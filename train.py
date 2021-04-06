@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
 	cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '.ckpt', save_weights_only=True, verbose=1)
 	model = mm.create_model('adam')
-	model.fit(pdata, epochs=20, callbacks=[cp_callback])
+	model.fit(pdata, epochs=10, callbacks=[cp_callback])
 
 
 

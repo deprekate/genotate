@@ -175,7 +175,7 @@ def get_windows(dna):
 	for i in range(0, len(dna)-2, 3):
 		for f in [0,1,2]:
 			n = (i+f)
-			window = dna[max(0+f, n-half) : n+half]
+			window = dna[max(0+f, n-57) : n+60]
 			freqs = translate.frequencies(window)
 			'''
 			befor = dna[ max(0+f,n-48) : n+3   ]
@@ -183,8 +183,8 @@ def get_windows(dna):
 			bef = translate.frequencies(befor)
 			aft = translate.frequencies(after)
 			'''
-			#row = [gc]
-			row = [i+f+1, gc]
+			row = [gc]
+			#row = [i+f+1, gc]
 			for aa in translate.amino_acids:
 				#row.append(bef.get(aa,0))
 				#row.append(aft.get(aa,0))
@@ -193,8 +193,8 @@ def get_windows(dna):
 			freqs = translate.frequencies(window, rev=True)
 			#bef = translate.frequencies(befor, rev=True)
 			#aft = translate.frequencies(after, rev=True)
-			row = [-(i+f+1), gc]
-			#row = [gc]
+			row = [gc]
+			#row = [-(i+f+1), gc]
 			for aa in translate.amino_acids:
 				#row.append(bef.get(aa,0))
 				#row.append(aft.get(aa,0))
@@ -212,13 +212,22 @@ if __name__ == '__main__':
 	parser.add_argument('-l', '--labels', action="store_true", help=argparse.SUPPRESS)
 	parser.add_argument('--ids', action="store", help=argparse.SUPPRESS)
 	args = parser.parse_args()
-	
+
+	# print the column header and quit
+	if args.labels:
+		translate = Translate()
+		sys.stdout.write('\t'.join(['TYPE','ID', 'GC'] + [aa for aa in translate.amino_acids]))
+		sys.stdout.write('\n')
 
 	if os.path.isdir(args.infile):
-		raise NotImplementedError('Running on multiple files in a directory')
+		#raise NotImplementedError('Running on multiple files in a directory')
+		for infile in os.listdir(args.infile):
+			for row in read_genbank(os.path.join(args.infile, infile)):
+				args.outfile.write('\t'.join(map(str,row)))
+				args.outfile.write('\n')
 	else:
 		for row in read_genbank(args.infile):
-			args.outfile.write(','.join(map(str,row)))
+			args.outfile.write('\t'.join(map(str,row)))
 			args.outfile.write('\n')
 
 
