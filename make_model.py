@@ -13,6 +13,24 @@ def create_model(opt):
 					#tf.keras.layers.Dense(41, input_shape=(41,)),
 					#tf.keras.layers.Dropout(0.05),
 					tf.keras.layers.Dense(33, activation='relu'),
+					tf.keras.layers.Dense(33, activation='relu'),
+					tf.keras.layers.Dense(3, activation='softmax')
+	])
+	model.compile(optimizer = opt,
+				  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+				  metrics=['accuracy']
+				  )
+	return model
+
+def create_model2(opt):
+	'''
+	This creates and returns a new model
+	'''
+	model = tf.keras.Sequential([
+					tf.keras.layers.Dense(41, input_shape=(41,)),
+					#tf.keras.layers.Dropout(0.05),
+					tf.keras.layers.Dense(66, activation='relu'),
+					tf.keras.layers.Dense(66, activation='relu'),
 					tf.keras.layers.Dense(3, activation='softmax')
 	])
 	model.compile(optimizer = opt,

@@ -175,30 +175,28 @@ def get_windows(dna):
 	for i in range(0, len(dna)-2, 3):
 		for f in [0,1,2]:
 			n = (i+f)
-			window = dna[max(0+f, n-57) : n+60]
-			freqs = translate.frequencies(window)
-			'''
+			#window = dna[max(0+f, n-57) : n+60]
+			#freqs = translate.frequencies(window)
 			befor = dna[ max(0+f,n-48) : n+3   ]
 			after = dna[         n     : n+48  ]
 			bef = translate.frequencies(befor)
 			aft = translate.frequencies(after)
-			'''
 			row = [gc]
 			#row = [i+f+1, gc]
 			for aa in translate.amino_acids:
-				#row.append(bef.get(aa,0))
-				#row.append(aft.get(aa,0))
-				row.append(freqs.get(aa,0))
+				row.append(bef.get(aa,0))
+				row.append(aft.get(aa,0))
+				#row.append(freqs.get(aa,0))
 			yield  row
-			freqs = translate.frequencies(window, rev=True)
-			#bef = translate.frequencies(befor, rev=True)
-			#aft = translate.frequencies(after, rev=True)
+			#freqs = translate.frequencies(window, rev=True)
+			bef = translate.frequencies(befor, rev=True)
+			aft = translate.frequencies(after, rev=True)
 			row = [gc]
 			#row = [-(i+f+1), gc]
 			for aa in translate.amino_acids:
-				#row.append(bef.get(aa,0))
-				#row.append(aft.get(aa,0))
-				row.append(freqs.get(aa,0))
+				row.append(bef.get(aa,0))
+				row.append(aft.get(aa,0))
+				#row.append(freqs.get(aa,0))
 			yield row
 
 
