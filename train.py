@@ -7,15 +7,16 @@ from statistics import mode
 import make_model as mm
 
 # TensorFlow and tf.keras
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
+
+#sess = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(log_device_placement=True))
 
 # Helper libraries
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 def is_valid_file(x):
 	if not os.path.exists(x):
@@ -36,26 +37,29 @@ if __name__ == '__main__':
 	letters = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 	#colnames = ['TYPE','GC'] + [letter for pair in zip([l+'1' for l in letters], [l+'2' for l in letters]) for letter in pair]
 	colnames = ['TYPE','GC'] + letters
+	print(colnames)
+	print(colnames[0])
 	tfiles = tf.data.experimental.make_csv_dataset(
 		file_pattern        = args.directory + "/*.tsv",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
+		select_columns      = colnames,
 		column_defaults     = [tf.int32] + [tf.float32] * (len(colnames)-1),
 		batch_size          = 100,
 		num_epochs          = 1,
-		num_parallel_reads  = 10,
 		shuffle_buffer_size = 10000,
-		label_name          = colnames[0],
-		select_columns      = colnames
+		label_name          = colnames[0]
+		#label_name          = 0 # this is old version
 		)
+		#num_parallel_reads  = 10,
 	pdata = tfiles.map(pack)
 	#for feature in tfiles.take(1):
 	#	print( feature )
-
-	cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '.ckpt', save_weights_only=True, verbose=1)
-	model = mm.create_model('adam')
-	model.fit(pdata, epochs=10, callbacks=[cp_callback])
+	with tf.device('/device:GPU:0'):
+		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '.ckpt', save_weights_only=True, verbose=1)
+		model = mm.create_model('adam')
+		model.fit(pdata, epochs=5, callbacks=[cp_callback])
 
 
 
