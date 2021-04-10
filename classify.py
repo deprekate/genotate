@@ -56,8 +56,8 @@ if __name__ == '__main__':
 		exit()
 	'''
 
-	model = mm.create_model('adam')
-	model.load_weights('small.ckpt')
+	model = mm.create_model2('adam')
+	model.load_weights('train/double.ckpt')
 	
 	contigs = mt.read_fasta(args.infile)
 	for header in contigs:
@@ -65,7 +65,7 @@ if __name__ == '__main__':
 								mt.get_windows,
 								args=[contigs[header]],
 								output_types=tf.float32,
-								output_shapes = (21,) 
+								output_shapes = (41,) 
 								).batch(10)
 		#for feature in train.take(1):
 		#	print( feature )

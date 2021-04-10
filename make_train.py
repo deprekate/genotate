@@ -149,6 +149,61 @@ def read_genbank(infile):
 		pos = -((i+1)//2) if (i+1)%2 else ((i+1)//2)
 		yield [coding_frame.get(pos, 0)] + row
 
+
+def single_window(dna, n, rev):
+	'''
+	get ONE window of 117 bases centered at the CODon
+				.....COD.....   => translate => count aminoacids => [1,2,...,19,20]
+	'''
+	row = []
+	translate = Translate()
+	window = dna[ max( n%3 , n-57) : n+60]
+	freqs = translate.frequencies(window, rev)
+	for aa in translate.amino_acids:
+		row.append(freqs.get(aa,0))
+	return row
+
+def double_window(dna, n, rev):
+	'''
+	get TWO windows of 60 bases centered at the CODon
+				.....COD        => translate => count aminoacids => [1,2,...,19,20]
+					 COD.....   => translate => count aminoacids => [1,2,...,19,20]
+																		  |
+																		  V
+															[1,2,...,19,20 , 1,2,...,19,20]
+	'''
+	row = []
+	translate = Translate()
+	# first
+	window = dna[ max( n%3 , n-57 ) : n+3  ]
+	freqs = translate.frequencies(window, rev)
+	for aa in translate.amino_acids:
+		row.append(freqs.get(aa,0))
+	# second
+	window = dna[            n      : n+60 ]
+	freqs = translate.frequencies(window, rev)
+	for aa in translate.amino_acids:
+		row.append(freqs.get(aa,0))
+	return row
+
+def glob_window(dna, n, rev):
+	'''
+	lol go crazy with windows
+	'''
+	row = []
+	for j in [0,1,2]:
+		row.extend(single_window(dna, n+j,  rev    ))
+		row.extend(single_window(dna, n+j, not rev ))
+	return row	
+
+def gc_counts(dna, n):
+	row = []
+	window = dna[ max( n%3 , n-57) : n+60]
+	for f in [0,1,2]:
+		frame = dna[f::3]
+		row.append( frame.count('G') + frame.count('C') )
+	return row
+
 def get_windows(dna):
 	'''
 	This method takes as input a string of the nucleotides, and returns
@@ -162,42 +217,24 @@ def get_windows(dna):
 	those before and those after the codon:
 		A(before) A(after) C(before) C(after) D(before) D(after) etc
 	'''
+	# this is to fix python variable passing issues
 	if type(dna) is not str:
 		dna = dna.decode()
 
-	translate = Translate()
+	#translate = Translate()
 	gc = gc_content(dna) 
 
 	# get the aminoacid frequency window
-	args = lambda: None
-	args.window = 120
-	half = int(args.window / 2)
-	for i in range(0, len(dna)-2, 3):
+	#args = lambda: None
+	for n in range(0, len(dna)-2, 3):
 		for f in [0,1,2]:
-			n = (i+f)
-			#window = dna[max(0+f, n-57) : n+60]
-			#freqs = translate.frequencies(window)
-			befor = dna[ max(0+f,n-48) : n+3   ]
-			after = dna[         n     : n+48  ]
-			bef = translate.frequencies(befor)
-			aft = translate.frequencies(after)
-			row = [gc]
-			#row = [i+f+1, gc]
-			for aa in translate.amino_acids:
-				row.append(bef.get(aa,0))
-				row.append(aft.get(aa,0))
-				#row.append(freqs.get(aa,0))
-			yield  row
-			#freqs = translate.frequencies(window, rev=True)
-			bef = translate.frequencies(befor, rev=True)
-			aft = translate.frequencies(after, rev=True)
-			row = [gc]
-			#row = [-(i+f+1), gc]
-			for aa in translate.amino_acids:
-				row.append(bef.get(aa,0))
-				row.append(aft.get(aa,0))
-				#row.append(freqs.get(aa,0))
-			yield row
+			#yield [gc] + single_window(dna, n+f, False)
+			#yield [gc] + single_window(dna, n+f, True )
+			#yield [gc] + double_window(dna, n+f, False)
+			#yield [gc] + double_window(dna, n+f, True )
+			print(gc_counts(dna, n+f))
+			yield [gc] + glob_window(dna, n+f, False )
+			yield [gc] + glob_window(dna, n+f, True )
 
 
 
@@ -206,7 +243,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='', formatter_class=RawTextHelpFormatter, usage=usage)
 	parser.add_argument('infile', type=is_valid_file, help='input file in genbank format')
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write the output [stdout]')
-	parser.add_argument('-w', '--window', action="store", type=int, default=120,  help='The size of the window')
+	#parser.add_argument('-w', '--window', action="store", type=int, default=120,  help='The size of the window')
 	parser.add_argument('-l', '--labels', action="store_true", help=argparse.SUPPRESS)
 	parser.add_argument('--ids', action="store", help=argparse.SUPPRESS)
 	args = parser.parse_args()
