@@ -232,7 +232,6 @@ def get_windows(dna):
 			#yield [gc] + single_window(dna, n+f, True )
 			#yield [gc] + double_window(dna, n+f, False)
 			#yield [gc] + double_window(dna, n+f, True )
-			print(gc_counts(dna, n+f))
 			yield [gc] + glob_window(dna, n+f, False )
 			yield [gc] + glob_window(dna, n+f, True )
 

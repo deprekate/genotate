@@ -36,7 +36,8 @@ if __name__ == '__main__':
 
 	letters = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 	#colnames = ['TYPE','GC'] + letters
-	colnames = ['TYPE','GC'] + [letter for pair in zip([l+'1' for l in letters], [l+'2' for l in letters]) for letter in pair]
+	#colnames = ['TYPE','GC'] + [letter for pair in zip([l+'1' for l in letters], [l+'2' for l in letters]) for letter in pair]
+	colnames =  ['TYPE', 'GC'] + [letter+f for letter in letters for f in ['+0','-0','+1','-1','+2','-2']]
 	tfiles = tf.data.experimental.make_csv_dataset(
 		file_pattern        = args.directory + "/A*.tsv",
 		field_delim         = '\t',
@@ -57,8 +58,8 @@ if __name__ == '__main__':
 	#	print( feature )
 	with tf.device('/device:CPU:0'):
 		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '.ckpt', save_weights_only=True, verbose=1)
-		model = mm.create_model2('adam')
-		model.fit(pdata, epochs=5, callbacks=[cp_callback])
+		model = mm.create_model3('adam')
+		model.fit(pdata, epochs=10, callbacks=[cp_callback])
 
 
 
