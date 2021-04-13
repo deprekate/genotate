@@ -31,12 +31,11 @@ class Translate:
 
 	def frequencies(self, seq, rev=False):
 		counts = self.counts(seq, rev=rev)
+		total = sum(counts.values())
 		for c in '#+*':
 			del counts[c]
-		total = sum(counts.values())
 		for aa in counts:
-			counts[aa] = round(counts[aa] / total , 4)
-			#counts[aa] = round(counts[aa] / 16 , 4)
+			counts[aa] = counts[aa] / total
 		return counts
 
 	def seq(self, seq, rev=False):
@@ -83,7 +82,7 @@ def gc_content(seq):
 	c = seq.count('C')
 	a = seq.count('A')
 	t = seq.count('T')
-	return round( (g+c) / (g+c+a+t) , 3)
+	return (g+c) / (g+c+a+t)
 
 def our_generator():
     for i in range(1000):
@@ -126,12 +125,12 @@ def read_genbank(infile):
 					if pair[0] == '<1':
 						left = right % 3 + 1
 					for i in range(left-remainder,right-1,3):
-						coding_frame[ +(i + 0) * direction ] = 2 #True
-						coding_frame[ +(i + 1) * direction ] = 1 #False
-						coding_frame[ +(i + 2) * direction ] = 1 #False
-						coding_frame[ -(i + 0) * direction ] = 1 #False
-						coding_frame[ -(i + 1) * direction ] = 1 #False
-						coding_frame[ -(i + 2) * direction ] = 1 #False
+						coding_frame[ +(i + 0) * direction ] = 1 #True
+						coding_frame[ +(i + 1) * direction ] = 0 #False
+						coding_frame[ +(i + 2) * direction ] = 0 #False
+						coding_frame[ -(i + 0) * direction ] = 0 #False
+						coding_frame[ -(i + 1) * direction ] = 0 #False
+						coding_frame[ -(i + 2) * direction ] = 0 #False
 						remainder = right-2 - i
 				if remainder and ">" not in pair[1]:
 					raise ValueError("Out of frame: ( %s , %s )" % tuple(pair))
@@ -190,7 +189,8 @@ def glob_window(dna, n, rev):
 	'''
 	lol go crazy with windows
 	'''
-	row = []
+	window = dna[ max( n%3 , n-57) : n+60]
+	row = [gc_content(window)]
 	for j in [0,1,2]:
 		row.extend(single_window(dna, n+j,  rev    ))
 		row.extend(single_window(dna, n+j, not rev ))

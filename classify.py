@@ -56,8 +56,8 @@ if __name__ == '__main__':
 		exit()
 	'''
 
-	model = mm.create_model2('adam')
-	model.load_weights('train/double.ckpt')
+	model = mm.create_model3('adam')
+	model.load_weights('train/glob.ckpt')
 	
 	contigs = mt.read_fasta(args.infile)
 	for header in contigs:
@@ -65,7 +65,7 @@ if __name__ == '__main__':
 								mt.get_windows,
 								args=[contigs[header]],
 								output_types=tf.float32,
-								output_shapes = (41,) 
+								output_shapes = (122,) 
 								).batch(10)
 		#for feature in train.take(1):
 		#	print( feature )
@@ -77,11 +77,13 @@ if __name__ == '__main__':
 		#Y = smooth(Y)
 	
 		for i,row in enumerate(Y):
-			if row == 2:
+			if row == 1:
 				if i%2:
 					print('     CDS             complement(', ((i-1)//2)+1, '..', ((i-1)//2)+3, ')', sep='')
 				else:
 					print('     CDS             ', (i//2)+1 , '..', (i//2)+3, sep='')
+			elif row == 3:
+				print('     gap             ', (i//2)+1 , '..', (i//2)+3, sep='')
 
 
 

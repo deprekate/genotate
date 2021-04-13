@@ -1,7 +1,7 @@
 import os
 
 # TensorFlow and tf.keras
-#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 
 def create_model(opt):
@@ -44,11 +44,11 @@ def create_model3(opt):
 	This creates and returns a new model
 	'''
 	model = tf.keras.Sequential([
-					tf.keras.layers.Dense(121, input_shape=(121,)),
+					tf.keras.layers.Dense(122, input_shape=(122,)),
 					#tf.keras.layers.Dropout(0.05),
 					tf.keras.layers.Dense(133, activation='relu'),
 					tf.keras.layers.Dense(133, activation='relu'),
-					tf.keras.layers.Dense(3, activation='softmax')
+					tf.keras.layers.Dense(2, activation='softmax')
 	])
 	model.compile(optimizer = opt,
 				  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
