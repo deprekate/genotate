@@ -64,10 +64,16 @@ if __name__ == '__main__':
 		dataset = tf.data.Dataset.from_generator(
 								mt.get_windows,
 								args=[contigs[header]],
-								output_types=tf.float32,
-								output_shapes = (122,) 
-								).batch(10)
-		#for feature in train.take(1):
+								#output_shapes = (121,), output_types=tf.float32,
+								#output_signature=(tf.TensorSpec(shape=(121,), dtype=tf.float32))
+								output_signature=(
+										tf.TensorSpec(
+											shape=model.input.type_spec.shape[1:],
+											dtype=tf.float32
+											)
+										)
+								).batch(1)
+		#for feature in dataset.take(1):
 		#	print( feature )
 		#exit()
 	

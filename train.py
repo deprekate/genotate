@@ -51,23 +51,24 @@ if __name__ == '__main__':
 	usage = '%s [-opt1, [-opt2, ...]] directory' % __file__
 	parser = argparse.ArgumentParser(description='', formatter_class=RawTextHelpFormatter, usage=usage)
 	parser.add_argument('directory', type=is_valid_file, help='input directory')
-	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write the output [stdout]')
+	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
 	args = parser.parse_args()
 
 	letters = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 	#colnames = ['TYPE','GC'] + letters
 	#colnames = ['TYPE','GC'] + [letter for pair in zip([l+'1' for l in letters], [l+'2' for l in letters]) for letter in pair]
 	colnames =  ['TYPE', 'GC', 'DYN'] + [letter+f for letter in letters for f in ['+0','-0','+1','-1','+2','-2']]
+	selnames = ['TYPE'] + colnames[3:]
 	tfiles = tf.data.experimental.make_csv_dataset(
 		file_pattern        = args.directory + "/AB0*.tsv",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
-		select_columns      = colnames,
-		column_defaults     = [tf.int32] + [tf.float32] * (len(colnames)-1),
+		select_columns      = selnames,
+		column_defaults     = [tf.int32] + [tf.float32] * (len(selnames)-1),
 		batch_size          = 100,
 		num_epochs          = 1,
-		shuffle_buffer_size = 10000,
+		shuffle_buffer_size = 1000,
 		num_parallel_reads  = 10,
 		sloppy              = True,
 		label_name          = colnames[0]
@@ -78,12 +79,14 @@ if __name__ == '__main__':
 	#	print( feature )
 	#metrics = Metrics()
 	#class_weight = {0:0.5, 1:1, 2:5}
-	class_weight = {0:1, 1:5}
+	
+	model = mm.create_model3(len(selnames)-1)
+
+	class_weight = {0:1, 1:1}
 	with tf.device('/device:CPU:0'):
 		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '.ckpt', save_weights_only=True, verbose=1)
-		model = mm.create_model3('adam')
 		model.fit(pdata,
-				  epochs=5,
+				  epochs=9,
 				  class_weight=class_weight,
 				  callbacks=[cp_callback]
 				  )

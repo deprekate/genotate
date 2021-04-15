@@ -39,18 +39,18 @@ def create_model2(opt):
 				  )
 	return model
 
-def create_model3(opt):
+def create_model3(i):
 	'''
 	This creates and returns a new model
 	'''
 	model = tf.keras.Sequential([
-					tf.keras.layers.Dense(122, input_shape=(122,)),
+					tf.keras.layers.Dense(i, input_shape=(i,)),
 					#tf.keras.layers.Dropout(0.05),
 					tf.keras.layers.Dense(133, activation='relu'),
-					tf.keras.layers.Dense(133, activation='relu'),
+					#tf.keras.layers.Dense(133, activation='relu'),
 					tf.keras.layers.Dense(2, activation='softmax')
 	])
-	model.compile(optimizer = opt,
+	model.compile(optimizer = 'adam',
 				  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
 				  metrics=['accuracy']
 				  )

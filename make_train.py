@@ -26,28 +26,29 @@ class Translate:
 			return self.translate[codon]
 		else:
 			return ''
-	def counts(self, seq, rev=False):
-		return Counter(self.seq(seq, rev=rev))
+	def counts(self, seq, strand):
+		return Counter(self.seq(seq, strand))
 
-	def frequencies(self, seq, rev=False):
-		counts = self.counts(seq, rev=rev)
+	def frequencies(self, seq, strand):
+		counts = self.counts(seq, strand)
 		total = sum(counts.values())
 		for c in '#+*':
 			del counts[c]
 		for aa in counts:
-			counts[aa] = counts[aa] / total
+			counts[aa] = round(counts[aa] / total, 4)
+			#counts[aa] = counts[aa] / total
 		return counts
 
-	def seq(self, seq, rev=False):
+	def seq(self, seq, strand):
 		aa = ''
-		if rev:
-			for i in range(0, len(seq), 3):
-				aa += self.codon(self.rev_comp(seq[i:i+3]))
-			return aa[::-1]
-		else:
+		if strand > 0:
 			for i in range(0, len(seq), 3):
 				aa += self.codon(seq[i:i+3])
 			return aa
+		else:
+			for i in range(0, len(seq), 3):
+				aa += self.codon(self.rev_comp(seq[i:i+3]))
+			return aa[::-1]
 
 	def rev_comp(self, seq):
 		seq_dict = {'A':'T','T':'A','G':'C','C':'G',
@@ -56,10 +57,10 @@ class Translate:
 					'B':'V','V':'B','D':'H','H':'D'}
 		return "".join([seq_dict[base] for base in reversed(seq)])
 
-	def edp(self, seq, rev=False):
+	def edp(self, seq, strand):
 		"""Calculate entropy"""
 		H = 0
-		counts = self.counts(seq, rev=rev)
+		counts = self.counts(seq, strand)
 		for aa in self.amino_acids:
 			p = -counts[aa]*log(counts[aa]) if counts[aa] else 0
 			counts[aa] = p
@@ -92,8 +93,7 @@ def our_generator():
 
 def read_fasta(filepath, base_trans=str.maketrans('','')):
 	contigs_dict = dict()
-	name = ''
-	seq = ''
+	name = seq = ''
 
 	lib = gzip if filepath.endswith(".gz") else io
 	with lib.open(filepath, mode="rb") as f:
@@ -103,14 +103,13 @@ def read_fasta(filepath, base_trans=str.maketrans('','')):
 				name = line[1:].decode("utf-8").split()[0]
 				seq = ''
 			else:
-				#seq += line.replace("\n", "").upper()
-				seq += line[:-1].decode("utf-8").upper()
+				seq += line.decode("utf-8").rstrip().upper()
 		contigs_dict[name] = seq.translate(base_trans)
 	if '' in contigs_dict: del contigs_dict['']
 	return contigs_dict
 
 def read_genbank(infile):
-	dna = ''
+	dna = False
 	coding_frame = dict()
 	with open(infile) as fp:
 		for line in fp:
@@ -135,21 +134,18 @@ def read_genbank(infile):
 				if remainder and ">" not in pair[1]:
 					raise ValueError("Out of frame: ( %s , %s )" % tuple(pair))
 			elif line.startswith('ORIGIN'):
-				dna = '\n'
-			elif dna:
-				line = line[10:].replace(' ','')
-				dna += line.upper()
+				dna = ''
+			elif dna != False:
+				dna += line[10:].rstrip().replace(' ','').upper()
 
-	dna = dna.replace('\n', '')
-
-	gc = gc_content(dna) 
+	assert dna, "No DNA sequence found in the infile"
 
 	for i, row in enumerate(get_windows(dna), start=1):
 		pos = -((i+1)//2) if (i+1)%2 else ((i+1)//2)
 		yield [coding_frame.get(pos, 0)] + row
 
 
-def single_window(dna, n, rev):
+def single_window(dna, n, strand):
 	'''
 	get ONE window of 117 bases centered at the CODon
 				.....COD.....   => translate => count aminoacids => [1,2,...,19,20]
@@ -157,12 +153,12 @@ def single_window(dna, n, rev):
 	row = []
 	translate = Translate()
 	window = dna[ max( n%3 , n-57) : n+60]
-	freqs = translate.frequencies(window, rev)
+	freqs = translate.frequencies(window, strand)
 	for aa in translate.amino_acids:
 		row.append(freqs.get(aa,0))
 	return row
 
-def double_window(dna, n, rev):
+def double_window(dna, n, strand):
 	'''
 	get TWO windows of 60 bases centered at the CODon
 				.....COD        => translate => count aminoacids => [1,2,...,19,20]
@@ -175,25 +171,25 @@ def double_window(dna, n, rev):
 	translate = Translate()
 	# first
 	window = dna[ max( n%3 , n-57 ) : n+3  ]
-	freqs = translate.frequencies(window, rev)
+	freqs = translate.frequencies(window, strand)
 	for aa in translate.amino_acids:
 		row.append(freqs.get(aa,0))
 	# second
 	window = dna[            n      : n+60 ]
-	freqs = translate.frequencies(window, rev)
+	freqs = translate.frequencies(window, strand)
 	for aa in translate.amino_acids:
 		row.append(freqs.get(aa,0))
 	return row
 
-def glob_window(dna, n, rev):
+def glob_window(dna, n, strand):
 	'''
 	lol go crazy with windows
 	'''
 	window = dna[ max( n%3 , n-57) : n+60]
 	row = [gc_content(window)]
 	for j in [0,1,2]:
-		row.extend(single_window(dna, n+j,  rev    ))
-		row.extend(single_window(dna, n+j, not rev ))
+		row.extend(single_window(dna, n+(j*strand),  strand ))
+		row.extend(single_window(dna, n+(j*strand), -strand ))
 	return row	
 
 def gc_counts(dna, n):
@@ -212,10 +208,6 @@ def get_windows(dna):
 	rows follow the pattern:
 		+1 -1 +2 -2 +3 -3 +4 -4 +5 -5 +6 -6 +7 -7 etc
 
-	The row consists of 41 columns, where the first column is the GC content
-	and the other 40 are the amino-acid frequencies, and are interlaced by
-	those before and those after the codon:
-		A(before) A(after) C(before) C(after) D(before) D(after) etc
 	'''
 	# this is to fix python variable passing issues
 	if type(dna) is not str:
@@ -232,8 +224,8 @@ def get_windows(dna):
 			#yield [gc] + single_window(dna, n+f, True )
 			#yield [gc] + double_window(dna, n+f, False)
 			#yield [gc] + double_window(dna, n+f, True )
-			yield [gc] + glob_window(dna, n+f, False )
-			yield [gc] + glob_window(dna, n+f, True )
+			yield [] + glob_window(dna, n+f, +1 )
+			yield [] + glob_window(dna, n+f, -1 )
 
 
 
@@ -241,7 +233,7 @@ if __name__ == '__main__':
 	usage = 'make_train.py [-opt1, [-opt2, ...]] infile'
 	parser = argparse.ArgumentParser(description='', formatter_class=RawTextHelpFormatter, usage=usage)
 	parser.add_argument('infile', type=is_valid_file, help='input file in genbank format')
-	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write the output [stdout]')
+	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
 	#parser.add_argument('-w', '--window', action="store", type=int, default=120,  help='The size of the window')
 	parser.add_argument('-l', '--labels', action="store_true", help=argparse.SUPPRESS)
 	parser.add_argument('--ids', action="store", help=argparse.SUPPRESS)
