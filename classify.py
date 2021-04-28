@@ -50,14 +50,16 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='', formatter_class=RawTextHelpFormatter, usage=usage)
 	parser.add_argument('infile', type=is_valid_file, help='input file')
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
+	parser.add_argument('-m', '--model', help='')
 	args = parser.parse_args()
 	'''
 	if args.labels: print("\t".join(['ID','TYPE','GC'] + translate.amino_acids))
 		exit()
 	'''
-
-	model = mm.create_model3('adam')
-	model.load_weights('train/glob.ckpt')
+	
+	ckpt_reader = tf.train.load_checkpoint(args.model)
+	model = mm.create_model5(len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE')))
+	model.load_weights(args.model)
 	
 	contigs = mt.read_fasta(args.infile)
 	for header in contigs:
@@ -78,18 +80,33 @@ if __name__ == '__main__':
 		#exit()
 	
 		p = model.predict(dataset)
-		Y = np.argmax(p,axis=-1)
-	
+		#Y = np.argmax(p,axis=-1)
+		Y = np.round(p)
+
 		#Y = smooth(Y)
-	
+
 		for i,row in enumerate(Y):
+			#print(i//2, np.round(p[i]), p[i])
+			#if not i%2:
+			#	print(1+i//2, p[i], p[i+1])
 			if row == 1:
 				if i%2:
 					print('     CDS             complement(', ((i-1)//2)+1, '..', ((i-1)//2)+3, ')', sep='')
 				else:
 					print('     CDS             ', (i//2)+1 , '..', (i//2)+3, sep='')
-			elif row == 3:
-				print('     gap             ', (i//2)+1 , '..', (i//2)+3, sep='')
+				print('                     /colour=100 100 100')
+			'''
+			#elif row == 2:
+			#	print('     gap             ', (i//2)+1 , '..', (i//2)+3, sep='')
+			'''
+			'''
+			if row == 2:
+				print('     CDS             complement(', i+1, '..', i+3, ')', sep='')
+				print('                     /colour=100 100 100')
+			elif row == 1:
+				print('     CDS             ', i+1 , '..', i+3, sep='')
+				print('                     /colour=100 100 100')
+			'''
 
 
 

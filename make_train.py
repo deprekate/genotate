@@ -6,6 +6,7 @@ import io
 import sys
 import re
 from math import log
+import random
 import argparse
 from argparse import RawTextHelpFormatter
 from collections import Counter
@@ -31,12 +32,13 @@ class Translate:
 
 	def frequencies(self, seq, strand):
 		counts = self.counts(seq, strand)
-		total = sum(counts.values())
+		#total = sum(counts.values())
 		for c in '#+*':
 			del counts[c]
+		total = sum(counts.values())
 		for aa in counts:
-			counts[aa] = round(counts[aa] / total, 4)
-			#counts[aa] = counts[aa] / total
+			#counts[aa] = round(counts[aa] / total, 4)
+			counts[aa] = counts[aa] / total
 		return counts
 
 	def seq(self, seq, strand):
@@ -124,12 +126,17 @@ def read_genbank(infile):
 					if pair[0] == '<1':
 						left = right % 3 + 1
 					for i in range(left-remainder,right-1,3):
-						coding_frame[ +(i + 0) * direction ] = 1 #True
-						coding_frame[ +(i + 1) * direction ] = 0 #False
-						coding_frame[ +(i + 2) * direction ] = 0 #False
-						coding_frame[ -(i + 0) * direction ] = 0 #False
-						coding_frame[ -(i + 1) * direction ] = 0 #False
-						coding_frame[ -(i + 2) * direction ] = 0 #False
+						coding_frame[ +(i + 0) * direction ] = 1     #True
+						if +(i + 1) * direction not in coding_frame:
+							coding_frame[ +(i + 1) * direction ] = 0 #False
+						if +(i + 2) * direction not in coding_frame:
+							coding_frame[ +(i + 2) * direction ] = 0 #False
+						if -(i + 0) * direction not in coding_frame:
+							coding_frame[ -(i + 0) * direction ] = 0 #False
+						if -(i + 1) * direction not in coding_frame:
+							coding_frame[ -(i + 1) * direction ] = 0 #False
+						if -(i + 2) * direction not in coding_frame:
+							coding_frame[ -(i + 2) * direction ] = 0 #False
 						remainder = right-2 - i
 				if remainder and ">" not in pair[1]:
 					raise ValueError("Out of frame: ( %s , %s )" % tuple(pair))
@@ -143,7 +150,38 @@ def read_genbank(infile):
 	for i, row in enumerate(get_windows(dna), start=1):
 		pos = -((i+1)//2) if (i+1)%2 else ((i+1)//2)
 		yield [coding_frame.get(pos, 0)] + row
+		'''
+		if coding_frame.get(i, 0) and coding_frame.get(-i, 0):
+			#yield [int(random.random() * 2) * 2 - 1] + row
+			#yield [int(random.random() * 2) + 1] + row
+			yield [3] + row
+		elif coding_frame.get(i, 0):
+			yield [1] + row
+		elif coding_frame.get(-i, 0):
+			yield [2] + row
+		else:
+			yield [0] + row
+		'''
 
+def gcpos_freq(dna, strand):
+	row = []
+	for f in [0,1,2]:
+		frame = dna[f::3]
+		row.append( frame.count('G') + frame.count('C') )
+	row = [count / sum(row) for count in row ]
+	return row[::strand]
+
+def nucl_freq(dna, strand):
+	n = len(dna) 
+	a = dna.count('A') / n
+	t = dna.count('T') / n
+	g = dna.count('G') / n
+	c = dna.count('C') / n
+	if strand > 0:
+		return [a, t, g, c]
+	else:
+		return [t, a, c, g]
+	
 
 def single_window(dna, n, strand):
 	'''
@@ -185,20 +223,22 @@ def glob_window(dna, n, strand):
 	'''
 	lol go crazy with windows
 	'''
+	#row = []
 	window = dna[ max( n%3 , n-57) : n+60]
-	row = [gc_content(window)]
+	row = [gc_content(window)] + nucl_freq(window, strand) + gcpos_freq(window, strand)
+	#row = [gc_content(window)] + [ count / sum(counts) for count in counts ]
+	#row = [ count / sum(counts) for count in counts ]
 	for j in [0,1,2]:
 		row.extend(single_window(dna, n+(j*strand),  strand ))
 		row.extend(single_window(dna, n+(j*strand), -strand ))
 	return row	
 
-def gc_counts(dna, n):
+def dglob_window(dna, n, strand):
 	row = []
-	window = dna[ max( n%3 , n-57) : n+60]
-	for f in [0,1,2]:
-		frame = dna[f::3]
-		row.append( frame.count('G') + frame.count('C') )
-	return row
+	for j in [0,1,2]:
+		row.extend(double_window(dna, n+(j*strand),  strand ))
+		row.extend(double_window(dna, n+(j*strand), -strand ))
+	return row	
 
 def get_windows(dna):
 	'''
@@ -224,8 +264,10 @@ def get_windows(dna):
 			#yield [gc] + single_window(dna, n+f, True )
 			#yield [gc] + double_window(dna, n+f, False)
 			#yield [gc] + double_window(dna, n+f, True )
-			yield [] + glob_window(dna, n+f, +1 )
-			yield [] + glob_window(dna, n+f, -1 )
+			yield [gc] + glob_window(dna, n+f, +1 )
+			yield [gc] + glob_window(dna, n+f, -1 )
+			#yield [gc] + dglob_window(dna, n+f, +1 )
+			#yield [gc] + dglob_window(dna, n+f, -1 )
 
 
 
