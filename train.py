@@ -57,7 +57,8 @@ if __name__ == '__main__':
 	letters = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 	#colnames = ['TYPE','GC'] + letters
 	#colnames = ['TYPE','GC'] + [letter for pair in zip([l+'1' for l in letters], [l+'2' for l in letters]) for letter in pair]
-	colnames =  ['TYPE', 'GC', 'DYN', 'a','t','g', 'c', 'P1', 'P2', 'P3'] + [letter+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters]
+	#colnames =  ['TYPE', 'GC', 'a','t','g', 'c', 'P1', 'P2', 'P3'] + [letter+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters]
+	colnames =  ['TYPE', 'GC', 'a','t','g', 'c'] + [letter+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters]
 	#colnames =  ['TYPE', 'GC', 'DYN'] + [letter+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters]
 	#colnames =  ['TYPE', 'GC', 'DYN'] + [letter+d+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters for d in 'ab']
 	selnames = colnames[:2] + colnames[2:]
@@ -85,7 +86,7 @@ if __name__ == '__main__':
 
 	class_weight = {0:0.25, 1:2}
 	with tf.device('/device:CPU:0'):
-		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '.ckpt', save_weights_only=True, verbose=1)
+		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_new.ckpt', save_weights_only=True, verbose=1)
 		model.fit(pdata,
 				  epochs=10,
 				  class_weight=class_weight,

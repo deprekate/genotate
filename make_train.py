@@ -149,7 +149,7 @@ def read_genbank(infile):
 
 	for i, row in enumerate(get_windows(dna), start=1):
 		pos = -((i+1)//2) if (i+1)%2 else ((i+1)//2)
-		yield [coding_frame.get(pos, 0)] + row
+		yield [coding_frame.get(pos, 0)] + [round(r, 3) for r in row]
 		'''
 		if coding_frame.get(i, 0) and coding_frame.get(-i, 0):
 			#yield [int(random.random() * 2) * 2 - 1] + row
@@ -225,7 +225,8 @@ def glob_window(dna, n, strand):
 	'''
 	#row = []
 	window = dna[ max( n%3 , n-57) : n+60]
-	row = [gc_content(window)] + nucl_freq(window, strand) + gcpos_freq(window, strand)
+	#row = [gc_content(window), n+1] + nucl_freq(window, strand) + gcpos_freq(window, strand)
+	row = nucl_freq(window, strand)
 	#row = [gc_content(window)] + [ count / sum(counts) for count in counts ]
 	#row = [ count / sum(counts) for count in counts ]
 	for j in [0,1,2]:
