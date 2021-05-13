@@ -82,11 +82,11 @@ if __name__ == '__main__':
 	#	print( feature )
 	#metrics = Metrics()
 	
-	model = mm.create_model5(len(selnames)-1)
+	model = mm.create_model3(len(selnames)-1)
 
-	class_weight = {0:0.25, 1:2}
+	class_weight = {0:1, 1:1, 2:1}
 	with tf.device('/device:CPU:0'):
-		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_new.ckpt', save_weights_only=True, verbose=1)
+		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '.ckpt', save_weights_only=True, verbose=1)
 		model.fit(pdata,
 				  epochs=10,
 				  class_weight=class_weight,

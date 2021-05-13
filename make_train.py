@@ -87,12 +87,6 @@ def gc_content(seq):
 	t = seq.count('T')
 	return (g+c) / (g+c+a+t)
 
-def our_generator():
-    for i in range(1000):
-      x = np.random.rand(28,28)
-      y = np.random.randint(1,10, size=1)
-      yield x,y
-
 def read_fasta(filepath, base_trans=str.maketrans('','')):
 	contigs_dict = dict()
 	name = seq = ''
@@ -149,7 +143,7 @@ def read_genbank(infile):
 
 	for i, row in enumerate(get_windows(dna), start=1):
 		pos = -((i+1)//2) if (i+1)%2 else ((i+1)//2)
-		yield [coding_frame.get(pos, 0)] + [round(r, 3) for r in row]
+		yield [coding_frame.get(pos, 2)] + [round(r, 3) for r in row]
 		'''
 		if coding_frame.get(i, 0) and coding_frame.get(-i, 0):
 			#yield [int(random.random() * 2) * 2 - 1] + row
@@ -227,18 +221,19 @@ def glob_window(dna, n, strand):
 	window = dna[ max( n%3 , n-57) : n+60]
 	#row = [gc_content(window), n+1] + nucl_freq(window, strand) + gcpos_freq(window, strand)
 	row = nucl_freq(window, strand)
-	#row = [gc_content(window)] + [ count / sum(counts) for count in counts ]
-	#row = [ count / sum(counts) for count in counts ]
 	for j in [0,1,2]:
 		row.extend(single_window(dna, n+(j*strand),  strand ))
 		row.extend(single_window(dna, n+(j*strand), -strand ))
 	return row	
 
 def dglob_window(dna, n, strand):
-	row = []
+	#row = []
+	window = dna[ max( n%3 , n-57) : n+60]
+	row = nucl_freq(window, strand)
 	for j in [0,1,2]:
 		row.extend(double_window(dna, n+(j*strand),  strand ))
 		row.extend(double_window(dna, n+(j*strand), -strand ))
+
 	return row	
 
 def get_windows(dna):

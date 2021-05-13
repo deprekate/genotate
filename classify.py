@@ -23,6 +23,19 @@ def is_valid_file(x):
 		raise argparse.ArgumentTypeError("{0} does not exist".format(x))
 	return x
 
+def mode(a, axis=0):
+	scores = np.unique(np.ravel(a))       # get ALL unique values
+	testshape = list(a.shape)
+	testshape[axis] = 1
+	oldmostfreq = np.zeros(testshape)
+	oldcounts = np.zeros(testshape)
+	for score in scores:
+		template = (a == score)
+		counts = np.expand_dims(np.sum(template, axis),axis)
+		mostfrequent = np.where(counts > oldcounts, score, oldmostfreq)
+		oldcounts = np.maximum(counts, oldcounts)
+		oldmostfreq = mostfrequent
+	return mostfrequent[0] #, oldcounts
 
 def pack(features, label):
   return tf.stack(list(features.values()), axis=-1), label
@@ -38,10 +51,14 @@ def smooth(data):
 					data[5::6]
 					])
 	for i in range(var.shape[1]):
-		counts = np.count_nonzero(var[:,max(i-19, 0) : i+20] == 2, axis=1)
-		idx = np.argmax(counts)
-		if counts[idx] >= 3:
-			out[6*i+idx] = 2
+		#counts = np.count_nonzero(var[:,max(i-19, 0) : i+20] == 2, axis=1)
+		#idx = np.argmax(counts)
+		#if counts[idx] >= 3:
+		#	out[6*i+idx] = 2
+		#out[i:i+5] = np.apply_along_axis(lambda x: np.bincount(x).argmax(), axis=1, arr = var[ : , max(i-19, 0) : i+20 ] )
+		for j in range(6):
+			window = var[ j , max(i-19, 0) : i+20 ]
+			out[6*i+j] = mode(window)
 	return out
 
 
@@ -58,7 +75,7 @@ if __name__ == '__main__':
 	'''
 	
 	ckpt_reader = tf.train.load_checkpoint(args.model)
-	model = mm.create_model5(len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE')))
+	model = mm.create_model3(len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE')))
 	model.load_weights(args.model)
 	
 	contigs = mt.read_fasta(args.infile)
@@ -80,13 +97,11 @@ if __name__ == '__main__':
 		#exit()
 	
 		p = model.predict(dataset)
-		#Y = np.argmax(p,axis=-1)
-		Y = np.round(p)
-
-		#Y = smooth(Y)
+		#Y = np.round(p.flatten())
+		Y = np.argmax(p,axis=-1)
+		Y = smooth(Y)
 
 		for i,row in enumerate(Y):
-			#print(i//2, np.round(p[i]), p[i])
 			#if not i%2:
 			#	print(1+i//2, p[i], p[i+1])
 			if row == 1:
