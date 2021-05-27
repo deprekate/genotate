@@ -37,7 +37,6 @@ class Translate:
 			del counts[c]
 		total = sum(counts.values())
 		for aa in counts:
-			#counts[aa] = round(counts[aa] / total, 4)
 			counts[aa] = counts[aa] / total
 		return counts
 
@@ -143,7 +142,8 @@ def read_genbank(infile):
 
 	for i, row in enumerate(get_windows(dna), start=1):
 		pos = -((i+1)//2) if (i+1)%2 else ((i+1)//2)
-		yield [coding_frame.get(pos, 2)] + [round(r, 3) for r in row]
+		#yield [coding_frame.get(pos, 2)] + [round(r, 3) for r in row]
+		yield [coding_frame.get(pos, 2)] + row
 		'''
 		if coding_frame.get(i, 0) and coding_frame.get(-i, 0):
 			#yield [int(random.random() * 2) * 2 - 1] + row
@@ -167,10 +167,10 @@ def gcpos_freq(dna, strand):
 
 def nucl_freq(dna, strand):
 	n = len(dna) 
-	a = dna.count('A') / n
-	t = dna.count('T') / n
-	g = dna.count('G') / n
-	c = dna.count('C') / n
+	a = dna.count('A') / n if n else 0
+	t = dna.count('T') / n if n else 0
+	g = dna.count('G') / n if n else 0
+	c = dna.count('C') / n if n else 0
 	if strand > 0:
 		return [a, t, g, c]
 	else:
@@ -185,6 +185,7 @@ def single_window(dna, n, strand):
 	row = []
 	translate = Translate()
 	window = dna[ max( n%3 , n-57) : n+60]
+	row.extend(nucl_freq(window, strand))
 	freqs = translate.frequencies(window, strand)
 	for aa in translate.amino_acids:
 		row.append(freqs.get(aa,0))
@@ -203,11 +204,13 @@ def double_window(dna, n, strand):
 	translate = Translate()
 	# first
 	window = dna[ max( n%3 , n-57 ) : n+3  ]
+	#row.extend(nucl_freq(window, strand))
 	freqs = translate.frequencies(window, strand)
 	for aa in translate.amino_acids:
 		row.append(freqs.get(aa,0))
 	# second
 	window = dna[            n      : n+60 ]
+	#row.extend(nucl_freq(window, strand))
 	freqs = translate.frequencies(window, strand)
 	for aa in translate.amino_acids:
 		row.append(freqs.get(aa,0))
@@ -227,9 +230,11 @@ def glob_window(dna, n, strand):
 	return row	
 
 def dglob_window(dna, n, strand):
-	#row = []
-	window = dna[ max( n%3 , n-57) : n+60]
-	row = nucl_freq(window, strand)
+	row = []
+	window = dna[ max( n%3 , n-57 ) : n+3  ]
+	row.extend(nucl_freq(window, strand))
+	window = dna[            n      : n+60 ]
+	row.extend(nucl_freq(window, strand))
 	for j in [0,1,2]:
 		row.extend(double_window(dna, n+(j*strand),  strand ))
 		row.extend(double_window(dna, n+(j*strand), -strand ))
@@ -256,12 +261,12 @@ def get_windows(dna):
 	#args = lambda: None
 	for n in range(0, len(dna)-2, 3):
 		for f in [0,1,2]:
-			#yield [gc] + single_window(dna, n+f, False)
-			#yield [gc] + single_window(dna, n+f, True )
-			#yield [gc] + double_window(dna, n+f, False)
-			#yield [gc] + double_window(dna, n+f, True )
-			yield [gc] + glob_window(dna, n+f, +1 )
-			yield [gc] + glob_window(dna, n+f, -1 )
+			yield [gc] + single_window(dna, n+f, +1)
+			yield [gc] + single_window(dna, n+f, -1 )
+			#yield [gc] + double_window(dna, n+f, +1)
+			#yield [gc] + double_window(dna, n+f, -1 )
+			#yield [gc] + glob_window(dna, n+f, +1 )
+			#yield [gc] + glob_window(dna, n+f, -1 )
 			#yield [gc] + dglob_window(dna, n+f, +1 )
 			#yield [gc] + dglob_window(dna, n+f, -1 )
 
@@ -282,6 +287,12 @@ if __name__ == '__main__':
 		translate = Translate()
 		sys.stdout.write('\t'.join(['TYPE','ID', 'GC'] + [aa for aa in translate.amino_acids]))
 		sys.stdout.write('\n')
+
+	#contigs = read_fasta(args.infile)
+	#for row in get_windows(contigs[list(contigs.keys())[0]]):
+	#	args.outfile.write('\t'.join(map(str,row)))
+	#	args.outfile.write('\n')
+	#exit()
 
 	if os.path.isdir(args.infile):
 		#raise NotImplementedError('Running on multiple files in a directory')

@@ -55,15 +55,17 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	letters = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
-	#colnames = ['TYPE','GC'] + letters
-	#colnames = ['TYPE','GC'] + [letter for pair in zip([l+'1' for l in letters], [l+'2' for l in letters]) for letter in pair]
+	#letters = ['#','*','+','A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
+	colnames = ['TYPE', 'GC', 'a','t','g', 'c'] + letters
+	#colnames =  ['TYPE', 'GC', 'a','t','g', 'c'] + [letter+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters]
+
+	#colnames = ['TYPE', 'GC', 'a','t','g','c'] + [letter for pair in zip([l+'1' for l in letters], [l+'2' for l in letters]) for letter in pair]
+	#colnames = ['TYPE', 'GC', 'a1','t1','g1', 'c1'] + [c + '1' for c in letters] + ['a2','t2','g2', 'c2'] + [c + '2' for c in letters]
+	#colnames =  ['TYPE', 'GC', 'a','t','g', 'c'] + [letter+d+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters for d in 'ab']
 	#colnames =  ['TYPE', 'GC', 'a','t','g', 'c', 'P1', 'P2', 'P3'] + [letter+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters]
-	colnames =  ['TYPE', 'GC', 'a','t','g', 'c'] + [letter+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters]
-	#colnames =  ['TYPE', 'GC', 'DYN'] + [letter+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters]
-	#colnames =  ['TYPE', 'GC', 'DYN'] + [letter+d+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters for d in 'ab']
 	selnames = colnames[:2] + colnames[2:]
 	tfiles = tf.data.experimental.make_csv_dataset(
-		file_pattern        = args.directory + "/*.tsv",
+		file_pattern        = args.directory + "/AB*.tsv",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
@@ -82,7 +84,7 @@ if __name__ == '__main__':
 	#	print( feature )
 	#metrics = Metrics()
 	
-	model = mm.create_model3(len(selnames)-1)
+	model = mm.create_model(len(selnames)-1)
 
 	class_weight = {0:1, 1:1, 2:1}
 	with tf.device('/device:CPU:0'):

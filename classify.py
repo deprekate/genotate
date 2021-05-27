@@ -67,7 +67,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='', formatter_class=RawTextHelpFormatter, usage=usage)
 	parser.add_argument('infile', type=is_valid_file, help='input file')
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
-	parser.add_argument('-m', '--model', help='')
+	parser.add_argument('-m', '--model', help='', required=True)
 	args = parser.parse_args()
 	'''
 	if args.labels: print("\t".join(['ID','TYPE','GC'] + translate.amino_acids))
@@ -75,16 +75,19 @@ if __name__ == '__main__':
 	'''
 	
 	ckpt_reader = tf.train.load_checkpoint(args.model)
-	model = mm.create_model3(len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE')))
-	model.load_weights(args.model)
-	
+	model = mm.create_model(len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE')))
+	model.load_weights(args.model).expect_partial()
+	#q = [[0.448,0.308,0.188,0.299,0.205,0.128,0,0.051,0.026,0.026,0.051,0,0.026,0.103,0.154,0.026,0.051,0.026,0.077,0.077,0,0.077,0.077,0,0.026]]
+	#p = model.predict(np.array(q))
+	#print(p)
+	#exit()
+
+
 	contigs = mt.read_fasta(args.infile)
 	for header in contigs:
 		dataset = tf.data.Dataset.from_generator(
 								mt.get_windows,
 								args=[contigs[header]],
-								#output_shapes = (121,), output_types=tf.float32,
-								#output_signature=(tf.TensorSpec(shape=(121,), dtype=tf.float32))
 								output_signature=(
 										tf.TensorSpec(
 											shape=model.input.type_spec.shape[1:],
@@ -98,6 +101,9 @@ if __name__ == '__main__':
 	
 		p = model.predict(dataset)
 		#Y = np.round(p.flatten())
+		#for i,pp in enumerate(p):
+		#	print(1+i//2, pp)
+		#exit()
 		Y = np.argmax(p,axis=-1)
 		Y = smooth(Y)
 
