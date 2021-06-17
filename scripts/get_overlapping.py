@@ -25,7 +25,7 @@ def nint(x):
 	return int(x.replace('<','').replace('>',''))
 
 def read_genbank(infile):
-	length = num = total = 0
+	length = num = cov = total = 0
 	forward = []
 	reverse = []
 	with open(infile) as fp:
@@ -34,7 +34,7 @@ def read_genbank(infile):
 				length = int(line.split()[2])
 				forward = [0] * length
 				reverse = [0] * length
-			elif line.startswith('     CDS '):
+			elif line.startswith('     CDS ') or line.startswith('     tRNA ') or line.startswith('     tmRNA '):
 				pairs = [pair.split('..') for pair in re.findall(r"<*\d+\.\.>*\d+", line)]
 				# this is for features that continue on next line
 				if line.rstrip().endswith(','):
@@ -54,13 +54,15 @@ def read_genbank(infile):
 						else:
 							forward[i] = 1
 						remainder = right-2 - i
-				if remainder and ">" not in pair[1]:
+				if remainder and ">" not in pair[1] and 'CDS' in line:
 					raise ValueError("Out of frame: ( %s , %s )" % tuple(pair))
 	for i in range(0, length-2, 3):
 		total = sum(forward[i:i+3]) + sum(reverse[i:i+3])
+		if total > 0:
+			cov += 1
 		if total > 1:
 			num += (total-1)
-	return (3*num, length)
+	return (3*cov, 3*num, length)
 
 
 
@@ -74,8 +76,8 @@ if __name__ == '__main__':
 	parser.add_argument('--ids', action="store", help=argparse.SUPPRESS)
 	args = parser.parse_args()
 
-	o, l = read_genbank(args.infile)
-	print(Path(args.infile).stem, o, l, round(o/l, 3), sep='\t')
+	c, o, l = read_genbank(args.infile)
+	print(Path(args.infile).stem, l, c, round(c/l, 3), o, round(o/l, 3), sep='\t')
 
 
 

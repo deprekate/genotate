@@ -4,8 +4,9 @@ import argparse
 from argparse import RawTextHelpFormatter
 from statistics import mode
 
-import make_train as mt
-import make_model as mm
+import genotate.make_train as mt
+import genotate.make_model as mm
+from genotate.features import Features
 
 # TensorFlow and tf.keras
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -58,8 +59,37 @@ def smooth(data):
 		#out[i:i+5] = np.apply_along_axis(lambda x: np.bincount(x).argmax(), axis=1, arr = var[ : , max(i-19, 0) : i+20 ] )
 		for j in range(6):
 			window = var[ j , max(i-19, 0) : i+20 ]
+			#window = var[ j , max(i-1, 0) : i+2 ]
 			out[6*i+j] = mode(window)
 	return out
+
+def cutoff(data, c=29):
+	out = np.zeros_like(data)
+	data[6] = 1
+	data[12] = 1
+	var = np.array([
+					data[0::6], 
+					data[1::6],
+					data[2::6],
+					data[3::6],
+					data[4::6],
+					data[5::6]
+					])
+	for i in range(var.shape[1]):
+		for j in range(6):
+			if var[j,i] == 1:
+				befor = np.flip( var[ j , max(i-39, 0) : i+1  ] )
+				after =          var[ j ,     i        : i+40 ]
+				b = np.where(np.append(befor, 0) != 1)[0][0]
+				a = np.where(np.append(after, 0) != 1)[0][0]
+				if b+a > c:
+					out[6*i+j] = 1
+				else:
+					out[6*i+j] = 0
+			else:
+				out[6*i+j] = var[j,i]
+	return out
+	
 
 
 if __name__ == '__main__':
@@ -68,20 +98,17 @@ if __name__ == '__main__':
 	parser.add_argument('infile', type=is_valid_file, help='input file')
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
 	parser.add_argument('-m', '--model', help='', required=True)
+	parser.add_argument('-c', '--cutoff', help='The minimum cutoff length for runs', type=int, default=29)
 	args = parser.parse_args()
 	'''
 	if args.labels: print("\t".join(['ID','TYPE','GC'] + translate.amino_acids))
 		exit()
 	'''
-	
-	ckpt_reader = tf.train.load_checkpoint(args.model)
-	model = mm.create_model(len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE')))
-	model.load_weights(args.model).expect_partial()
-	#q = [[0.448,0.308,0.188,0.299,0.205,0.128,0,0.051,0.026,0.026,0.051,0,0.026,0.103,0.154,0.026,0.051,0.026,0.077,0.077,0,0.077,0.077,0,0.026]]
-	#p = model.predict(np.array(q))
-	#print(p)
-	#exit()
 
+
+	ckpt_reader = tf.train.load_checkpoint(args.model)
+	model = mm.create_model4(len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE')))
+	model.load_weights(args.model).expect_partial()
 
 	contigs = mt.read_fasta(args.infile)
 	for header in contigs:
@@ -100,34 +127,38 @@ if __name__ == '__main__':
 		#exit()
 	
 		p = model.predict(dataset)
-		#Y = np.round(p.flatten())
-		#for i,pp in enumerate(p):
-		#	print(1+i//2, pp)
-		#exit()
-		Y = np.argmax(p,axis=-1)
-		Y = smooth(Y)
 
-		for i,row in enumerate(Y):
-			#if not i%2:
-			#	print(1+i//2, p[i], p[i+1])
-			if row == 1:
-				if i%2:
-					print('     CDS             complement(', ((i-1)//2)+1, '..', ((i-1)//2)+3, ')', sep='')
-				else:
-					print('     CDS             ', (i//2)+1 , '..', (i//2)+3, sep='')
-				print('                     /colour=100 100 100')
-			'''
-			#elif row == 2:
-			#	print('     gap             ', (i//2)+1 , '..', (i//2)+3, sep='')
-			'''
-			'''
-			if row == 2:
-				print('     CDS             complement(', i+1, '..', i+3, ')', sep='')
-				print('                     /colour=100 100 100')
-			elif row == 1:
-				print('     CDS             ', i+1 , '..', i+3, sep='')
-				print('                     /colour=100 100 100')
-			'''
+		#contig_features = Features(**vars(args))
+		#contig_features.parse_contig(header, contigs[header], Y)
+		#for orfs in contig_features.iter_orfs('longest'):
+		#	for orf in orfs:
+		#		print(orf)
+		#exit()
+
+		if False:
+			Y = np.argmax(p,axis=-1)
+			#Y = smooth(Y)
+			#Y = cutoff(Y)
+			for i,row in enumerate(Y[:-4]):
+				#if not i%2:
+				#	print(1+i//2, p[i], p[i+1])
+				if row == 1:
+					if i%2:
+						print('     CDS             complement(', ((i-1)//2)+1, '..', ((i-1)//2)+3, ')', sep='')
+					else:
+						print('     CDS             ', (i//2)+1 , '..', (i//2)+3, sep='')
+					print('                     /colour=100 100 100')
+		if True:
+			Y = p
+			for i,row in enumerate(Y[:-4]):
+				#if not i%2:
+				#	print(1+i//2, p[i], p[i+1])
+				if row > 0.5:
+					if i%2:
+						print('     CDS             complement(', ((i-1)//2)+1, '..', ((i-1)//2)+3, ')', sep='')
+					else:
+						print('     CDS             ', (i//2)+1 , '..', (i//2)+3, sep='')
+					print('                     /colour=100 100 100')
 
 
 

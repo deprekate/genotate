@@ -45,9 +45,8 @@ def create_model4(i):
 	'''
 	model = tf.keras.Sequential([
 					tf.keras.layers.Dense(i, input_shape=(i,)),
-					#tf.keras.layers.Dropout(0.05),
-					tf.keras.layers.Dense(1666, activation='relu'),
-					tf.keras.layers.Dense(166, activation='relu'),
+					tf.keras.layers.Dense(i*10, activation='relu'),
+					tf.keras.layers.Dense(i*3, activation='relu'),
 					tf.keras.layers.Dense(1, activation='sigmoid')
 	])
 	model.compile(optimizer = 'adam',
