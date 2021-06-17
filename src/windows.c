@@ -29,23 +29,35 @@ static const char nuc_table[256] = { VAL_64X, VAL_32X, VAL_1X, 0, VAL_1X, 1, VAL
 
 unsigned char aa_table[129] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV#Y+YSSSS*CWCLFLFXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
 
-unsigned char get_int(const unsigned char *dna, unsigned int i) {
-    // unsigned char* so high-ASCII -> 128..255, not negative,
-    // and works as an index into a 256 entry table
-    unsigned char idx = nuc_table[dna[i]];
-    idx = idx*4 + nuc_table[dna[i+1]];
-    idx = idx*4 + nuc_table[dna[i+2]];
-	//printf("i:%i c:%c%c%c idx: %i aa: %c\n", i, dna[i], dna[i+1], dna[i+2], idx, aa_table[idx]);
-    return aa_table[idx];
-}
+unsigned char compl[256] = "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnntngnnncnnnnnnnnnnnna";
+
+
 typedef struct {
 	PyObject_HEAD
 	const unsigned char* dna;
 	unsigned int len;
 	unsigned int i;
+	unsigned int f;
 	float gc;
-	//unsigned short nucl_freq[4] = {0};
 } windows_Iterator;
+
+unsigned char get_int(const unsigned char *dna, unsigned int i, unsigned int f) {
+    // unsigned char* so high-ASCII -> 128..255, not negative,
+    // and works as an index into a 256 entry table
+    unsigned char idx;
+	if(f){
+		idx	= nuc_table[dna[i]];
+		idx = idx*4 + nuc_table[dna[i+1]];
+		idx = idx*4 + nuc_table[dna[i+2]];
+	}else{
+		//printf("codon: %c%c%c\n", compl[dna[i+2]], compl[dna[i+1]], compl[dna[i+0]] );
+		idx	= nuc_table[compl[dna[i+2]]];
+		idx = idx*4 + nuc_table[compl[dna[i+1]]];
+		idx = idx*4 + nuc_table[compl[dna[i]]];
+	}
+	//printf("i:%i c:%c%c%c idx: %i aa: %c\n", i, dna[i], dna[i+1], dna[i+2], idx, aa_table[idx]);
+    return aa_table[idx];
+}
 
 PyObject* windows_Iterator_iter(PyObject *self){
 	Py_INCREF(self);
@@ -67,7 +79,7 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 		k = MIN( p->len-2 , p->i + 60);
 		for (i = j; i < k; i += 3){
 			//printf("%c", get_int(p->dna, i) );
-			aa[get_int(p->dna, i)]++;
+			aa[get_int(p->dna, i, p->f)]++;
 			nuc[ nuc_table[p->dna[i  ]] % 6 ]++;
 			nuc[ nuc_table[p->dna[i+1]] % 6 ]++;
 			nuc[ nuc_table[p->dna[i+2]] % 6 ]++;
@@ -76,41 +88,36 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 		total = (float) t;
 		//printf("\n");
 
-		// eventually change the "Append"s to "SetItem" to save on memory leak
-		//PyObect* list = PyList_New(20);
-		//PyList_SetItem(list, 0, Py_BuildValue("i", aa['A']));
-		PyObject *aa_list = PyList_New(0);
-		// GC CONTENT
-		PyList_Append(aa_list, Py_BuildValue("f", p->gc          ));
-		PyList_Append(aa_list, Py_BuildValue("f", nuc[0] / (3.0*t)));
-		PyList_Append(aa_list, Py_BuildValue("f", nuc[1] / (3.0*t)));
-		PyList_Append(aa_list, Py_BuildValue("f", nuc[2] / (3.0*t)));
-		PyList_Append(aa_list, Py_BuildValue("f", nuc[3] / (3.0*t)));
-		// AMINO ACIDS
-		//PyList_Append(aa_list, Py_BuildValue("f", aa['#'] / total));
-		//PyList_Append(aa_list, Py_BuildValue("f", aa['*'] / total));
-		//PyList_Append(aa_list, Py_BuildValue("f", aa['+'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['A'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['C'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['D'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['E'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['F'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['G'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['H'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['I'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['K'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['L'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['M'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['N'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['P'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['Q'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['R'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['S'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['T'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['V'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['W'] / total));
-		PyList_Append(aa_list, Py_BuildValue("f", aa['Y'] / total));
-		(p->i)++;
+		PyObject *aa_list = Py_BuildValue("[fffffffffffffffffffffffff]",
+									p->gc,
+									nuc[0] / (3.0*t),
+									nuc[1] / (3.0*t),
+									nuc[2] / (3.0*t),
+									nuc[3] / (3.0*t),
+                                    aa['A'] / total,
+                                    aa['C'] / total,
+                                    aa['D'] / total,
+                                    aa['E'] / total,
+                                    aa['F'] / total,
+                                    aa['G'] / total,
+                                    aa['H'] / total,
+                                    aa['I'] / total,
+                                    aa['K'] / total,
+                                    aa['L'] / total,
+                                    aa['M'] / total,
+                                    aa['N'] / total,
+                                    aa['P'] / total,
+                                    aa['Q'] / total,
+                                    aa['R'] / total,
+                                    aa['S'] / total,
+                                    aa['T'] / total,
+                                    aa['V'] / total,
+                                    aa['W'] / total,
+                                    aa['Y'] / total
+									);
+
+		p->f ^= 1;
+		p->i += p->f;
 		return aa_list;
 	}else{
 		PyErr_SetNone(PyExc_StopIteration);
@@ -143,8 +150,8 @@ static PyObject * get_windows(PyObject *self, PyObject *args){
 		return NULL;
 	}
 	p->i = 0;
+	p->f = 1;
 	p->len = strlen( (const char*) p->dna);
-
 
 	for (i=0; p->dna[i] ; i++){
 		nuc[ nuc_table[p->dna[i]] % 6 ]++;

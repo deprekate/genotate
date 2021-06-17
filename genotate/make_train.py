@@ -366,7 +366,7 @@ if __name__ == '__main__':
 		else:
 			infile = get_windows(list(read_fasta(args.infile).values())[0])
 		for row in infile:
-			args.outfile.write('\t'.join(map(str,row)))
+			args.outfile.write('\t'.join(map(str,[round(item, 3) for item in row])))
 			args.outfile.write('\n')
 
 
