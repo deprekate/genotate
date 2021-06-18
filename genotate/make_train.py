@@ -15,8 +15,8 @@ import pathlib
 from signal import signal, SIGPIPE, SIG_DFL
 signal(SIGPIPE,SIG_DFL)
 
-#from genotate.windows import get_windows
-from genotate.make_train import get_windows
+from genotate.windows import get_windows
+#from genotate.make_train import get_windows
 
 
 class Translate:
