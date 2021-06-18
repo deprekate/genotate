@@ -12,6 +12,13 @@ from argparse import RawTextHelpFormatter
 from collections import Counter
 import pathlib
 
+from signal import signal, SIGPIPE, SIG_DFL
+signal(SIGPIPE,SIG_DFL)
+
+#from genotate.windows import get_windows
+from genotate.make_train import get_windows
+
+
 class Translate:
 	def __init__(self):
 		nucs = ['t', 'c', 'a', 'g']
@@ -247,7 +254,7 @@ def single_window(dna, n, strand):
 	#row.extend(gcfp_freq(window, strand))
 	freqs = translate.frequencies(window, strand)
 	for aa in translate.amino_acids:
-		row.append(freqs.get(aa,0))
+		row.append(freqs.get(aa,0.0))
 	return row
 
 def double_window(dna, n, strand):
@@ -300,7 +307,7 @@ def dglob_window(dna, n, strand):
 
 	return row	
 
-def get_windows(dna):
+def old_get_windows(dna):
 	'''
 	This method takes as input a string of the nucleotides, and returns
 	the amino-acid frequencies of a window centered at each potential codon
@@ -329,6 +336,11 @@ def get_windows(dna):
 			#yield [gc] + dglob_window(dna, n+f, +1 )
 			#yield [gc] + dglob_window(dna, n+f, -1 )
 
+def rround(item, n):
+	try:
+		return round(item, n)
+	except:
+		return item.decode()
 
 
 if __name__ == '__main__':
@@ -348,11 +360,6 @@ if __name__ == '__main__':
 		sys.stdout.write('\t'.join(['TYPE','ID', 'GC'] + [aa for aa in translate.amino_acids]))
 		sys.stdout.write('\n')
 
-	#contigs = read_fasta(args.infile)
-	#for row in get_windows(contigs[list(contigs.keys())[0]]):
-	#	args.outfile.write('\t'.join(map(str,row)))
-	#	args.outfile.write('\n')
-	#exit()
 
 	if os.path.isdir(args.infile):
 		#raise NotImplementedError('Running on multiple files in a directory')
@@ -364,10 +371,12 @@ if __name__ == '__main__':
 		if pathlib.Path(args.infile).suffix in ['gb', 'gbk']:
 			infile = read_genbank(args.infile)
 		else:
-			infile = get_windows(list(read_fasta(args.infile).values())[0])
+			s = list(read_fasta(args.infile).values())[0]
+			infile = get_windows(s)
 		for row in infile:
-			args.outfile.write('\t'.join(map(str,[round(item, 3) for item in row])))
+			args.outfile.write('\t'.join(map(str,[rround(item, 3) for item in row])))
 			args.outfile.write('\n')
+			pass
 
 
 

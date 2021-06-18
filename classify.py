@@ -4,9 +4,15 @@ import argparse
 from argparse import RawTextHelpFormatter
 from statistics import mode
 
+#import faulthandler
+
+sys.path.pop(0)
 import genotate.make_train as mt
 import genotate.make_model as mm
 from genotate.features import Features
+
+from genotate.windows import get_windows
+#from genotate.make_train import get_windows
 
 # TensorFlow and tf.keras
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -16,8 +22,6 @@ import tensorflow as tf
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
 
 def is_valid_file(x):
 	if not os.path.exists(x):
@@ -89,7 +93,10 @@ def cutoff(data, c=29):
 			else:
 				out[6*i+j] = var[j,i]
 	return out
-	
+
+def wrapper(thing):
+	for item in get_windows(thing):
+		yield item
 
 
 if __name__ == '__main__':
@@ -110,11 +117,14 @@ if __name__ == '__main__':
 	model = mm.create_model4(len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE')))
 	model.load_weights(args.model).expect_partial()
 
+
+	#faulthandler.enable()
 	contigs = mt.read_fasta(args.infile)
 	for header in contigs:
+		dna = contigs[header]
+		generator = lambda : get_windows(dna)
 		dataset = tf.data.Dataset.from_generator(
-								mt.get_windows,
-								args=[contigs[header]],
+								generator,
 								output_signature=(
 										tf.TensorSpec(
 											shape=model.input.type_spec.shape[1:],
@@ -127,14 +137,13 @@ if __name__ == '__main__':
 		#exit()
 	
 		p = model.predict(dataset)
-
+		
 		#contig_features = Features(**vars(args))
 		#contig_features.parse_contig(header, contigs[header], Y)
 		#for orfs in contig_features.iter_orfs('longest'):
 		#	for orf in orfs:
 		#		print(orf)
-		#exit()
-
+		
 		if False:
 			Y = np.argmax(p,axis=-1)
 			#Y = smooth(Y)
@@ -160,5 +169,5 @@ if __name__ == '__main__':
 						print('     CDS             ', (i//2)+1 , '..', (i//2)+3, sep='')
 					print('                     /colour=100 100 100')
 
-
+		print("//")
 

@@ -15,6 +15,12 @@
 */
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
+#define SWAP(a, b)   \
+do {                 \
+    int temp = a;    \
+    a = b;           \
+    b = temp;        \
+} while(0)
 
 #define VAL_1X     -128
 #define VAL_2X     VAL_1X,  VAL_1X
@@ -71,12 +77,14 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 	unsigned int i, j, k, t;
 	float total;
 
-	if( p->i < p->len-2 ){
+	if( p->i < p->len - 2 ){
+		//printf("%i %i %i %c\n", p->len, p->i, p->dna[p->i], p->dna[p->i]);
 		t = 0;
-		//j =    (p->i > 56)       ? p->i-57  : p->i%3;
-		//k = (p->i+60 > p->len-2) ? p->len-2 : p->i+60;
-		j = MAX( p->i  ,  57 + p->i % 3) - 57;
-		k = MIN( p->len-2 , p->i + 60);
+
+		j =    (p->i > 56)       ? p->i-57  : p->i%3;
+		k = (p->i+60 > p->len-2) ? p->len-2 : p->i+60;
+		//j = MAX( p->i  ,  57 + p->i % 3) - 57;
+		//k = MIN( p->len - 2 , p->i + 60);
 		for (i = j; i < k; i += 3){
 			//printf("%c", get_int(p->dna, i) );
 			aa[get_int(p->dna, i, p->f)]++;
@@ -85,9 +93,15 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 			nuc[ nuc_table[p->dna[i+2]] % 6 ]++;
 			t++;
 		}
+		if(!p->f){
+			SWAP(nuc[0] , nuc[3]);
+			SWAP(nuc[1] , nuc[2]);
+		}
 		total = (float) t;
 		//printf("\n");
 
+		// ADD IN DIV ZERO HANDLING IN CASE BAD SEQUENCE
+		//
 		PyObject *aa_list = Py_BuildValue("[fffffffffffffffffffffffff]",
 									p->gc,
 									nuc[0] / (3.0*t),
@@ -115,7 +129,6 @@ PyObject* windows_Iterator_iternext(PyObject *self){
                                     aa['W'] / total,
                                     aa['Y'] / total
 									);
-
 		p->f ^= 1;
 		p->i += p->f;
 		return aa_list;
@@ -145,16 +158,18 @@ static PyObject * get_windows(PyObject *self, PyObject *args){
 	windows_Iterator *p;
 	p = PyObject_New(windows_Iterator, &IterableType);
 	if (!p) return NULL;
-
+	
 	if (!PyArg_ParseTuple(args, "s", &p->dna)) {
+	//if (!PyArg_ParseTuple(args, "s#", &p->dna, &p->len)) {
 		return NULL;
 	}
+	
 	p->i = 0;
 	p->f = 1;
 	p->len = strlen( (const char*) p->dna);
 
 	for (i=0; p->dna[i] ; i++){
-		nuc[ nuc_table[p->dna[i]] % 6 ]++;
+		nuc[ nuc_table[(p->dna[i])] % 6 ]++;
 	}
 	p->gc =  (float)( nuc[1] + nuc[2] ) / ( nuc[0] + nuc[1] + nuc[2] + nuc[3] );
 
