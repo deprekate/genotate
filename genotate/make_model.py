@@ -15,7 +15,8 @@ def create_model(i):
 					tf.keras.layers.Dense(3, activation='softmax')
 	])
 	model.compile(optimizer = 'adam',
-				  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+				  loss=tf.keras.losses.CategoricalCrossentropy(from_logits=False),
+				  #loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
 				  metrics=['accuracy']
 				  )
 	return model

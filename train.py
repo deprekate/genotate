@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import argparse
 from argparse import RawTextHelpFormatter
 from statistics import mode
@@ -18,48 +19,43 @@ os.environ['MKL_NUM_THREADS'] = '1'
 import numpy as np
 import pandas as pd
 
+class LossHistoryCallback(tf.keras.callbacks.Callback):
+	def on_epoch_end(self, batch, logs=None):
+		#logs['loss'] or logs['val_loss'] (the latter available only if you use validation data when model.fit()
+		# Use logs['loss'] or logs['val_loss'] for pyqt5 purposes
+		row = list()
+		for key, value in logs.items():
+			row.append(key)
+			row.append(value)
+		print('\t'.join(map(str,row)), flush=True)
+
+
 def is_valid_file(x):
 	if not os.path.exists(x):
 		raise argparse.ArgumentTypeError("{0} does not exist".format(x))
 	return x
 
-def pack(features, label):
-  return tf.stack(list(features.values()), axis=-1), label
+def pack(features, labels):
+	#return tf.stack(list(features.values()), axis=-1), label
+	return tf.stack(list(features.values()), axis=-1), tf.one_hot(labels, depth=3)
 
-class Metrics(tf.keras.callbacks.Callback):
-    def on_train_begin(self, logs={}):
-        self._data = []
 
-    def on_epoch_end(self, batch, logs={}):
-        x_test, y_test = self.validation_data[0], self.validation_data[1]
-        y_predict = np.asarray(model.predict(x_test))
-
-        true = np.argmax(y_test, axis=1)
-        pred = np.argmax(y_predict, axis=1)
-
-        cm = confusion_matrix(true, pred)
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-        self._data.append({
-            'classLevelaccuracy':cm.diagonal() ,
-        })
-        return
-
-    def get_data(self):
-        return self._data
 
 if __name__ == '__main__':
 	usage = '%s [-opt1, [-opt2, ...]] directory' % __file__
 	parser = argparse.ArgumentParser(description='', formatter_class=RawTextHelpFormatter, usage=usage)
 	parser.add_argument('directory', type=is_valid_file, help='input directory')
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
+	parser.add_argument('-c', '--columns', action="store", default="GC,a,c,g,t", help='sel cols')
 	args = parser.parse_args()
 
+	stops = ['#', '*', '+']
 	letters = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
-	#letters = ['#','*','+','A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
 	######  single  ######
-	colnames = ['TYPE', 'GC', 'a','t','g', 'c'] + letters
+	#colnames = ['TYPE', 'GC', 'a','c','g', 't'] + letters
+	#colnames = ['TYPE', 'GC', 'a','c','g', 't'] + letters + [str(a)+':'+str(b) for a in range(7) for b in range(7)]
 	#colnames =  ['TYPE', 'GC', 'a','t','g', 'c', 'P1', 'P2', 'P3'] + letters
-	#colnames =  ['TYPE', 'GC', '1a','1t','1g','1c', '2a','2t','2g','2c', '3a','3t','3g','3c'] + letters
+	colnames =  ['TYPE', 'GC', 'GCw','a','c','g','t','GC1','GC2','GC3', '1a','1c','1g','1t', '2a','2c','2g','2t', '3a','3c','3g','3t'] + stops + letters + [str(a)+':'+str(b) for a in range(7) for b in range(7)]
 	######   glob   ######
 	#colnames =  ['TYPE', 'GC', 'a','t','g', 'c'] + [letter+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters]
 	#colnames =  ['TYPE', 'GC', 'a','t','g', 'c', 'P1', 'P2', 'P3'] + [letter+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters]
@@ -67,9 +63,38 @@ if __name__ == '__main__':
 	#colnames = ['TYPE', 'GC', 'a','t','g','c'] + [letter for pair in zip([l+'1' for l in letters], [l+'2' for l in letters]) for letter in pair]
 	#colnames = ['TYPE', 'GC', 'a1','t1','g1', 'c1'] + [c + '1' for c in letters] + ['a2','t2','g2', 'c2'] + [c + '2' for c in letters]
 	#colnames =  ['TYPE', 'GC', 'a','t','g', 'c'] + [letter+d+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters for d in 'ab']
-	selnames = colnames[:2] + colnames[2:]
+	#selnames = colnames[:2] + colnames[2:]
+	
+	selnames = ['TYPE'] + args.columns.split(',') + letters 
+
 	tfiles = tf.data.experimental.make_csv_dataset(
-		file_pattern        = args.directory + "/NC_*.tsv",
+		#file_pattern        = args.directory + "/NC_?????[2468]*.tsv",
+		file_pattern        = args.directory + "/NC_0[01]*.tsv",
+		#file_pattern        = args.directory + "/NC_001416.tsv",
+		field_delim         = '\t',
+		header              = False,
+		column_names        = colnames,
+		select_columns      = selnames,
+		column_defaults     = [tf.int32] + [tf.float32] * (len(selnames)-1),
+		batch_size          = 500,
+		num_epochs          = 1,
+		shuffle             = True,
+		shuffle_buffer_size = 5000,
+		num_parallel_reads  = 1000,
+		sloppy				= True,
+		label_name          = colnames[0]
+		#label_name          = 0 # this is old version
+		)
+	pdata = tfiles.map(pack)
+	#for feature in tfiles.take(1):
+	#	print( len(np.unique(feature[0]['GC'].numpy())) )
+	#exit()
+	#metrics = Metrics()
+	#exit()
+	vfiles = tf.data.experimental.make_csv_dataset(
+		#file_pattern        = args.directory + "/NC_?????[1357]*.tsv",
+		file_pattern        = args.directory + "/NC_0[01]*.tsv",
+		#file_pattern        = args.directory + "/NC_001416.tsv",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
@@ -77,27 +102,31 @@ if __name__ == '__main__':
 		column_defaults     = [tf.int32] + [tf.float32] * (len(selnames)-1),
 		batch_size          = 100,
 		num_epochs          = 1,
-		shuffle_buffer_size = 1000,
+		shuffle             = True,
 		num_parallel_reads  = 10,
-		sloppy              = True,
+		sloppy				= True,
 		label_name          = colnames[0]
 		#label_name          = 0 # this is old version
 		)
-	pdata = tfiles.map(pack)
-	#for feature in tfiles.take(1):
-	#	print( feature )
-	#metrics = Metrics()
+	vdata = vfiles.map(pack)
+	#Xval = pd.read_csv(args.directory + "/NC_001416.tsv",names=colnames, sep='\t')
+	#Yval = Xval.pop('TYPE')
 	
-	model = mm.create_model4(len(selnames)-1)
+	
+	model = mm.create_model(len(selnames)-1)
 
-	class_weight = {0:1, 1:1, 2:1}
+	#class_weight = {0:1, 1:1, 2:1}
 	with tf.device('/device:CPU:0'):
-		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_binary.ckpt', save_weights_only=True, verbose=1)
+		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_' + re.sub('0.*6', 'dicodings', args.columns) + '.ckpt',save_weights_only=True,verbose=1)
+		#cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_self.ckpt',save_weights_only=True,verbose=1)
+		#es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=10, min_delta=0.001, baseline=None)
 		model.fit(pdata,
-				  epochs=10,
-				  class_weight=class_weight,
-				  callbacks=[cp_callback]
-				  )
+				  validation_data=vdata,
+				  epochs=100,
+				  #class_weight=class_weight,
+				  verbose=0,
+				  callbacks=[LossHistoryCallback(), cp_callback]
+		)
 
 
 

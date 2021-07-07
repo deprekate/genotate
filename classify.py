@@ -4,15 +4,16 @@ import argparse
 from argparse import RawTextHelpFormatter
 from statistics import mode
 
-#import faulthandler
+import faulthandler
 
-sys.path.pop(0)
+from find_frameshifts import find_frameshifts
+#sys.path.pop(0)
 import genotate.make_train as mt
 import genotate.make_model as mm
 from genotate.features import Features
 
-from genotate.windows import get_windows
-#from genotate.make_train import get_windows
+#from genotate.windows import get_windows
+from genotate.make_train import get_windows
 
 # TensorFlow and tf.keras
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -114,9 +115,8 @@ if __name__ == '__main__':
 
 
 	ckpt_reader = tf.train.load_checkpoint(args.model)
-	model = mm.create_model4(len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE')))
+	model = mm.create_model(len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE')))
 	model.load_weights(args.model).expect_partial()
-
 
 	#faulthandler.enable()
 	contigs = mt.read_fasta(args.infile)
@@ -131,43 +131,38 @@ if __name__ == '__main__':
 											dtype=tf.float32
 											)
 										)
-								).batch(1)
+								).batch(32)
 		#for feature in dataset.take(1):
 		#	print( feature )
 		#exit()
-	
 		p = model.predict(dataset)
-		
+		if p.shape[1] == 1:
+			Y = np.round(p.flatten())
+		else:
+			Y = np.argmax(p,axis=-1)
+
 		#contig_features = Features(**vars(args))
 		#contig_features.parse_contig(header, contigs[header], Y)
 		#for orfs in contig_features.iter_orfs('longest'):
 		#	for orf in orfs:
 		#		print(orf)
+
+		#find_frameshifts(dna, p)
+		#exit()
 		
-		if False:
-			Y = np.argmax(p,axis=-1)
-			#Y = smooth(Y)
-			#Y = cutoff(Y)
-			for i,row in enumerate(Y[:-4]):
-				#if not i%2:
-				#	print(1+i//2, p[i], p[i+1])
-				if row == 1:
-					if i%2:
-						print('     CDS             complement(', ((i-1)//2)+1, '..', ((i-1)//2)+3, ')', sep='')
-					else:
-						print('     CDS             ', (i//2)+1 , '..', (i//2)+3, sep='')
-					print('                     /colour=100 100 100')
-		if True:
-			Y = p
-			for i,row in enumerate(Y[:-4]):
-				#if not i%2:
-				#	print(1+i//2, p[i], p[i+1])
-				if row > 0.5:
-					if i%2:
-						print('     CDS             complement(', ((i-1)//2)+1, '..', ((i-1)//2)+3, ')', sep='')
-					else:
-						print('     CDS             ', (i//2)+1 , '..', (i//2)+3, sep='')
-					print('                     /colour=100 100 100')
+		#Y = smooth(Y)
+		#Y = cutoff(Y)
+		for i,row in enumerate(Y[:-4]):
+			#if not i%2:
+				#print(1+i//2, p[i], p[i+1])
+			#print(1+i//2, p[i])
+			#continue	
+			if row == 1:
+				if i%2:
+					print('     CDS             complement(', ((i-1)//2)+1, '..', ((i-1)//2)+3, ')', sep='')
+				else:
+					print('     CDS             ', (i//2)+1 , '..', (i//2)+3, sep='')
+				print('                     /colour=100 100 100')
 
 		print("//")
 
