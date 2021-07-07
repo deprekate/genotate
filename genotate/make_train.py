@@ -375,13 +375,13 @@ def single_window(dna, n, strand):
 	#row.extend([gc_content(window)])	
 	#row.extend(nucl_freq(window, strand))
 	#row.extend(gc_fp(window, strand))
-	#row.extend(nucl_fp(window, strand))
-	#freqs = translate.frequencies(window, strand)
-	#for aa in translate.amino_acids:
-	#	row.append(freqs.get(aa,0.0))
+	row.extend(nucl_fp(window, strand))
+	freqs = translate.frequencies(window, strand)
+	for aa in translate.amino_acids:
+		row.append(freqs.get(aa,0.0))
 	#row.extend(translate.dicodings(window, strand))
 	#row.extend(translate.structure(window, strand))
-	row.extend(translate.array(window, strand))
+	#row.extend(translate.array(window, strand))
 	#ents = translate.codon_entropy(window, strand)
 	return row
 
@@ -455,8 +455,8 @@ def get_windows(dna):
 	#args = lambda: None
 	for n in range(0, len(dna)-2, 3):
 		for f in [0,1,2]:
-			yield gc,  single_window(dna, n+f, +1)
-			yield gc,  single_window(dna, n+f, -1 )
+			yield [gc] + single_window(dna, n+f, +1)
+			yield [gc] + single_window(dna, n+f, -1 )
 			#yield [gc] + double_window(dna, n+f, +1)
 			#yield [gc] + double_window(dna, n+f, -1 )
 			#yield [gc] + glob_window(dna, n+f, +1 )
@@ -509,11 +509,11 @@ if __name__ == '__main__':
 			s = list(read_fasta(args.infile).values())[0]
 			rows = get_windows(s)
 		
-		#for row in rows:
-			#args.outfile.write('\t'.join(map(str,[rround(item, 5) for item in row])))
+		for row in rows:
+			args.outfile.write('\t'.join(map(str,[rround(item, 5) for item in row])))
 			#args.outfile.write('\t'.join(map(str,row)))
-			#args.outfile.write('\n')
-			#pass
+			args.outfile.write('\n')
+			pass
 
 
 
