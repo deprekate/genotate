@@ -10,6 +10,7 @@ import genotate.make_model as mm
 # TensorFlow and tf.keras
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
+from tensorflow.keras.callbacks import Callback
 
 #sess = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(log_device_placement=True))
 
@@ -18,6 +19,9 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+
+
 
 class LossHistoryCallback(tf.keras.callbacks.Callback):
 	def on_epoch_end(self, batch, logs=None):
@@ -29,6 +33,13 @@ class LossHistoryCallback(tf.keras.callbacks.Callback):
 			row.append(value)
 		print('\t'.join(map(str,row)), flush=True)
 
+class LearningRateReducerCb(tf.keras.callbacks.Callback):
+	def on_epoch_end(self, epoch, logs={}):
+		old_lr = self.model.optimizer.lr.read_value()
+		new_lr = old_lr * 0.99
+		print("\nEpoch: {}. Reducing Learning Rate from {} to {}".format(epoch, old_lr, new_lr))
+		self.model.optimizer.lr.assign(new_lr)
+
 
 def is_valid_file(x):
 	if not os.path.exists(x):
@@ -36,7 +47,7 @@ def is_valid_file(x):
 	return x
 
 def pack(features, labels):
-	#return tf.stack(list(features.values()), axis=-1), label
+	#return tf.stack(list(features.values()), axis=-1), labels
 	return tf.stack(list(features.values()), axis=-1), tf.one_hot(labels, depth=3)
 
 
@@ -68,24 +79,25 @@ if __name__ == '__main__':
 	selnames = ['TYPE'] + args.columns.split(',') + letters 
 
 	tfiles = tf.data.experimental.make_csv_dataset(
-		#file_pattern        = args.directory + "/NC_?????[2468]*.tsv",
 		file_pattern        = args.directory + "/NC_0[01]*.tsv",
-		#file_pattern        = args.directory + "/NC_001416.tsv",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
 		select_columns      = selnames,
 		column_defaults     = [tf.int32] + [tf.float32] * (len(selnames)-1),
+		shuffle             = True,
+		num_parallel_reads  = 1000,
+		shuffle_buffer_size = 5000,
 		batch_size          = 500,
 		num_epochs          = 1,
-		shuffle             = True,
-		shuffle_buffer_size = 5000,
-		num_parallel_reads  = 1000,
 		sloppy				= True,
 		label_name          = colnames[0]
-		#label_name          = 0 # this is old version
 		)
-	pdata = tfiles.map(pack)
+	tdata = tfiles.map(pack)
+	#tdata = tfiles.map( lambda features,labels: tf.stack(list(features.values()), axis=-1), tf.one_hot(labels, depth=3) )
+	
+	model = mm.create_model(len(selnames)-1)
+
 	#for feature in tfiles.take(1):
 	#	print( len(np.unique(feature[0]['GC'].numpy())) )
 	#exit()
@@ -117,16 +129,17 @@ if __name__ == '__main__':
 
 	#class_weight = {0:1, 1:1, 2:1}
 	with tf.device('/device:CPU:0'):
-		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_' + re.sub('0.*6', 'dicodings', args.columns) + '.ckpt',save_weights_only=True,verbose=1)
+		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_' + re.sub('0.*6', 'dicodings', args.columns) + 'test.ckpt',save_weights_only=True,verbose=1)
 		#cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_self.ckpt',save_weights_only=True,verbose=1)
 		#es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=10, min_delta=0.001, baseline=None)
-		model.fit(pdata,
+		lr_callback = LRFinder()
+		model.fit(tdata,
 				  validation_data=vdata,
-				  epochs=100,
+				  epochs==100,
 				  #class_weight=class_weight,
 				  verbose=0,
 				  callbacks=[LossHistoryCallback(), cp_callback]
 		)
 
-
+	lr_callback.plot()
 
