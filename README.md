@@ -9,11 +9,11 @@ at every position along the genome.
 
 To install `Genotate`,
 ```sh
- git clone https://github.com/deprekate/Genotate.git
- cd Genotate
+ git clone https://github.com/deprekate/genotate.git
+ cd genotate
 ```
 
-To run `Genotate` you only need to specify the FASTA formatted genome file, and which
+And to run `Genotate` you only need to specify the FASTA formatted genome file, and which
 model to use.  To run on the provided phiX174 genome, use the command:
 ```
  python3 classify.py phiX174.fna --model models/single.ckpt > predictions.gb
@@ -22,3 +22,13 @@ model to use.  To run on the provided phiX174 genome, use the command:
 The output of the script are individual single codon predictions, in GenBank format, that
 represent the predicted coding frame.  In future versions adjacent single predictions will
 be merged into one long gene CDS feature.
+
+
+Currently the best way to visualize the predictions is in a Genome Viewer application, such
+as Artemis by Sanger. The example phiX174.gb GenBank file loaded into Artemis shows the 
+gene layout:
+![](https://github.com/deprekate/genotate/blob/main/src/genes.png)
+The predictions.gb file can then be loaded using the File>Read An Entry menu, and the
+predictions will be overlaid as black/grey single codon CDS features in the gene layout
+window:
+
