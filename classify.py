@@ -117,8 +117,6 @@ if __name__ == '__main__':
 	ckpt_reader = tf.train.load_checkpoint(args.model)
 	model = mm.create_model(len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE')))
 	model.load_weights(args.model).expect_partial()
-	print(model.input)
-	exit()
 
 	#faulthandler.enable()
 	contigs = mt.read_fasta(args.infile)
