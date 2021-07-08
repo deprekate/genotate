@@ -28,6 +28,7 @@ Currently the best way to visualize the predictions is in a Genome Viewer applic
 as Artemis by Sanger. The example phiX174.gb GenBank file loaded into Artemis shows the 
 gene layout:
 ![](https://github.com/deprekate/genotate/blob/main/src/genes.png)
+
 The predictions.gb file can then be loaded using the File>Read An Entry menu, and the
 predictions will be overlaid as black/grey single codon CDS features in the gene layout
 window:
