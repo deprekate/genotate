@@ -31,4 +31,4 @@ gene layout:
 The predictions.gb file can then be loaded using the File>Read An Entry menu, and the
 predictions will be overlaid as black/grey single codon CDS features in the gene layout
 window:
-
+![](https://github.com/deprekate/genotate/blob/main/src/predictions.png)
