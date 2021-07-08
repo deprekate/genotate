@@ -14,7 +14,8 @@ To install `Genotate`,
 ```
 
 And to run `Genotate` you only need to specify the FASTA formatted genome file, and which
-model to use.  To run on the provided phiX174 genome, use the command:
+model to use (provided is the most basic model trained on the first 800 phage genomes from
+RefSeq). To run on the provided phiX174 genome, use the command:
 ```
  python3 classify.py phiX174.fna --model models/single.ckpt > predictions.gb
 ```
@@ -29,7 +30,7 @@ as Artemis by Sanger. The example phiX174.gb GenBank file loaded into Artemis sh
 gene layout:
 ![](https://github.com/deprekate/genotate/blob/main/src/genes.png)
 
-The predictions.gb file can then be loaded using the File>Read An Entry menu, and the
+The predictions.gb file can then be loaded using the 'File>Read An Entry' menu, and the
 predictions will be overlaid as black/grey single codon CDS features in the gene layout
 window:
 ![](https://github.com/deprekate/genotate/blob/main/src/predictions.png)
