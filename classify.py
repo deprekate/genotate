@@ -115,7 +115,8 @@ if __name__ == '__main__':
 
 
 	ckpt_reader = tf.train.load_checkpoint(args.model)
-	model = mm.create_model(len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE')))
+	n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
+	model = mm.create_model(n)
 	model.load_weights(args.model).expect_partial()
 
 	#faulthandler.enable()
@@ -127,7 +128,8 @@ if __name__ == '__main__':
 								generator,
 								output_signature=(
 										tf.TensorSpec(
-											shape=model.input.type_spec.shape[1:],
+											#shape=model.input.type_spec.shape[1:],
+											shape=(n,),
 											dtype=tf.float32
 											)
 										)
