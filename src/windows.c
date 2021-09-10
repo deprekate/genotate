@@ -33,9 +33,9 @@ do {                 \
 #define VAL_128X   VAL_64X, VAL_64X
 static const char nuc_table[256] = { VAL_64X, VAL_32X, VAL_1X, 0, VAL_1X, 1, VAL_3X, 2, VAL_8X, VAL_4X, 3, VAL_128X, VAL_8X, VAL_3X };
 
-unsigned char aa_table[129] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV#Y+YSSSS*CWCLFLFXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+unsigned char compl[256] = "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnntngnnncnnnnnnnnnnnnannnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn";
 
-unsigned char compl[256] = "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnntngnnncnnnnnnnnnnnna";
+unsigned char aa_table[65] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV#Y+YSSSS*CWCLFLFX";
 
 
 typedef struct {
@@ -47,22 +47,25 @@ typedef struct {
 	float gc;
 } windows_Iterator;
 
-unsigned char get_int(const unsigned char *dna, unsigned int i, unsigned int f) {
+unsigned char get_chr(const unsigned char *dna, unsigned int i, unsigned int f) {
     // unsigned char* so high-ASCII -> 128..255, not negative,
     // and works as an index into a 256 entry table
-    unsigned char idx;
+    unsigned int idx;
 	if(f){
 		idx	= nuc_table[dna[i]];
 		idx = idx*4 + nuc_table[dna[i+1]];
 		idx = idx*4 + nuc_table[dna[i+2]];
 	}else{
-		//printf("codon: %c%c%c\n", compl[dna[i+2]], compl[dna[i+1]], compl[dna[i+0]] );
 		idx	= nuc_table[compl[dna[i+2]]];
 		idx = idx*4 + nuc_table[compl[dna[i+1]]];
 		idx = idx*4 + nuc_table[compl[dna[i]]];
 	}
 	//printf("i:%i c:%c%c%c idx: %i aa: %c\n", i, dna[i], dna[i+1], dna[i+2], idx, aa_table[idx]);
-    return aa_table[idx];
+	if(idx > 63){
+		return aa_table[64];
+	}else{
+    	return aa_table[idx];
+	}
 }
 
 PyObject* windows_Iterator_iter(PyObject *self){
@@ -78,36 +81,37 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 	float total;
 
 	if( p->i < p->len - 2 ){
-		//printf("%i %i %i %c\n", p->len, p->i, p->dna[p->i], p->dna[p->i]);
+		//printf("%i %i %c%c%c = %u\n", p->len, p->i, p->dna[p->i], p->dna[p->i+1], p->dna[p->i+2], get_chr(p->dna, p->i, p->f));
 		t = 0;
-
 		j =    (p->i > 56)       ? p->i-57  : p->i%3;
 		k = (p->i+60 > p->len-2) ? p->len-2 : p->i+60;
 		//j = MAX( p->i  ,  57 + p->i % 3) - 57;
 		//k = MIN( p->len - 2 , p->i + 60);
+		//-----------------------------------------------
 		for (i = j; i < k; i += 3){
-			//printf("%c", get_int(p->dna, i) );
-			aa[get_int(p->dna, i, p->f)]++;
+			//printf("%c\t", get_chr(p->dna, i, p->f) );
+			aa[get_chr(p->dna, i, p->f)]++;
 			nuc[ nuc_table[p->dna[i  ]] % 6 ]++;
 			nuc[ nuc_table[p->dna[i+1]] % 6 ]++;
 			nuc[ nuc_table[p->dna[i+2]] % 6 ]++;
 			t++;
 		}
+		//printf("\n");
+
 		if(!p->f){
 			SWAP(nuc[0] , nuc[3]);
 			SWAP(nuc[1] , nuc[2]);
 		}
 		total = (float) t;
-		//printf("\n");
-
 		// ADD IN DIV ZERO HANDLING IN CASE BAD SEQUENCE
 		//
-		PyObject *aa_list = Py_BuildValue("[fffffffffffffffffffffffff]",
+		//PyObject *aa_list = Py_BuildValue("[fffffffffffffffffffffffff]",
+		PyObject *aa_list = Py_BuildValue("[fffffffffffffffffffff]",
 									p->gc,
-									nuc[0] / (3.0*t),
-									nuc[1] / (3.0*t),
-									nuc[2] / (3.0*t),
-									nuc[3] / (3.0*t),
+									//nuc[0] / (3.0*t),
+									//nuc[1] / (3.0*t),
+									//nuc[2] / (3.0*t),
+									//nuc[3] / (3.0*t),
                                     aa['A'] / total,
                                     aa['C'] / total,
                                     aa['D'] / total,
@@ -129,6 +133,8 @@ PyObject* windows_Iterator_iternext(PyObject *self){
                                     aa['W'] / total,
                                     aa['Y'] / total
 									);
+		//
+		
 		p->f ^= 1;
 		p->i += p->f;
 		return aa_list;

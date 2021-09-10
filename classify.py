@@ -4,15 +4,16 @@ import argparse
 from argparse import RawTextHelpFormatter
 from statistics import mode
 
-#import faulthandler
+import faulthandler
 
-sys.path.pop(0)
+#sys.path.pop(0)
 import genotate.make_train as mt
 import genotate.make_model as mm
 from genotate.features import Features
 
-from genotate.windows import get_windows
-#from genotate.make_train import get_windows
+#from genotate.windows import get_windows
+from genotate.make_train import get_windows
+#from genotate.mt import get_windows
 
 # TensorFlow and tf.keras
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -45,6 +46,31 @@ def mode(a, axis=0):
 def pack(features, label):
   return tf.stack(list(features.values()), axis=-1), label
 
+def smo(data):
+	out = np.zeros_like(data)
+	for i in range(6):
+		for j in range(3):
+			out[i::6,j] = smooth_line(data[i::6,j])
+	return out
+
+
+def smooth_line(x,window_len=101,window='hamming'):
+    if x.ndim != 1:
+        raise ValueError("smooth only accepts 1 dimension arrays.")
+    if x.size < window_len:
+        raise ValueError("Input vector needs to be bigger than window size.")
+    if window_len<3:
+        return x
+    if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+        raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+    s = np.r_[x[window_len-1:0:-1],x,x[-2:-window_len-1:-1]]
+    if window == 'flat': #moving average
+        w = np.ones(window_len,'d')
+    else:
+        w = eval('np.'+window+'(window_len)')
+    y = np.convolve(w/w.sum(),s,mode='valid')
+    return y[ (window_len-1)//2 : -(window_len-1)//2 ]
+
 def smooth(data):
 	out = np.zeros_like(data)
 	var = np.array([
@@ -65,6 +91,20 @@ def smooth(data):
 			window = var[ j , max(i-19, 0) : i+20 ]
 			#window = var[ j , max(i-1, 0) : i+2 ]
 			out[6*i+j] = mode(window)
+	return out
+
+def smoo(data):
+	out = np.zeros_like(data)
+	for i in range(len(data)):
+		window = data[ max(i-19, i % 6) : i+20 : 6 ]
+		out[i] = np.mean(window, axis=0)
+	return out
+
+def best(data):
+	out = np.zeros_like(data)
+	for i in range(0, len(data), 6):
+		idx = np.argmax(data[i:i+6, 1])
+		out[i+idx][1] = data[i+idx, 1]
 	return out
 
 def cutoff(data, c=29):
@@ -106,6 +146,7 @@ if __name__ == '__main__':
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
 	parser.add_argument('-m', '--model', help='', required=True)
 	parser.add_argument('-c', '--cutoff', help='The minimum cutoff length for runs', type=int, default=29)
+	parser.add_argument('-g', '--genes', action="store_true")
 	args = parser.parse_args()
 	'''
 	if args.labels: print("\t".join(['ID','TYPE','GC'] + translate.amino_acids))
@@ -114,9 +155,9 @@ if __name__ == '__main__':
 
 
 	ckpt_reader = tf.train.load_checkpoint(args.model)
-	model = mm.create_model4(len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE')))
+	n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
+	model = mm.create_model(n)
 	model.load_weights(args.model).expect_partial()
-
 
 	#faulthandler.enable()
 	contigs = mt.read_fasta(args.infile)
@@ -127,47 +168,104 @@ if __name__ == '__main__':
 								generator,
 								output_signature=(
 										tf.TensorSpec(
-											shape=model.input.type_spec.shape[1:],
+											#shape=model.input.type_spec.shape[1:],
+											shape=(n,),
 											dtype=tf.float32
 											)
 										)
-								).batch(1)
+								).batch(32)
 		#for feature in dataset.take(1):
 		#	print( feature )
 		#exit()
-	
 		p = model.predict(dataset)
+		#p = smo(p)
+		#p = smoo(p)
+		#p = best(p)
+		'''
+		for i in range(0,len(p), 6):
+			for j in range(6):
+				print(p[i+j], end='\t')
+			print()
+		exit()
+		'''
+		if args.genes:
+
+			nc = np.array([
+                p[0::6,0],
+                p[1::6,0],
+				p[2::6,0],
+                p[3::6,0],
+                p[4::6,0],
+                p[5::6,0],
+                p[0::6,2],
+                p[1::6,2],
+				p[2::6,2],
+                p[3::6,2],
+                p[4::6,2],
+                p[5::6,2]
+				])
+
+			signal = np.array([
+                p[0::6,1],
+                p[1::6,1],
+				p[2::6,1],
+                p[3::6,1],
+                p[4::6,1],
+                p[5::6,1],
+				np.mean(nc, axis=0)
+                ]).T
+			import ruptures as rpt
+			# detection
+			#algo = rpt.Pelt(model="rbf").fit(signal)
+			algo = rpt.KernelCPD(kernel="linear", min_size=10).fit(signal[:-3,:])
+			result = algo.predict(pen=15)
+			
+			frame = {0:1, 1:-1, 2:2, 3:-2, 4:3, 5:-3, 6:0}
+			last = 0
+			for loc in [item * 3 for item in result]:
+				#print(last,loc, frame[ np.argmax(signal[last//3 : loc//3,].mean(axis=0)) ], sep='\t') ;  last = loc ; continue
+				f = frame[ np.argmax(signal[last//3 : loc//3,].mean(axis=0)) ]
+				if f > 0:
+					print("     CDS             ",(last//3)*3 + f,"..",(loc//3)*3 + f + 2, sep='')
+				elif f < 0:
+					print("     CDS             complement(",(last//3)*3 + abs(f),"..",(loc//3)*3 + abs(f) + 2, ")",sep='')
+				last = loc
+		else:
+			if p.shape[1] == 1:
+				Y = np.round(p.flatten())
+			else:
+				Y = np.argmax(p,axis=-1)
+	
+			#contig_features = Features(**vars(args))
+			#contig_features.parse_contig(header, contigs[header], Y)
+			#for orfs in contig_features.iter_orfs('longest'):
+			#	for orf in orfs:
+			#		print(orf)
+
+			#find_frameshifts(dna, p)
+			#exit()
 		
-		#contig_features = Features(**vars(args))
-		#contig_features.parse_contig(header, contigs[header], Y)
-		#for orfs in contig_features.iter_orfs('longest'):
-		#	for orf in orfs:
-		#		print(orf)
-		
-		if False:
-			Y = np.argmax(p,axis=-1)
 			#Y = smooth(Y)
 			#Y = cutoff(Y)
 			for i,row in enumerate(Y[:-4]):
 				#if not i%2:
-				#	print(1+i//2, p[i], p[i+1])
+				#	print(1+i//2, p[i], p[i+1], sep='\t')
+				#print(1+i//2, p[i], sep='\t')
+				#continue	
 				if row == 1:
 					if i%2:
 						print('     CDS             complement(', ((i-1)//2)+1, '..', ((i-1)//2)+3, ')', sep='')
 					else:
 						print('     CDS             ', (i//2)+1 , '..', (i//2)+3, sep='')
 					print('                     /colour=100 100 100')
-		if True:
-			Y = p
-			for i,row in enumerate(Y[:-4]):
-				#if not i%2:
-				#	print(1+i//2, p[i], p[i+1])
-				if row > 0.5:
-					if i%2:
-						print('     CDS             complement(', ((i-1)//2)+1, '..', ((i-1)//2)+3, ')', sep='')
-					else:
-						print('     CDS             ', (i//2)+1 , '..', (i//2)+3, sep='')
+				# BOTH
+				'''
+				if row == 1:
+					print('     CDS             ', i+1 , '..', i+3, sep='')
 					print('                     /colour=100 100 100')
-
-		print("//")
-
+				elif row == 3:
+					print('     CDS             complement(', i+1, '..', i+3, ')', sep='')
+					print('                     /colour=100 100 100')
+				'''
+			print("//")
+	

@@ -8,12 +8,12 @@ from setuptools import setup, Extension, find_packages
 
 def extension():
 	#os.environ["CC"] = "gcc"
-	#compile_args = ["-g -Wall -O2"]
+	compile_args = ["-g"] # -Wall -O2"]
 	link_args	= ["-lm"]
 
 	ext = Extension('genotate.windows',
 				language='gcc',
-				#extra_compile_args=compile_args,
+				extra_compile_args=compile_args,
 				extra_link_args=link_args,
 				include_dirs=[
 							 '.',
