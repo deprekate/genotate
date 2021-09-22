@@ -9,6 +9,7 @@ import faulthandler
 #sys.path.pop(0)
 import genotate.make_train as mt
 import genotate.make_model as mm
+import genotate.codons as cd
 from genotate.features import Features
 
 #from genotate.windows import get_windows
@@ -153,16 +154,18 @@ if __name__ == '__main__':
 		exit()
 	'''
 
+	outfile = args.outfile
 
 	ckpt_reader = tf.train.load_checkpoint(args.model)
 	n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
-	model = mm.create_model(n)
+	model = mm.create_model_d(n)
 	model.load_weights(args.model).expect_partial()
 
 	#faulthandler.enable()
 	contigs = mt.read_fasta(args.infile)
 	for header in contigs:
 		dna = contigs[header]
+		locations = cd.Locations(dna)
 		generator = lambda : get_windows(dna)
 		dataset = tf.data.Dataset.from_generator(
 								generator,
@@ -188,6 +191,16 @@ if __name__ == '__main__':
 			print()
 		exit()
 		'''
+		outfile.write('LOCUS       ')
+		outfile.write(header)
+		outfile.write(str(len(dna)).rjust(10))
+		outfile.write(' bp    DNA             UNK')
+		outfile.write('\n')
+		outfile.write('DEFINITION  ' + header + '\n')
+		outfile.write('FEATURES             Location/Qualifiers\n')
+		outfile.write('     source          1..')
+		outfile.write(str(len(dna)))
+		outfile.write('\n')
 		if args.genes:
 
 			nc = np.array([
@@ -217,7 +230,7 @@ if __name__ == '__main__':
 			import ruptures as rpt
 			# detection
 			#algo = rpt.Pelt(model="rbf").fit(signal)
-			algo = rpt.KernelCPD(kernel="linear", min_size=10).fit(signal[:-3,:])
+			algo = rpt.KernelCPD(kernel="linear", min_size=30).fit(signal[:-3,:])
 			result = algo.predict(pen=15)
 			
 			frame = {0:1, 1:-1, 2:2, 3:-2, 4:3, 5:-3, 6:0}
@@ -225,10 +238,22 @@ if __name__ == '__main__':
 			for loc in [item * 3 for item in result]:
 				#print(last,loc, frame[ np.argmax(signal[last//3 : loc//3,].mean(axis=0)) ], sep='\t') ;  last = loc ; continue
 				f = frame[ np.argmax(signal[last//3 : loc//3,].mean(axis=0)) ]
+				left = (last//3)*3 + abs(f)
+				right = (loc//3)*3 + abs(f) + 2
 				if f > 0:
-					print("     CDS             ",(last//3)*3 + f,"..",(loc//3)*3 + f + 2, sep='')
+					outfile.write("     CDS             " + str(left) + ".." + str(right))
+					outfile.write('\n')
+					outfile.write("                     /nearest_start=" + str(locations.nearest_start( left - 1 )) )
+					outfile.write('\n')
+					outfile.write("                     /nearest_stopp=" + str(locations.nearest_stop( right - 3 )) )
+					outfile.write('\n')
 				elif f < 0:
-					print("     CDS             complement(",(last//3)*3 + abs(f),"..",(loc//3)*3 + abs(f) + 2, ")",sep='')
+					outfile.write("     CDS             complement(" + str(left) + ".." + str(right) + ")")
+					outfile.write('\n')
+					outfile.write("                     /nearest_start=" + str(locations.nearest_start( right - 3 , forward=False)) )
+					outfile.write('\n')
+					outfile.write("                     /nearest_stopp=" + str(locations.nearest_stop( left - 1 , forward=False)) )
+					outfile.write('\n')
 				last = loc
 		else:
 			if p.shape[1] == 1:
@@ -267,5 +292,5 @@ if __name__ == '__main__':
 					print('     CDS             complement(', i+1, '..', i+3, ')', sep='')
 					print('                     /colour=100 100 100')
 				'''
-			print("//")
+			outfile.write("//\n")
 	

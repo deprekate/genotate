@@ -65,7 +65,8 @@ if __name__ == '__main__':
 	parser.add_argument('-d', '--deep', action="store_true")
 	args = parser.parse_args()
 
-	cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + "_" + args.columns + '_deep.ckpt',save_weights_only=True,verbose=1)
+	filepath = args.directory + "_" + args.columns + '.ckpt'
+	cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=filepath,save_weights_only=True,verbose=1)
 
 	stops = ['#', '*', '+']
 	letters = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
@@ -107,6 +108,9 @@ if __name__ == '__main__':
 	else:
 		model = mm.create_model(len(selnames)-1)
 	
+	
+	model.load_weights(filepath).expect_partial()
+
 	##############################################
 	print("Using", len(selnames), "features")
 	print(colnames)
