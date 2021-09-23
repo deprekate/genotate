@@ -148,6 +148,7 @@ if __name__ == '__main__':
 	parser.add_argument('-m', '--model', help='', required=True)
 	parser.add_argument('-c', '--cutoff', help='The minimum cutoff length for runs', type=int, default=29)
 	parser.add_argument('-g', '--genes', action="store_true")
+	parser.add_argument('-p', '--plot', action="store_true")
 	args = parser.parse_args()
 	'''
 	if args.labels: print("\t".join(['ID','TYPE','GC'] + translate.amino_acids))
@@ -181,16 +182,30 @@ if __name__ == '__main__':
 		#	print( feature )
 		#exit()
 		p = model.predict(dataset)
-		#p = smo(p)
+		p = smo(p)
 		#p = smoo(p)
 		#p = best(p)
-		'''
-		for i in range(0,len(p), 6):
-			for j in range(6):
-				print(p[i+j], end='\t')
-			print()
-		exit()
-		'''
+		if args.plot:
+			print("# BASE VAL1  VAL2 VAL3  VAL4 VAL5 VAL6")
+			print("# colour 255:0:0 0:0:255 0:0:0 128:0:0 0:0:128 128:128:128")
+			for i in range(0,len(p), 6):
+				val = []
+				for j in range(6):
+					val.append(p[i+j,1])
+				v = [None] * 6
+				v[0] = val[0]
+				v[1] = val[2]
+				v[2] = val[4]
+				v[3] = val[1]
+				v[4] = val[3]
+				v[5] = val[5]
+				print(i // 2 + 1, end='\t')
+				print('\t'.join(map(str,v)))
+				print(i // 2 + 2, end='\t')
+				print('\t'.join(map(str,v)))
+				print(i // 2 + 3, end='\t')
+				print('\t'.join(map(str,v)))
+			exit()
 		outfile.write('LOCUS       ')
 		outfile.write(header)
 		outfile.write(str(len(dna)).rjust(10))
