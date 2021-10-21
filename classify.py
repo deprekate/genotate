@@ -16,6 +16,8 @@ from genotate.features import Features
 from genotate.make_train import get_windows
 #from genotate.mt import get_windows
 
+import ruptures as rpt
+
 # TensorFlow and tf.keras
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
@@ -24,6 +26,13 @@ import tensorflow as tf
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 import numpy as np
+
+
+nucs = ['T', 'C', 'A', 'G']
+codons = [a+b+c for a in nucs for b in nucs for c in nucs]
+amino_acids = 'FFLLSSSSYY#+CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG'
+translate_codon = dict(zip(codons, amino_acids))
+translate = lambda dna : ''.join([translate_codon[dna[i:i+3].upper()] for i in range(0,len(dna),3) ])
 
 def is_valid_file(x):
 	if not os.path.exists(x):
@@ -55,7 +64,7 @@ def smo(data):
 	return out
 
 
-def smooth_line(x,window_len=101,window='hamming'):
+def smooth_line(x,window_len=10,window='hamming'):
     if x.ndim != 1:
         raise ValueError("smooth only accepts 1 dimension arrays.")
     if x.size < window_len:
@@ -148,7 +157,9 @@ if __name__ == '__main__':
 	parser.add_argument('-m', '--model', help='', required=True)
 	parser.add_argument('-c', '--cutoff', help='The minimum cutoff length for runs', type=int, default=29)
 	parser.add_argument('-g', '--genes', action="store_true")
-	parser.add_argument('-p', '--plot', action="store_true")
+	parser.add_argument('-a', '--amino', action="store_true")
+	parser.add_argument('-f', '--plot_frames', action="store_true")
+	parser.add_argument('-s', '--plot_strands', action="store_true")
 	args = parser.parse_args()
 	'''
 	if args.labels: print("\t".join(['ID','TYPE','GC'] + translate.amino_acids))
@@ -185,9 +196,39 @@ if __name__ == '__main__':
 		p = smo(p)
 		#p = smoo(p)
 		#p = best(p)
-		if args.plot:
+		'''
+		if True:
+			for i in range(0,len(p), 6):
+				for f in range(6):
+					print('\t'.join([str(item) for item in p[i+f]]), end='\t')
+				print()
+		exit()
+		'''
+		if args.plot_strands:
+			f = p[0::6,1] + p[2::6,1] + p[4::6,1]
+			r = p[1::6,1] + p[3::6,1] + p[5::6,1]
+			ig = p[0::6,2] + p[2::6,2] + p[4::6,2] + p[1::6,2] + p[3::6,2] + p[5::6,2]
+			signal = np.array([f.clip(0,1), r.clip(0,1), ig/6]).T
+			# detection
+			#algo = rpt.Pelt(model="rbf").fit(signal)
+			algo = rpt.KernelCPD(kernel="linear", min_size=30).fit(signal)
+			result = algo.predict(pen=15)
+			result = [x*3 for x in result]
+			print(result)
+			print("# BASE VAL1  VAL2 VAL3  VAL4")
+			print("# colour 255:0:0 0:0:255 0:0:0 128:128:128 0:0:0")
+			for i in range(0,len(p), 6):
+				f = p[i+0,1] + p[i+2,1] + p[i+4,1]
+				r = p[i+1,1] + p[i+3,1] + p[i+5,1]
+				ig = (p[i+0,2] + p[i+2,2] + p[i+4,2] + p[i+1,2] + p[i+3,2] + p[i+5,2]) / 6
+				c = 1 if i//2 in result or i//2+1 in result or i//2+2 in result else 0
+				print(i // 2 + 1, f, r, ig, c, sep='\t')
+				print(i // 2 + 2, f, r, ig, c, sep='\t')
+				print(i // 2 + 3, f, r, ig, c, sep='\t')
+			exit()
+		if args.plot_frames:
 			print("# BASE VAL1  VAL2 VAL3  VAL4 VAL5 VAL6")
-			print("# colour 255:0:0 0:0:255 0:0:0 128:0:0 0:0:128 128:128:128")
+			print("# colour 255:0:0 0:0:255 0:0:0 255:0:255 0:128:128 128:128:128")
 			for i in range(0,len(p), 6):
 				val = []
 				for j in range(6):
@@ -206,18 +247,29 @@ if __name__ == '__main__':
 				print(i // 2 + 3, end='\t')
 				print('\t'.join(map(str,v)))
 			exit()
-		outfile.write('LOCUS       ')
-		outfile.write(header)
-		outfile.write(str(len(dna)).rjust(10))
-		outfile.write(' bp    DNA             UNK')
-		outfile.write('\n')
-		outfile.write('DEFINITION  ' + header + '\n')
-		outfile.write('FEATURES             Location/Qualifiers\n')
-		outfile.write('     source          1..')
-		outfile.write(str(len(dna)))
-		outfile.write('\n')
-		if args.genes:
+		if args.genes or args.amino:
+			if not args.amino:
+				outfile.write('LOCUS       ')
+				outfile.write(header)
+				outfile.write(str(len(dna)).rjust(10))
+				outfile.write(' bp    DNA             UNK')
+				outfile.write('\n')
+				outfile.write('DEFINITION  ' + header + '\n')
+				outfile.write('FEATURES             Location/Qualifiers\n')
+				outfile.write('     source          1..')
+				outfile.write(str(len(dna)))
+				outfile.write('\n')
 
+			f = p[0::6,1] + p[2::6,1] + p[4::6,1]
+			r = p[1::6,1] + p[3::6,1] + p[5::6,1]
+			ig = p[0::6,2] + p[2::6,2] + p[4::6,2] + p[1::6,2] + p[3::6,2] + p[5::6,2]
+			signal = np.array([ig/6, f.clip(0,1), r.clip(0,1)]).T
+			strand = {0:0, 1:+1, 2:-1}
+			# detection
+			#algo = rpt.Pelt(model="rbf").fit(signal)
+			algo = rpt.KernelCPD(kernel="linear", min_size=30).fit(signal[:-3,:])
+			result = algo.predict(pen=15)
+			'''	
 			nc = np.array([
                 p[0::6,0],
                 p[1::6,0],
@@ -242,33 +294,48 @@ if __name__ == '__main__':
                 p[5::6,1],
 				np.mean(nc, axis=0)
                 ]).T
-			import ruptures as rpt
-			# detection
-			#algo = rpt.Pelt(model="rbf").fit(signal)
-			algo = rpt.KernelCPD(kernel="linear", min_size=30).fit(signal[:-3,:])
-			result = algo.predict(pen=15)
-			
 			frame = {0:1, 1:-1, 2:2, 3:-2, 4:3, 5:-3, 6:0}
+			'''
+			
 			last = 0
 			for loc in [item * 3 for item in result]:
 				#print(last,loc, frame[ np.argmax(signal[last//3 : loc//3,].mean(axis=0)) ], sep='\t') ;  last = loc ; continue
-				f = frame[ np.argmax(signal[last//3 : loc//3,].mean(axis=0)) ]
-				left = (last//3)*3 + abs(f)
-				right = (loc//3)*3 + abs(f) + 2
-				if f > 0:
-					outfile.write("     CDS             " + str(left) + ".." + str(right))
+				s = strand[ np.argmax(signal[last//3 : loc//3,].mean(axis=0)) ]
+				left = (last//3)*3
+				right = (loc//3)*3 + 2
+				if s > 0:
+					outfile.write("     mRNA            " + str(left) + ".." + str(right))
 					outfile.write('\n')
-					outfile.write("                     /nearest_start=" + str(locations.nearest_start( left - 1 )) )
+					outfile.write("                     /colour=200 0 0\n" )
+				elif s < 0:
+					outfile.write("     mRNA            complement(" + str(left) + ".." + str(right) + ")" )
 					outfile.write('\n')
-					outfile.write("                     /nearest_stopp=" + str(locations.nearest_stop( right - 3 )) )
-					outfile.write('\n')
-				elif f < 0:
-					outfile.write("     CDS             complement(" + str(left) + ".." + str(right) + ")")
-					outfile.write('\n')
-					outfile.write("                     /nearest_start=" + str(locations.nearest_start( right - 3 , forward=False)) )
-					outfile.write('\n')
-					outfile.write("                     /nearest_stopp=" + str(locations.nearest_stop( left - 1 , forward=False)) )
-					outfile.write('\n')
+					outfile.write("                     /colour=200 0 0\n" )
+				'''
+				left = (last//3)*3 + abs(s)
+				right = (loc//3)*3 + abs(s) + 2
+				if s > 0:
+					if args.amino:
+						print(">" + header + " " + str(left) + ".." + str(right) )
+						print(translate(dna[left-1:right]))
+					else:
+						outfile.write("     CDS             " + str(left) + ".." + str(right))
+						outfile.write('\n')
+						outfile.write("                     /nearest_start=" + str(locations.nearest_start( left - 1 )) )
+						outfile.write('\n')
+						outfile.write("                     /nearest_stopp=" + str(locations.nearest_stop( right - 3 )) )
+						outfile.write('\n')
+				elif s < 0:
+					if args.amino:
+						pass
+					else:
+						outfile.write("     CDS             complement(" + str(left) + ".." + str(right) + ")")
+						outfile.write('\n')
+						outfile.write("                     /nearest_start=" + str(locations.nearest_start( right - 3 , forward=False)) )
+						outfile.write('\n')
+						outfile.write("                     /nearest_stopp=" + str(locations.nearest_stop( left - 1 , forward=False)) )
+						outfile.write('\n')
+				'''
 				last = loc
 		else:
 			if p.shape[1] == 1:

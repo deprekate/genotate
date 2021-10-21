@@ -7,6 +7,12 @@ from statistics import mode
 
 import genotate.make_model as mm
 
+import resource
+low, high = resource.getrlimit(resource.RLIMIT_NOFILE)
+resource.setrlimit(resource.RLIMIT_NOFILE, (high, high))
+
+
+
 # TensorFlow and tf.keras
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
@@ -19,8 +25,9 @@ os.environ['OPENBLAS_NUM_THREADS'] = '7'
 os.environ['MKL_NUM_THREADS'] = '7'
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
+import time
 
 
 class LossHistoryCallback(tf.keras.callbacks.Callback):
@@ -51,6 +58,15 @@ def pack(features, labels):
 	#return tf.stack(list(features.values()), axis=-1), tf.one_hot(tf.add(labels,2), depth=4)
 	return tf.stack(list(features.values()), axis=-1), tf.one_hot(labels, depth=3)
 
+def smooth_pack(features, labels):
+	factor = 0.1
+	#return tf.stack(list(features.values()), axis=-1), labels
+	#return tf.stack(list(features.values()), axis=-1), tf.one_hot(tf.add(labels,2), depth=4)
+	labs =  tf.one_hot(labels, depth=3)
+	labs *= (1 - factor)
+	labs += (factor / labs.shape[1])
+	return tf.stack(list(features.values()), axis=-1), labs
+
 def pack_b(features, labels):
 	return tf.stack(list(features.values()), axis=-1), tf.one_hot(labels, depth=4)
 
@@ -65,7 +81,7 @@ if __name__ == '__main__':
 	parser.add_argument('-d', '--deep', action="store_true")
 	args = parser.parse_args()
 
-	filepath = args.directory + "_" + args.columns + '.ckpt'
+	filepath = args.directory + "_" + args.columns + '_test.ckpt'
 	cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=filepath,save_weights_only=True,verbose=1)
 
 	stops = ['#', '*', '+']
@@ -109,7 +125,7 @@ if __name__ == '__main__':
 		model = mm.create_model(len(selnames)-1)
 	
 	
-	model.load_weights(filepath).expect_partial()
+	#model.load_weights(filepath).expect_partial()
 
 	##############################################
 	print("Using", len(selnames), "features")
@@ -119,15 +135,16 @@ if __name__ == '__main__':
 	#exit()	
 	tfiles = tf.data.experimental.make_csv_dataset(
 		compression_type    = 'GZIP',
-		file_pattern        = args.directory + "/NC_0[01]*.tsv.gz",
-		#file_pattern        = args.directory + "/NC_001416.tsv",
+		file_pattern        = args.directory + "/NC_*.tsv.gz",
+		#file_pattern        = args.directory + "/NC_0[01]*.tsv.gz",
+		#file_pattern        = args.directory + "/NC_001416.tsv.gz",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
 		select_columns      = selnames,
 		column_defaults     = [tf.int32] + [tf.float32] * (len(selnames)-1),
 		shuffle             = True,
-		num_parallel_reads  = 1000,
+		num_parallel_reads  = 800,
 		shuffle_buffer_size = 5000,
 		batch_size          = 500,
 		num_epochs          = 1,
@@ -151,8 +168,8 @@ if __name__ == '__main__':
 		compression_type    = 'GZIP',
 		#file_pattern        = args.directory + "/NC_?????[1357]*.tsv",
 		#file_pattern        = args.directory + "/NC_0[01]*.tsv",
-		file_pattern        = args.directory + "/NC_02*.tsv.gz",
-		#file_pattern        = "data/train/single/NC_001416.tsv.gz",
+		#file_pattern        = args.directory + "/NC_02*.tsv.gz",
+		file_pattern        = "data/train/single/NC_001416.tsv.gz",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
@@ -171,18 +188,16 @@ if __name__ == '__main__':
 	else:
 		vdata = vfiles.map(pack)
 	
-	
 	#class_weight = {0:1, 1:1, 2:1}
 	with tf.device('/device:CPU:0'):
 		#es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=10, min_delta=0.001, baseline=None)
 		#lr_callback = LRFinder()
 		model.fit(tdata,
 				  validation_data = vdata,
-				  epochs          = 100,
+				  epochs          = 1,
 				  #class_weight   = class_weight,
-				  verbose         = 0,
+				  verbose         = 1,
 				  callbacks       = [LossHistoryCallback(), cp_callback]
 		)
-
 	#lr_callback.plot()
 

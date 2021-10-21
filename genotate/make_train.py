@@ -6,6 +6,7 @@ import io
 import sys
 import re
 from math import log
+import gzip
 import random
 import argparse
 from argparse import RawTextHelpFormatter
@@ -282,6 +283,7 @@ def read_fasta(filepath, base_trans=str.maketrans('','')):
 	lib = gzip if filepath.endswith(".gz") else io
 	with lib.open(filepath, mode="rb") as f:
 		for line in f:
+			print(line)
 			if line.startswith(b'>'):
 				contigs_dict[name] = seq
 				name = line[1:].decode("utf-8").split()[0]
@@ -452,17 +454,18 @@ def single_window(dna, n, strand):
 	translate = Translate()
 	window = dna[ max( n%3 , n-57) : n+60]
 	#row.extend([window])	
+	#row.extend([strand])	
 	#row.extend([translate.seq(window, strand)])	
-	#row.extend([gc_content(window)])	
-	#row.extend(nucl_freq(window, strand))
-	#row.extend(gc_fp(window, strand))
+	row.extend([gc_content(window)])	
+	row.extend(nucl_freq(window, strand))
+	row.extend(gc_fp(window, strand))
 	row.extend(nucl_fp(window, strand))
 	freqs = translate.frequencies(window, strand)
 	for aa in translate.amino_acids:
 		row.append(freqs.get(aa,0.0))
 	#row.extend(translate.codings(window, strand))
-	#row.extend(translate.dicodings(window, strand))
-	#row.extend(translate.tricodings(window, strand))
+	row.extend(translate.dicodings(window, strand))
+	row.extend(translate.tricodings(window, strand))
 	row.extend(translate.dimers(window, strand))
 	row.extend(translate.dipeps(window, strand))
 	#row.extend(translate.trimers(window, strand))
@@ -579,7 +582,13 @@ if __name__ == '__main__':
 	# print the column header and quit
 	if args.labels:
 		translate = Translate()
-		sys.stdout.write('\t'.join(['TYPE','ID', 'GC'] + [aa for aa in translate.amino_acids]))
+		sys.stdout.write('\t'.join(['TYPE','ID', 'GC']))
+		sys.stdout.write('\t')
+		sys.stdout.write('\t'.join(['1a','1c','1g','1t', '2a','2c','2g','2t', '3a','3c','3g','3t']))
+		sys.stdout.write('\t')
+		sys.stdout.write('\t'.join([aa for aa in translate.amino_acids]))
+		sys.stdout.write('\t')
+		sys.stdout.write('\t'.join([aa+bb for aa in translate.amino_acids for bb in translate.amino_acids]))
 		sys.stdout.write('\n')
 
 	#faulthandler.enable()
@@ -590,7 +599,7 @@ if __name__ == '__main__':
 				args.outfile.write('\t'.join(map(str,row)))
 				args.outfile.write('\n')
 	else:
-		if pathlib.Path(args.infile).suffix in ['.gb', '.gbk']:
+		if pathlib.Path(args.infile.replace('.gz','')).suffix in ['.gb', '.gbk']:
 			rows = parse_genbank(args.infile)
 		else:
 			s = list(read_fasta(args.infile).values())[0]
