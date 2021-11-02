@@ -170,7 +170,7 @@ if __name__ == '__main__':
 
 	ckpt_reader = tf.train.load_checkpoint(args.model)
 	n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
-	model = mm.create_model_d(n)
+	model = mm.create_model_deep(n)
 	model.load_weights(args.model).expect_partial()
 
 	#faulthandler.enable()

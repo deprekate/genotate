@@ -24,25 +24,7 @@ def create_model(i):
 
 
 
-def create_model_b(i):
-	model = tf.keras.Sequential([
-					tf.keras.layers.Dense(i, input_shape=(i,)),
-					tf.keras.layers.Dense(i * 10, activation='relu'),
-					tf.keras.layers.Dense(i * 3, activation='relu'),
-					#tf.keras.layers.Dense(i * 2, activation='relu'),
-					#tf.keras.layers.Dense(i * 1, activation='relu'),
-					tf.keras.layers.Dense(4, activation='softmax')
-	])
-	opt = tf.keras.optimizers.Adam(learning_rate=0.001)
-	model.compile(optimizer = opt,
-				  loss=tf.keras.losses.CategoricalCrossentropy(from_logits=False),
-				  #loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
-				  metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives','CategoricalAccuracy']
-				  )
-	return model
-
-
-def create_model_d(i):
+def create_model_deep(i):
 	model = tf.keras.Sequential([
 					tf.keras.layers.Dense(i, input_shape=(i,)),
 					tf.keras.layers.Dense(i * 2, activation='relu'),

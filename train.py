@@ -3,15 +3,12 @@ import sys
 import re
 import argparse
 from argparse import RawTextHelpFormatter
-from statistics import mode
 
 import genotate.make_model as mm
 
 import resource
 low, high = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (high, high))
-
-
 
 # TensorFlow and tf.keras
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -23,11 +20,7 @@ from tensorflow.keras.callbacks import Callback
 # Helper libraries
 os.environ['OPENBLAS_NUM_THREADS'] = '7'
 os.environ['MKL_NUM_THREADS'] = '7'
-import numpy as np
-import pandas as pd
 #import matplotlib.pyplot as plt
-
-import time
 
 
 class LossHistoryCallback(tf.keras.callbacks.Callback):
@@ -77,11 +70,10 @@ if __name__ == '__main__':
 	parser.add_argument('directory', type=is_valid_file, help='input directory')
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
 	parser.add_argument('-c', '--columns', action="store", default="GC", help='sel cols')
-	parser.add_argument('-b', '--both', action="store_true")
-	parser.add_argument('-d', '--deep', action="store_true")
+	parser.add_argument('-k', '--kfold', action="store", default=0, type=int, help='which kfold')
 	args = parser.parse_args()
 
-	filepath = args.directory + "_" + args.columns + '_test.ckpt'
+	filepath = args.directory + "_" + args.columns + "_" + str(args.kfold) + 'fold.ckpt'
 	cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=filepath,save_weights_only=True,verbose=1)
 
 	stops = ['#', '*', '+']
@@ -93,38 +85,26 @@ if __name__ == '__main__':
 	dipeps = [a+'_'+b for a in stops+letters for b in stops+letters]
 	trimers = [a+':'+b+':'+c for a in stops+letters for b in stops+letters for c in stops+letters]
 	######  single  ######
-	colnames =  ['TYPE', 'GC', 'GCw','a','c','g','t','GC1','GC2','GC3', '1a','1c','1g','1t', '2a','2c','2g','2t', '3a','3c','3g','3t'] + stops + letters + codings + dicodings + tricodings + dimers + dipeps
+	colnames =  ['TYPE', 'GC', 'GCw','a','c','g','t','GC1','GC2','GC3', '1a','1c','1g','1t', '2a','2c','2g','2t', '3a','3c','3g','3t'] + stops + letters + dicodings + tricodings + dimers + dipeps
+
 	if 'TRICODINGS' in args.columns:
 		args.columns = args.columns.replace('TRICODINGS', ','.join(tricodings) )
 	if 'DICODINGS' in args.columns:
 		args.columns = args.columns.replace('DICODINGS', ','.join(dicodings) )
-	if 'CODINGS' in args.columns:
-		args.columns = args.columns.replace('CODINGS', ','.join(codings) )
+	#if 'CODINGS' in args.columns:
+	#	args.columns = args.columns.replace('CODINGS', ','.join(codings) )
 	if 'DIMERS' in args.columns:
 		args.columns = args.columns.replace('DIMERS', ','.join(dimers) )
 	if 'DIPEPS' in args.columns:
 		args.columns = args.columns.replace('DIPEPS', ','.join(dipeps) )
-	if 'TRIMERS' in args.columns:
-		args.columns = args.columns.replace('TRIMERS', ','.join(trimers) )
-		colnames =  ['TYPE', 'GC', '1a','1c','1g','1t', '2a','2c','2g','2t', '3a','3c','3g','3t'] + stops + letters + trimers
-	selnames = ['TYPE'] + args.columns.split(',') + letters 
+	#if 'TRIMERS' in args.columns:
+	#	args.columns = args.columns.replace('TRIMERS', ','.join(trimers) )
+	#	colnames =  ['TYPE', 'GC', '1a','1c','1g','1t', '2a','2c','2g','2t', '3a','3c','3g','3t'] + stops + letters + trimers
+	selnames = ['TYPE'] + args.columns.split(',') + stops + letters 
 
 	
-	######   glob   ######
-	#colnames =  ['TYPE', 'GC', 'a','t','g', 'c'] + [letter+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters]
-	#colnames =  ['TYPE', 'GC', 'a','t','g', 'c', 'P1', 'P2', 'P3'] + [letter+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters]
 
-	# BOTH
-	if args.both:
-		colnames = ['TYPE', 'GC'] + [f+d for d in ['+','-'] for f in colnames[2:] ]
-		selnames = ['TYPE', 'GC'] + [f+d for d in ['+','-'] for f in selnames[2:] ]
-		model = mm.create_model_b(len(selnames)-1)
-	elif args.deep:
-		model = mm.create_model_d(len(selnames)-1)
-	else:
-		model = mm.create_model(len(selnames)-1)
-	
-	
+	model = mm.create_model_deep(len(selnames)-1)
 	#model.load_weights(filepath).expect_partial()
 
 	##############################################
@@ -134,17 +114,20 @@ if __name__ == '__main__':
 
 	#exit()	
 	tfiles = tf.data.experimental.make_csv_dataset(
-		compression_type    = 'GZIP',
-		file_pattern        = args.directory + "/NC_*.tsv.gz",
+		#compression_type    = 'GZIP',
+		#file_pattern        = args.directory + "/NC_*.tsv.gz",
 		#file_pattern        = args.directory + "/NC_0[01]*.tsv.gz",
 		#file_pattern        = args.directory + "/NC_001416.tsv.gz",
+		#                                        1234567890
+		#file_pattern       = "viruses/train/gbk/GCF_000836805",
+		file_pattern        = "viruses/train/tsv/GCF_??????[^" +str(args.kfold) + "]??*",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
 		select_columns      = selnames,
 		column_defaults     = [tf.int32] + [tf.float32] * (len(selnames)-1),
 		shuffle             = True,
-		num_parallel_reads  = 800,
+		num_parallel_reads  = 500,
 		shuffle_buffer_size = 5000,
 		batch_size          = 500,
 		num_epochs          = 1,
@@ -152,24 +135,21 @@ if __name__ == '__main__':
 		label_name          = colnames[0]
 		)
 
-	if args.both:
-		tdata = tfiles.map(pack_b)
-	else:
-		tdata = tfiles.map(pack)
+	tdata = tfiles.map(pack)
 	#tdata = tfiles.map( lambda features,labels: tf.stack(list(features.values()), axis=-1), tf.one_hot(labels, depth=3) )
 	
 
 	#for feature in tfiles.take(1):
 	#	print( len(np.unique(feature[0]['GC'].numpy())) )
 	#exit()
-	#metrics = Metrics()
-	#exit()
+
 	vfiles = tf.data.experimental.make_csv_dataset(
-		compression_type    = 'GZIP',
+		#compression_type    = 'GZIP',
 		#file_pattern        = args.directory + "/NC_?????[1357]*.tsv",
 		#file_pattern        = args.directory + "/NC_0[01]*.tsv",
 		#file_pattern        = args.directory + "/NC_02*.tsv.gz",
-		file_pattern        = "data/train/single/NC_001416.tsv.gz",
+		#file_pattern        = "data/train/single/NC_001416.tsv.gz",
+		file_pattern        = "viruses/train/tsv/GCF_??????[" +str(args.kfold) + "]??*",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
@@ -183,20 +163,17 @@ if __name__ == '__main__':
 		label_name          = colnames[0]
 		#label_name          = 0 # this is old version
 		)
-	if args.both:
-		vdata = vfiles.map(pack_b)
-	else:
-		vdata = vfiles.map(pack)
-	
+	vdata = vfiles.map(pack)
+
 	#class_weight = {0:1, 1:1, 2:1}
 	with tf.device('/device:CPU:0'):
 		#es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=10, min_delta=0.001, baseline=None)
 		#lr_callback = LRFinder()
 		model.fit(tdata,
 				  validation_data = vdata,
-				  epochs          = 1,
+				  epochs          = 10,
 				  #class_weight   = class_weight,
-				  verbose         = 1,
+				  verbose         = 0,
 				  callbacks       = [LossHistoryCallback(), cp_callback]
 		)
 	#lr_callback.plot()
