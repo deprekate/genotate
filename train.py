@@ -18,8 +18,8 @@ from tensorflow.keras.callbacks import Callback
 #sess = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(log_device_placement=True))
 
 # Helper libraries
-os.environ['OPENBLAS_NUM_THREADS'] = '7'
-os.environ['MKL_NUM_THREADS'] = '7'
+os.environ['OPENBLAS_NUM_THREADS'] = '9'
+os.environ['MKL_NUM_THREADS'] = '9'
 #import matplotlib.pyplot as plt
 
 
@@ -127,7 +127,7 @@ if __name__ == '__main__':
 		select_columns      = selnames,
 		column_defaults     = [tf.int32] + [tf.float32] * (len(selnames)-1),
 		shuffle             = True,
-		num_parallel_reads  = 500,
+		num_parallel_reads  = 200,
 		shuffle_buffer_size = 5000,
 		batch_size          = 500,
 		num_epochs          = 1,

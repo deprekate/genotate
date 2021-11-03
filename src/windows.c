@@ -33,7 +33,7 @@ do {                 \
 #define VAL_128X   VAL_64X, VAL_64X
 static const char nuc_table[256] = { VAL_64X, VAL_32X, VAL_1X, 0, VAL_1X, 1, VAL_3X, 2, VAL_8X, VAL_4X, 3, VAL_128X, VAL_8X, VAL_3X };
 
-unsigned char compl[256] = "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnntngnnncnnnnnnnnnnnnannnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn";
+unsigned char compl[256] = "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnntvghnncdnnmnknnnnynanbnnrnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn";
 
 unsigned char aa_table[65] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV#Y+YSSSS*CWCLFLFX";
 
@@ -60,14 +60,8 @@ unsigned char get_chr(const unsigned char *dna, unsigned int i, unsigned int f) 
 		idx = idx*4 + nuc_table[compl[dna[i]]];
 	}
 	//printf("i:%i c:%c%c%c idx: %i aa: %c\n", i, dna[i], dna[i+1], dna[i+2], idx, aa_table[idx]);
-	if(idx <= 63){
-    	return aa_table[idx];
-	}else{
-		if(f){
-			val = (dna[i+0] + (dna[i+1] * 255) + dna[i+2] * 255 * 255);
-		}else{
-			val = (compl[dna[i+2]] + (compl[dna[i+1]] * 255) + compl[dna[i+0]] * 255 * 255);
-		}
+	if(idx > 63){
+		val = f ? (dna[i+0] + (dna[i+1] * 255) + dna[i+2] * 255 * 255) : (compl[dna[i+2]] + (compl[dna[i+1]] * 255) + compl[dna[i+0]] * 255 * 255);
 		switch(val){
 			case 7437682 : idx = 0; break;
 			case 7892857 : idx = 1; break;
@@ -158,8 +152,8 @@ unsigned char get_chr(const unsigned char *dna, unsigned int i, unsigned int f) 
 			case 7439224 : idx = 8; break;
 			default      : idx = 64;
 		}
-    	return aa_table[idx];
 	}
+	return aa_table[idx];
 }
 
 PyObject* windows_Iterator_iter(PyObject *self){
