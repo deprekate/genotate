@@ -2,17 +2,6 @@
 #include <limits.h>
 #include <Python.h>
 
-/*
- // commented out because these are gcc specific
-#define min(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-      __typeof__ (b) _b = (b); \
-     _a < _b ? _a : _b; })
-#define max(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-      __typeof__ (b) _b = (b); \
-     _a > _b ? _a : _b; })
-*/
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 #define SWAP(a, b)   \
@@ -36,6 +25,10 @@ static const char nuc_table[256] = { VAL_64X, VAL_32X, VAL_1X, 0, VAL_1X, 1, VAL
 unsigned char compl[256] = "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnntvghnncdnnmnknnnnynanbnnrnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn";
 
 unsigned char aa_table[65] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV#Y+YSSSS*CWCLFLFX";
+
+int mod(int x,int N){
+    return (x % N + N) % N;
+}
 
 typedef struct {
 	PyObject_HEAD
@@ -61,7 +54,11 @@ unsigned char get_chr(const unsigned char *dna, unsigned int i, unsigned int f) 
 	}
 	//printf("i:%i c:%c%c%c idx: %i aa: %c\n", i, dna[i], dna[i+1], dna[i+2], idx, aa_table[idx]);
 	if(idx > 63){
-		val = f ? (dna[i+0] + (dna[i+1] * 255) + dna[i+2] * 255 * 255) : (compl[dna[i+2]] + (compl[dna[i+1]] * 255) + compl[dna[i+0]] * 255 * 255);
+		// this is to support codons that have ambiguous bases that we are able to know which aminoacid is encoded
+		if(f)
+			val = (dna[i+0] + (dna[i+1] * 255) + dna[i+2] * 255 * 255); 
+		else
+			val = (compl[dna[i+2]] + (compl[dna[i+1]] * 255) + compl[dna[i+0]] * 255 * 255);
 		switch(val){
 			case 7437682 : idx = 0; break;
 			case 7892857 : idx = 1; break;
@@ -150,7 +147,7 @@ unsigned char get_chr(const unsigned char *dna, unsigned int i, unsigned int f) 
 			case 6333799 : idx = 8; break;
 			case 6723949 : idx = 8; break;
 			case 7439224 : idx = 8; break;
-			default      : idx = 64;
+			default      : idx = 64; break;
 		}
 	}
 	return aa_table[idx];
@@ -166,22 +163,23 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 	char aa[90] = {0};
 	unsigned int nuc[5] = {0};
 	unsigned int i, j, k, t;
-	float total;
+	float total, nucs;
 
-	if( p->i < p->len - 2 ){
+	if( (p->i)  <  (p->len - 2) ){
 		//printf("%i %i %c%c%c = %u\n", p->len, p->i, p->dna[p->i], p->dna[p->i+1], p->dna[p->i+2], get_chr(p->dna, p->i, p->f));
 		t = 0;
-		j =    (p->i > 56)       ? p->i-57  : p->i%3;
-		k = (p->i+60 > p->len-2) ? p->len-2 : p->i+60;
-		//j = MAX( p->i  ,  57 + p->i % 3) - 57;
-		//k = MIN( p->len - 2 , p->i + 60);
+		//j =    (p->i > 56)       ? p->i-57  : p->i%3;
+		//k = (p->i+60 > p->len-2) ? p->len-2 : p->i+60;
+		j = MAX( p->i  ,  57 + p->i % 3) - 57;
+		k = MIN( p->len - 2 , p->i + 60);
 		//-----------------------------------------------
 		for (i = j; i < k; i += 3){
-			//printf("%c\t", get_chr(p->dna, i, p->f) );
-			aa[get_chr(p->dna, i, p->f)]++;
-			nuc[ nuc_table[p->dna[i  ]] % 6 ]++;
-			nuc[ nuc_table[p->dna[i+1]] % 6 ]++;
-			nuc[ nuc_table[p->dna[i+2]] % 6 ]++;
+			//printf("%c", get_chr(p->dna, i, p->f) );
+			//printf("%c%c%c", p->dna[i], p->dna[i+1], p->dna[i+2] );
+			 aa[ get_chr(p->dna, i, p->f)   ]++;
+			nuc[ mod(nuc_table[p->dna[i]] ,  6) ]++;
+			nuc[ mod(nuc_table[p->dna[i+1]], 6) ]++;
+			nuc[ mod(nuc_table[p->dna[i+2]], 6) ]++;
 			t++;
 		}
 		//printf("\n");
@@ -191,16 +189,18 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 			SWAP(nuc[1] , nuc[2]);
 		}
 		total = (float) t;
+		nucs = (float) (nuc[0] + nuc[1] + nuc[2] + nuc[3]);
 		// ADD IN DIV ZERO HANDLING IN CASE BAD SEQUENCE
 		//
 		//PyObject *aa_list = Py_BuildValue("[fffffffffffffffffffffffff]",
-		PyObject *aa_list = Py_BuildValue("[ffffffffffffffffffffffff]",
+		PyObject *aa_list = Py_BuildValue("[ffffffffffffffffffffffffffff]",
 									p->gc,
-									//nuc[0] / (3.0*t),
-									//nuc[1] / (3.0*t),
-									//nuc[2] / (3.0*t),
-									//nuc[3] / (3.0*t),
-                                    aa['#'] / total,
+									nuc[0] / nucs,
+									nuc[1] / nucs,
+									nuc[2] / nucs,
+									nuc[3] / nucs,
+                                    //aa['#'] / total,
+                                    total,
                                     aa['*'] / total,
                                     aa['+'] / total,
                                     aa['A'] / total,
@@ -224,7 +224,6 @@ PyObject* windows_Iterator_iternext(PyObject *self){
                                     aa['W'] / total,
                                     aa['Y'] / total
 									);
-		//
 		
 		p->f ^= 1;
 		p->i += p->f;
@@ -268,7 +267,7 @@ static PyObject * get_windows(PyObject *self, PyObject *args){
 	p->len = strlen( (const char*) p->dna);
 
 	for (i=0; p->dna[i] ; i++){
-		nuc[ nuc_table[(p->dna[i])] % 6 ]++;
+		nuc[ mod(nuc_table[(p->dna[i])], 6) ]++;
 	}
 	p->gc =  (float)( nuc[1] + nuc[2] ) / ( nuc[0] + nuc[1] + nuc[2] + nuc[3] );
 

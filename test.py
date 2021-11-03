@@ -34,12 +34,12 @@ for name,locus in genbank.items():
 	cwindows = cgw(locus.dna)
 	pwindows = pgw(locus.dna)
 	for i, windows in enumerate(zip(cwindows, pwindows), start=1):
+		#print(windows[0]) ; print(windows[1])
 		pw = [rround(item, 5) for item in windows[0] ]
 		cw = [rround(item, 5) for item in windows[1] ]
 		#print(i)
-		#print(pw)
-		#print(cw)
-		assert pw == cw, 'Error: non match at ' + str(i) + '\n' + '\t'.join(list('%#*+ACDEFGHIKLMNPQRSTVWY')) + '\n' + '\t'.join(map(str, pw)) + '\n' + '\t'.join(map(str, cw))
+		#print(pw) ; print(cw)
+		assert pw == cw, 'Error: non match at ' + str(i) + '\n' + '\t'.join(list('%acgt#*+ACDEFGHIKLMNPQRSTVWY')) + '\n' + '\t'.join(map(str, pw)) + '\n' + '\t'.join(map(str, cw))
 		pos = -((i+1)//2) if (i+1)%2 else ((i+1)//2)
 		#print( [rround(w, 5) for w in window] )
 		#yield [positions.get(pos, 2)] + window

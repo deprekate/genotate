@@ -59,11 +59,16 @@ def nucl_fp(dna, strand):
 	return row[::strand]
 
 def nucl_freq(dna, strand):
-	n = len(dna) 
-	a = dna.count('a') / n if n else 0
-	c = dna.count('c') / n if n else 0
-	g = dna.count('g') / n if n else 0
-	t = dna.count('t') / n if n else 0
+	a = dna.count('a') 
+	c = dna.count('c')
+	g = dna.count('g')
+	t = dna.count('t')
+	#n = len(dna) 
+	n = a + c + g + t
+	a = a / n if n else 0
+	c = c / n if n else 0
+	g = g / n if n else 0
+	t = t / n if n else 0
 	if strand > 0:
 		return [a, c, g, t]
 	else:
@@ -80,14 +85,17 @@ def single_window(dna, n, strand):
 	global translate
 	row = []
 	#translate = Translate()
-	window = dna[ max( n%3 , n-57) : n+60]
+	window = dna[ max( n%3 , n-57) : n+60 ]
+	m = len(window) % 3
+	if m:
+		window = window[:-m]
 	#translate.image(window, strand)
 
 	#row.extend([window])	
 	#row.extend([strand])	
 	#row.extend([translate.seq(window, strand)])	
 	#row.extend([gc_content(window)])	
-	#row.extend(nucl_freq(window, strand))
+	row.extend(nucl_freq(window, strand))
 	#row.extend(gc_fp(window, strand))
 	#row.extend(nucl_fp(window, strand))
 	freqs = translate.frequencies(window, strand)

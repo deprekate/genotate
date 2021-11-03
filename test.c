@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 
 
@@ -20,17 +21,35 @@ unsigned char compl[256] = "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
 unsigned char aa_table[65] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV#Y+YSSSS*CWCLFLFX";
 
 
+int mod (int a, int b){
+   int ret = a % b;
+   if(ret < 0)
+     ret+=b;
+   return ret;
+}
+int modulo(int x,int N){
+    return (x % N + N) %N;
+}
+
 int main(int argc, char** argv){
     unsigned int idx;
 	char dna[3];
-	printf("Value: %c (%i) -> %c\n", 'r', 'r', compl['r']);
-	printf("Value: %c (%i) -> %c\n", 'y', 'y', compl['y']);
-	printf("Value: %c (%i) -> %c\n", 'k', 'k', compl['k']);
-	printf("Value: %c (%i) -> %c\n", 'm', 'm', compl['m']);
-	printf("Value: %c (%i) -> %c\n", 'b', 'b', compl['b']);
-	printf("Value: %c (%i) -> %c\n", 'v', 'v', compl['v']);
-	printf("Value: %c (%i) -> %c\n", 'd', 'd', compl['d']);
-	printf("Value: %c (%i) -> %c\n", 'h', 'h', compl['h']);
+
+
+	printf("char: %c\n", 'm');
+	printf("i: %i\n", nuc_table['m']);
+	printf("mod: %i\n", nuc_table['m'] % 6 );
+	printf("mod: %i\n", (-128) % 6 );
+	printf("mod: %i\n", mod(-128, 6) );
+	printf("mod: %i\n", modulo(-128, 6) );
+	return 0;
+
+	printf("Value: %c (%i) -> %i\n", 'a', 'a', nuc_table['a']);
+	printf("Value: %c (%i) -> %i\n", 'c', 'c', nuc_table['c']);
+	printf("Value: %c (%i) -> %i\n", 'g', 'g', nuc_table['g']);
+	printf("Value: %c (%i) -> %i\n", 't', 't', nuc_table['t']);
+	printf("Value: %c (%i) -> %i\n", 'b', 'b', nuc_table['b']);
+	printf("Value: %c (%i) -> %i\n", 'n', 'n', nuc_table['n']);
 	return 0;
 
 	strcpy(dna,argv[1]);
