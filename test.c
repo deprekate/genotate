@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 
+#define VAR printf
 
 
 #define VAL_1X     -128
@@ -35,6 +36,8 @@ int main(int argc, char** argv){
     unsigned int idx;
 	char dna[3];
 
+	VAR("asD\n");
+	return 0;
 
 	printf("char: %c\n", 'm');
 	printf("i: %i\n", nuc_table['m']);

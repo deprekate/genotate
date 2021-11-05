@@ -2,6 +2,29 @@
 #include <limits.h>
 #include <Python.h>
 
+#define REP0(X)
+#define REP1(X) X
+#define REP2(X) REP1(X) X
+#define REP3(X) REP2(X) X
+#define REP4(X) REP3(X) X
+#define REP5(X) REP4(X) X
+#define REP6(X) REP5(X) X
+#define REP7(X) REP6(X) X
+#define REP8(X) REP7(X) X
+#define REP9(X) REP8(X) X
+#define REP10(X) REP9(X) X
+
+#define REP(HUNDREDS,TENS,ONES,X) \
+  REP##HUNDREDS(REP10(REP10(X))) \
+  REP##TENS(REP10(X)) \
+  REP##ONES(X)
+
+// this is to pack the dipeptides into a pytuple
+#define PEP(a,b) dipep[a][b]/(total-1.0)
+#define PEPS(a) PEP(a,'#'),PEP(a,'*'),PEP(a,'+'),PEP(a,'A'),PEP(a,'C'),PEP(a,'D'),PEP(a,'E'),PEP(a,'F'),PEP(a,'G'),PEP(a,'H'),PEP(a,'I'),PEP(a,'K'),PEP(a,'L'),PEP(a,'M'),PEP(a,'N'),PEP(a,'P'),PEP(a,'Q'),PEP(a,'R'),PEP(a,'S'),PEP(a,'T'),PEP(a,'V'),PEP(a,'W'),PEP(a,'Y')
+#define DIPEPS PEPS('#'),PEPS('*'),PEPS('+'),PEPS('A'),PEPS('C'),PEPS('D'),PEPS('E'),PEPS('F'),PEPS('G'),PEPS('H'),PEPS('I'),PEPS('K'),PEPS('L'),PEPS('M'),PEPS('N'),PEPS('P'),PEPS('Q'),PEPS('R'),PEPS('S'),PEPS('T'),PEPS('V'),PEPS('W'),PEPS('Y')
+
+
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 #define SWAP(a, b)   \
@@ -25,6 +48,7 @@ static const char nuc_table[256] = { VAL_64X, VAL_32X, VAL_1X, 0, VAL_1X, 1, VAL
 unsigned char compl[256] = "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnntvghnncdnnmnknnnnynanbnnrnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn";
 
 unsigned char aa_table[65] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV#Y+YSSSS*CWCLFLFX";
+
 
 int mod(int x,int N){
     return (x % N + N) % N;
@@ -182,7 +206,11 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 			//printf("%c", get_chr(p->dna, i, p->f) );
 			//printf("%c%c%c", p->dna[i], p->dna[i+1], p->dna[i+2] );
 			 aa[ get_chr(p->dna, i, p->f)   ]++;
-			 dipep[last][ get_chr(p->dna, i, p->f)   ]++;
+			if(p->f){
+				dipep[last][ get_chr(p->dna, i, p->f)   ]++;
+			}else{
+				dipep[ get_chr(p->dna, i, p->f)   ][last]++;
+			}
 			 last = get_chr(p->dna, i, p->f);
 			//nuc[ mod(nuc_table[p->dna[i]] ,  6) ]++;
 			//nuc[ mod(nuc_table[p->dna[i+1]], 6) ]++;
@@ -212,8 +240,8 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 		nucs_p3 = (float) (nuc_p3[0] + nuc_p3[1] + nuc_p3[2] + nuc_p3[3]);
 		// ADD IN DIV ZERO HANDLING IN CASE BAD SEQUENCE
 		//
-		//PyObject *aa_list = Py_BuildValue("[fffffffffffffffffffffffff]",
-		PyObject *aa_list = Py_BuildValue("[fffffffffffffffffffffffffffffffffffff]",
+		//PyObject *aa_list = Py_BuildValue("[ffffffffffffffffffffffffffffffffffff]",
+		PyObject *aa_list = Py_BuildValue("[" REP(5,6,5,"f") "]",
 									p->gc,
 									//nuc[0] / nucs,
 									//nuc[1] / nucs,
@@ -254,7 +282,9 @@ PyObject* windows_Iterator_iternext(PyObject *self){
                                     aa['V'] / total,
                                     aa['W'] / total,
                                     aa['Y'] / total,
-                                    dipep['V']['*'] / total
+                                    //dipep['#']['#'] / total,
+                                    //dipep['V']['*'] / total
+									DIPEPS
 									);
 		
 		p->f ^= 1;

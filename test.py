@@ -34,17 +34,20 @@ contigs = mt.read_fasta(sys.argv[1])
 
 sys.stderr.write("Start\n")
 
+'''
 for header in contigs:
 	dna = contigs[header]
 	windows = cgw(dna)
 	#windows = pgw(dna)
 	for i, window in enumerate(windows, start=1):
 		print(window)
-
 exit()
-for name,locus in genbank.items():
-	cwindows = cgw(locus.dna)
-	pwindows = pgw(locus.dna)
+'''
+#for name,locus in genbank.items():
+for header in contigs:
+	dna = contigs[header]
+	cwindows = cgw(dna)
+	pwindows = pgw(dna)
 	for i, windows in enumerate(zip(cwindows, pwindows), start=1):
 		#print(windows[0]) ; print(windows[1])
 		pw = [rround(item, 5) for item in windows[0] ]

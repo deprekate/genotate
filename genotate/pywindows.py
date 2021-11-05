@@ -104,7 +104,7 @@ def single_window(dna, n, strand):
 	#row.extend(translate.codings(window, strand))
 	#row.extend(translate.dicodings(window, strand))
 	#row.extend(translate.tricodings(window, strand))
-	#row.extend(translate.dimers(window, strand))
+	row.extend(translate.dimers(window, strand))
 	#row.extend(translate.dipeps(window, strand))
 	#row.extend(translate.trimers(window, strand))
 	#row.extend(translate.structure(window, strand))
