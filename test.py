@@ -16,6 +16,7 @@ sys.settrace
 from read_genbank import GenbankFile
 from genotate.windows import get_windows as cgw
 from genotate.pywindows import get_windows as pgw
+import genotate.make_train as mt
 
 
 def rround(item, n):
@@ -28,8 +29,18 @@ def rround(item, n):
 			return item
 
 
-genbank = GenbankFile(sys.argv[1])
+#genbank = GenbankFile(sys.argv[1])
+contigs = mt.read_fasta(args.argv[1])
 
+sys.stderr.write("Start\n")
+
+for name,locus in genbank.items():
+	windows = cgw(locus.dna)
+	#windows = pgw(locus.dna)
+	for i, window in enumerate(windows, start=1):
+		print(window)
+
+exit()
 for name,locus in genbank.items():
 	cwindows = cgw(locus.dna)
 	pwindows = pgw(locus.dna)
