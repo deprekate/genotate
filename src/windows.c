@@ -162,8 +162,11 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 	windows_Iterator *p = (windows_Iterator *)self;
 	char aa[90] = {0};
 	unsigned int nuc[5] = {0};
+	unsigned int nuc_p1[5] = {0};
+	unsigned int nuc_p2[5] = {0};
+	unsigned int nuc_p3[5] = {0};
 	unsigned int i, j, k, t;
-	float total, nucs;
+	float total, nucs, nucs_p1, nucs_p2, nucs_p3;
 
 	if( (p->i)  <  (p->len - 2) ){
 		//printf("%i %i %c%c%c = %u\n", p->len, p->i, p->dna[p->i], p->dna[p->i+1], p->dna[p->i+2], get_chr(p->dna, p->i, p->f));
@@ -180,6 +183,10 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 			nuc[ mod(nuc_table[p->dna[i]] ,  6) ]++;
 			nuc[ mod(nuc_table[p->dna[i+1]], 6) ]++;
 			nuc[ mod(nuc_table[p->dna[i+2]], 6) ]++;
+			// positional nuc freq
+			nuc_p1[ mod(nuc_table[p->dna[i]] ,  6) ]++;
+			nuc_p2[ mod(nuc_table[p->dna[i+1]], 6) ]++;
+			nuc_p3[ mod(nuc_table[p->dna[i+2]], 6) ]++;
 			t++;
 		}
 		//printf("\n");
@@ -187,18 +194,39 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 		if(!p->f){
 			SWAP(nuc[0] , nuc[3]);
 			SWAP(nuc[1] , nuc[2]);
+			SWAP(nuc_p1[0] , nuc_p3[3]);
+			SWAP(nuc_p1[1] , nuc_p3[2]);
+			SWAP(nuc_p1[2] , nuc_p3[1]);
+			SWAP(nuc_p1[3] , nuc_p3[0]);
+			SWAP(nuc_p2[0] , nuc_p2[3]);
+			SWAP(nuc_p2[1] , nuc_p2[2]);
 		}
 		total = (float) t;
 		nucs = (float) (nuc[0] + nuc[1] + nuc[2] + nuc[3]);
+		nucs_p1 = (float) (nuc_p1[0] + nuc_p1[1] + nuc_p1[2] + nuc_p1[3]);
+		nucs_p2 = (float) (nuc_p2[0] + nuc_p2[1] + nuc_p2[2] + nuc_p2[3]);
+		nucs_p3 = (float) (nuc_p3[0] + nuc_p3[1] + nuc_p3[2] + nuc_p3[3]);
 		// ADD IN DIV ZERO HANDLING IN CASE BAD SEQUENCE
 		//
 		//PyObject *aa_list = Py_BuildValue("[fffffffffffffffffffffffff]",
-		PyObject *aa_list = Py_BuildValue("[ffffffffffffffffffffffffffff]",
+		PyObject *aa_list = Py_BuildValue("[ffffffffffffffffffffffffffffffffffff]",
 									p->gc,
-									nuc[0] / nucs,
-									nuc[1] / nucs,
-									nuc[2] / nucs,
-									nuc[3] / nucs,
+									//nuc[0] / nucs,
+									//nuc[1] / nucs,
+									//nuc[2] / nucs,
+									//nuc[3] / nucs,
+									nuc_p1[0] / nucs_p1,
+									nuc_p1[1] / nucs_p1,
+									nuc_p1[2] / nucs_p1,
+									nuc_p1[3] / nucs_p1,
+									nuc_p2[0] / nucs_p2,
+									nuc_p2[1] / nucs_p2,
+									nuc_p2[2] / nucs_p2,
+									nuc_p2[3] / nucs_p2,
+									nuc_p3[0] / nucs_p3,
+									nuc_p3[1] / nucs_p3,
+									nuc_p3[2] / nucs_p3,
+									nuc_p3[3] / nucs_p3,
                                     aa['#'] / total,
                                     aa['*'] / total,
                                     aa['+'] / total,

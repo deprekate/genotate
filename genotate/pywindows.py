@@ -95,9 +95,9 @@ def single_window(dna, n, strand):
 	#row.extend([strand])	
 	#row.extend([translate.seq(window, strand)])	
 	#row.extend([gc_content(window)])	
-	row.extend(nucl_freq(window, strand))
+	#row.extend(nucl_freq(window, strand))
 	#row.extend(gc_fp(window, strand))
-	#row.extend(nucl_fp(window, strand))
+	row.extend(nucl_fp(window, strand))
 	freqs = translate.frequencies(window, strand)
 	for aa in translate.amino_acids:
 		row.append(freqs.get(aa,0.0))
