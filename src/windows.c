@@ -161,12 +161,14 @@ PyObject* windows_Iterator_iter(PyObject *self){
 PyObject* windows_Iterator_iternext(PyObject *self){
 	windows_Iterator *p = (windows_Iterator *)self;
 	char aa[90] = {0};
+	char dipep[90][90] = {0};
 	unsigned int nuc[5] = {0};
 	unsigned int nuc_p1[5] = {0};
 	unsigned int nuc_p2[5] = {0};
 	unsigned int nuc_p3[5] = {0};
 	unsigned int i, j, k, t;
 	float total, nucs, nucs_p1, nucs_p2, nucs_p3;
+	unsigned char last = 'X';
 
 	if( (p->i)  <  (p->len - 2) ){
 		//printf("%i %i %c%c%c = %u\n", p->len, p->i, p->dna[p->i], p->dna[p->i+1], p->dna[p->i+2], get_chr(p->dna, p->i, p->f));
@@ -180,9 +182,11 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 			//printf("%c", get_chr(p->dna, i, p->f) );
 			//printf("%c%c%c", p->dna[i], p->dna[i+1], p->dna[i+2] );
 			 aa[ get_chr(p->dna, i, p->f)   ]++;
-			nuc[ mod(nuc_table[p->dna[i]] ,  6) ]++;
-			nuc[ mod(nuc_table[p->dna[i+1]], 6) ]++;
-			nuc[ mod(nuc_table[p->dna[i+2]], 6) ]++;
+			 dipep[last][ get_chr(p->dna, i, p->f)   ]++;
+			 last = get_chr(p->dna, i, p->f);
+			//nuc[ mod(nuc_table[p->dna[i]] ,  6) ]++;
+			//nuc[ mod(nuc_table[p->dna[i+1]], 6) ]++;
+			//nuc[ mod(nuc_table[p->dna[i+2]], 6) ]++;
 			// positional nuc freq
 			nuc_p1[ mod(nuc_table[p->dna[i]] ,  6) ]++;
 			nuc_p2[ mod(nuc_table[p->dna[i+1]], 6) ]++;
@@ -209,7 +213,7 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 		// ADD IN DIV ZERO HANDLING IN CASE BAD SEQUENCE
 		//
 		//PyObject *aa_list = Py_BuildValue("[fffffffffffffffffffffffff]",
-		PyObject *aa_list = Py_BuildValue("[ffffffffffffffffffffffffffffffffffff]",
+		PyObject *aa_list = Py_BuildValue("[fffffffffffffffffffffffffffffffffffff]",
 									p->gc,
 									//nuc[0] / nucs,
 									//nuc[1] / nucs,
@@ -249,7 +253,8 @@ PyObject* windows_Iterator_iternext(PyObject *self){
                                     aa['T'] / total,
                                     aa['V'] / total,
                                     aa['W'] / total,
-                                    aa['Y'] / total
+                                    aa['Y'] / total,
+                                    dipep['V']['*'] / total
 									);
 		
 		p->f ^= 1;

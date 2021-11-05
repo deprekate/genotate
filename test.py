@@ -30,13 +30,14 @@ def rround(item, n):
 
 
 #genbank = GenbankFile(sys.argv[1])
-contigs = mt.read_fasta(args.argv[1])
+contigs = mt.read_fasta(sys.argv[1])
 
 sys.stderr.write("Start\n")
 
-for name,locus in genbank.items():
-	windows = cgw(locus.dna)
-	#windows = pgw(locus.dna)
+for header in contigs:
+	dna = contigs[header]
+	windows = cgw(dna)
+	#windows = pgw(dna)
 	for i, window in enumerate(windows, start=1):
 		print(window)
 
