@@ -39,7 +39,7 @@ for name,locus in genbank.items():
 		cw = [rround(item, 5) for item in windows[1] ]
 		#print(i)
 		#print(pw) ; print(cw)
-		assert pw == cw, 'Error: non match at ' + str(i) + '\n' + '\t'.join(list('%acgt#*+ACDEFGHIKLMNPQRSTVWY')) + '\n' + '\t'.join(map(str, pw)) + '\n' + '\t'.join(map(str, cw))
+		assert pw == cw, 'Error: non match at ' + str(i) + '\n%\t' + '\t'.join([str(p+1)+n for p in range(3) for n in list('acgt')]) + '\t'.join(list('#*+ACDEFGHIKLMNPQRSTVWY')) + '\n' + '\t'.join(map(str, pw)) + '\n' + '\t'.join(map(str, cw))
 		pos = -((i+1)//2) if (i+1)%2 else ((i+1)//2)
 		#print( [rround(w, 5) for w in window] )
 		#yield [positions.get(pos, 2)] + window
