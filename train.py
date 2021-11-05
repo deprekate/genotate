@@ -60,8 +60,6 @@ def smooth_pack(features, labels):
 	labs += (factor / labs.shape[1])
 	return tf.stack(list(features.values()), axis=-1), labs
 
-def pack_b(features, labels):
-	return tf.stack(list(features.values()), axis=-1), tf.one_hot(labels, depth=4)
 
 
 if __name__ == '__main__':
@@ -171,7 +169,7 @@ if __name__ == '__main__':
 		#lr_callback = LRFinder()
 		model.fit(tdata,
 				  validation_data = vdata,
-				  epochs          = 10,
+				  epochs          = 20,
 				  #class_weight   = class_weight,
 				  verbose         = 0,
 				  callbacks       = [LossHistoryCallback(), cp_callback]

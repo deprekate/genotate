@@ -24,7 +24,7 @@ signal(SIGPIPE,SIG_DFL)
 #from genotate.windows import get_windows
 #from genotate.make_train import get_windows
 
-from read_genbank import GenbankFeatures
+from read_genbank import GenbankFile
 try:
 	from aminoacid import Translate
 except:
@@ -179,6 +179,8 @@ def single_window(dna, n, strand, translate):
 	row = []
 	#translate = Translate()
 	window = dna[ max( n%3 , n-57) : n+60]
+	print(window)
+
 	#translate.image(window, strand)
 
 	#row.extend([window])	
@@ -195,7 +197,7 @@ def single_window(dna, n, strand, translate):
 	#row.extend(translate.dicodings(window, strand))
 	#row.extend(translate.tricodings(window, strand))
 	row.extend(translate.dimers(window, strand))
-	#row.extend(translate.dipeps(window, strand))
+	row.extend(translate.dipeps(window, strand))
 	#row.extend(translate.trimers(window, strand))
 	#row.extend(translate.structure(window, strand))
 	#row.extend( [translate.array(window, strand)] )

@@ -10,7 +10,7 @@ import faulthandler
 import genotate.make_train as mt
 import genotate.make_model as mm
 import genotate.codons as cd
-from genotate.features import Features
+#from genotate.features import Features
 
 #from genotate.windows import get_windows
 from genotate.make_train import get_windows
@@ -56,11 +56,11 @@ def mode(a, axis=0):
 def pack(features, label):
   return tf.stack(list(features.values()), axis=-1), label
 
-def smo(data):
+def smo(data, l=10):
 	out = np.zeros_like(data)
 	for i in range(6):
 		for j in range(3):
-			out[i::6,j] = smooth_line(data[i::6,j])
+			out[i::6,j] = smooth_line(data[i::6,j], window_len=l)
 	return out
 
 
@@ -193,7 +193,7 @@ if __name__ == '__main__':
 		#	print( feature )
 		#exit()
 		p = model.predict(dataset)
-		p = smo(p)
+
 		#p = smoo(p)
 		#p = best(p)
 		'''
@@ -205,6 +205,7 @@ if __name__ == '__main__':
 		exit()
 		'''
 		if args.plot_strands:
+			p = smo(p, 100)
 			f = p[0::6,1] + p[2::6,1] + p[4::6,1]
 			r = p[1::6,1] + p[3::6,1] + p[5::6,1]
 			ig = p[0::6,2] + p[2::6,2] + p[4::6,2] + p[1::6,2] + p[3::6,2] + p[5::6,2]
@@ -214,7 +215,6 @@ if __name__ == '__main__':
 			algo = rpt.KernelCPD(kernel="linear", min_size=30).fit(signal)
 			result = algo.predict(pen=15)
 			result = [x*3 for x in result]
-			print(result)
 			print("# BASE VAL1  VAL2 VAL3  VAL4")
 			print("# colour 255:0:0 0:0:255 0:0:0 128:128:128 0:0:0")
 			for i in range(0,len(p), 6):
