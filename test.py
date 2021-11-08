@@ -34,15 +34,13 @@ contigs = mt.read_fasta(sys.argv[1])
 
 sys.stderr.write("Start\n")
 
-'''
 for header in contigs:
 	dna = contigs[header]
-	windows = cgw(dna)
-	#windows = pgw(dna)
+	#windows = cgw(dna)
+	windows = pgw(dna)
 	for i, window in enumerate(windows, start=1):
-		print(window)
+		pass #print(window)
 exit()
-'''
 #for name,locus in genbank.items():
 for header in contigs:
 	dna = contigs[header]
