@@ -233,14 +233,17 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 			SWAP(nuc_p2[0] , nuc_p2[3]);
 			SWAP(nuc_p2[1] , nuc_p2[2]);
 		}
-		total = (float) t;
-		nucs = (float) (nuc[0] + nuc[1] + nuc[2] + nuc[3]);
-		nucs_p1 = (float) (nuc_p1[0] + nuc_p1[1] + nuc_p1[2] + nuc_p1[3]);
-		nucs_p2 = (float) (nuc_p2[0] + nuc_p2[1] + nuc_p2[2] + nuc_p2[3]);
-		nucs_p3 = (float) (nuc_p3[0] + nuc_p3[1] + nuc_p3[2] + nuc_p3[3]);
-		// ADD IN DIV ZERO HANDLING IN CASE BAD SEQUENCE
+		total = t ? (float) t : 1.0;
+		nucs = nuc[0] + nuc[1] + nuc[2] + nuc[3];
+		nucs = nuc[0] ? (float) nucs : 1.0;
+		nucs_p1 = nuc_p1[0] + nuc_p1[1] + nuc_p1[2] + nuc_p1[3];
+		nucs_p2 = nuc_p2[0] + nuc_p2[1] + nuc_p2[2] + nuc_p2[3];
+		nucs_p3 = nuc_p3[0] + nuc_p3[1] + nuc_p3[2] + nuc_p3[3];
+		nucs_p1 = nucs_p1 ? (float) nucs_p1 : 1.0;
+		nucs_p2 = nucs_p2 ? (float) nucs_p2 : 1.0;
+		nucs_p3 = nucs_p3 ? (float) nucs_p3 : 1.0;
 		//
-		//PyObject *aa_list = Py_BuildValue("[ffffffffffffffffffffffffffffffffffff]",
+		//PyObject *aa_list = Py_BuildValue("[fffffffffffffffffffffffffffffffffff]",
 		PyObject *aa_list = Py_BuildValue("[" REP(5,6,5,"f") "]",
 									p->gc,
 									//nuc[0] / nucs,

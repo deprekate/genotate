@@ -29,30 +29,33 @@ def rround(item, n):
 			return item
 
 
-#genbank = GenbankFile(sys.argv[1])
-contigs = mt.read_fasta(sys.argv[1])
+genbank = GenbankFile(sys.argv[1])
+#contigs = mt.read_fasta(sys.argv[1])
 
 sys.stderr.write("Start\n")
 
+'''
 for header in contigs:
 	dna = contigs[header]
-	#windows = cgw(dna)
-	windows = pgw(dna)
+	windows = cgw(dna)
+	#windows = pgw(dna)
 	for i, window in enumerate(windows, start=1):
-		pass #print(window)
+		print(window)
 exit()
-#for name,locus in genbank.items():
-for header in contigs:
-	dna = contigs[header]
+'''
+for name,locus in genbank.items():
+#for header in contigs:
+	#dna = contigs[header]
+	dna = locus.dna
 	cwindows = cgw(dna)
 	pwindows = pgw(dna)
 	for i, windows in enumerate(zip(cwindows, pwindows), start=1):
-		#print(windows[0]) ; print(windows[1])
+		#print('cw', windows[0]) ; print('pw', windows[1])
 		pw = [rround(item, 5) for item in windows[0] ]
 		cw = [rround(item, 5) for item in windows[1] ]
 		#print(i)
 		#print(pw) ; print(cw)
-		assert pw == cw, 'Error: non match at ' + str(i) + '\n%\t' + '\t'.join([str(p+1)+n for p in range(3) for n in list('acgt')]) + '\t'.join(list('#*+ACDEFGHIKLMNPQRSTVWY')) + '\n' + '\t'.join(map(str, pw)) + '\n' + '\t'.join(map(str, cw))
+		assert pw == cw, 'Error: non match at ' + str(i) + '\n%\t' + '\t'.join([str(p+1)+n for p in range(3) for n in list('acgt')]) + '\t' + '\t'.join(list('#*+ACDEFGHIKLMNPQRSTVWY')) + '\n' + '\t'.join(map(str, pw)) + '\n' + '\t'.join(map(str, cw))
 		pos = -((i+1)//2) if (i+1)%2 else ((i+1)//2)
 		#print( [rround(w, 5) for w in window] )
 		#yield [positions.get(pos, 2)] + window
