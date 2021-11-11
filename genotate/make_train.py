@@ -91,7 +91,7 @@ def get_stops(infile):
 
 
 def parse_genbank(infile):
-	genbank = GenbankFeatures(infile)
+	genbank = GenbankFile(infile)
 
 	# label the positions
 	for locus in genbank.values():
@@ -179,7 +179,6 @@ def single_window(dna, n, strand, translate):
 	row = []
 	#translate = Translate()
 	window = dna[ max( n%3 , n-57) : n+60]
-	print(window)
 
 	#translate.image(window, strand)
 
@@ -197,7 +196,7 @@ def single_window(dna, n, strand, translate):
 	#row.extend(translate.dicodings(window, strand))
 	#row.extend(translate.tricodings(window, strand))
 	row.extend(translate.dimers(window, strand))
-	row.extend(translate.dipeps(window, strand))
+	#row.extend(translate.dipeps(window, strand))
 	#row.extend(translate.trimers(window, strand))
 	#row.extend(translate.structure(window, strand))
 	#row.extend( [translate.array(window, strand)] )

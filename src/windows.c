@@ -51,7 +51,7 @@ unsigned char aa_table[65] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV#Y
 
 
 int mod(int x,int N){
-    return (x % N + N) % N;
+	return (x % N + N) % N;
 }
 
 typedef struct {
@@ -64,9 +64,9 @@ typedef struct {
 } windows_Iterator;
 
 unsigned char get_chr(const unsigned char *dna, unsigned int i, unsigned int f) {
-    // unsigned char* so high-ASCII -> 128..255, not negative,
-    // and works as an index into a 256 entry table
-    unsigned int idx, val;
+	// unsigned char* so high-ASCII -> 128..255, not negative,
+	// and works as an index into a 256 entry table
+	unsigned int idx, val;
 	if(f){
 		idx	= nuc_table[dna[i]];
 		idx = idx*4 + nuc_table[dna[i+1]];
@@ -242,7 +242,7 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 		nucs_p1 = nucs_p1 ? (float) nucs_p1 : 1.0;
 		nucs_p2 = nucs_p2 ? (float) nucs_p2 : 1.0;
 		nucs_p3 = nucs_p3 ? (float) nucs_p3 : 1.0;
-		//
+		
 		//PyObject *aa_list = Py_BuildValue("[fffffffffffffffffffffffffffffffffff]",
 		PyObject *aa_list = Py_BuildValue("[" REP(5,6,5,"f") "]",
 									p->gc,
@@ -262,31 +262,30 @@ PyObject* windows_Iterator_iternext(PyObject *self){
 									nuc_p3[1] / nucs_p3,
 									nuc_p3[2] / nucs_p3,
 									nuc_p3[3] / nucs_p3,
-                                    aa['#'] / total,
-                                    aa['*'] / total,
-                                    aa['+'] / total,
-                                    aa['A'] / total,
-                                    aa['C'] / total,
-                                    aa['D'] / total,
-                                    aa['E'] / total,
-                                    aa['F'] / total,
-                                    aa['G'] / total,
-                                    aa['H'] / total,
-                                    aa['I'] / total,
-                                    aa['K'] / total,
-                                    aa['L'] / total,
-                                    aa['M'] / total,
-                                    aa['N'] / total,
-                                    aa['P'] / total,
-                                    aa['Q'] / total,
-                                    aa['R'] / total,
-                                    aa['S'] / total,
-                                    aa['T'] / total,
-                                    aa['V'] / total,
-                                    aa['W'] / total,
-                                    aa['Y'] / total,
-                                    //dipep['#']['#'] / total,
-                                    //dipep['V']['*'] / total
+									aa['#'] / total,
+									aa['*'] / total,
+									aa['+'] / total,
+									aa['A'] / total,
+									aa['C'] / total,
+									aa['D'] / total,
+									aa['E'] / total,
+									aa['F'] / total,
+									aa['G'] / total,
+									aa['H'] / total,
+									aa['I'] / total,
+									aa['K'] / total,
+									aa['L'] / total,
+									aa['M'] / total,
+									aa['N'] / total,
+									aa['P'] / total,
+									aa['Q'] / total,
+									aa['R'] / total,
+									aa['S'] / total,
+									aa['T'] / total,
+									aa['V'] / total,
+									aa['W'] / total,
+									aa['Y'] / total,
+									//dipep['#']['#'] / total,
 									DIPEPS
 									);
 		
@@ -303,13 +302,13 @@ static void Iter_dealloc(windows_Iterator *self){ PyObject_Del(self); }
 
 static PyTypeObject IterableType = {
 	PyVarObject_HEAD_INIT(NULL, 0)
-	.tp_name = "Iter",
-	.tp_doc = "Custom objects",
+	.tp_name      = "Iter",
+	.tp_doc       = "Custom objects",
 	.tp_basicsize = sizeof(windows_Iterator),
-	.tp_itemsize = 0,
-	.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
-	.tp_dealloc = (destructor) Iter_dealloc,
-	.tp_iter	  = windows_Iterator_iter,
+	.tp_itemsize  = 0,
+	.tp_flags     = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+	.tp_dealloc   = (destructor) Iter_dealloc,
+	.tp_iter      = windows_Iterator_iter,
 	.tp_iternext  = windows_Iterator_iternext
 };
 
@@ -334,7 +333,7 @@ static PyObject * get_windows(PyObject *self, PyObject *args){
 	for (i=0; p->dna[i] ; i++){
 		nuc[ mod(nuc_table[(p->dna[i])], 6) ]++;
 	}
-	p->gc =  (float)( nuc[1] + nuc[2] ) / ( nuc[0] + nuc[1] + nuc[2] + nuc[3] );
+	p->gc =  (float)( nuc[1] + nuc[2] ) / i;
 
 	/* I'm not sure if it's strictly necessary. */
 	if (!PyObject_Init((PyObject *)p, &IterableType)) {

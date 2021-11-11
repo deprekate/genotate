@@ -103,10 +103,10 @@ def smooth(data):
 			out[6*i+j] = mode(window)
 	return out
 
-def smoo(data):
+def smoo(data, n=10):
 	out = np.zeros_like(data)
 	for i in range(len(data)):
-		window = data[ max(i-19, i % 6) : i+20 : 6 ]
+		window = data[ max(i-69, i % 6) : i+80 : 6 ]
 		out[i] = np.mean(window, axis=0)
 	return out
 
@@ -205,10 +205,17 @@ if __name__ == '__main__':
 		exit()
 		'''
 		if args.plot_strands:
-			p = smo(p, 100)
+			#p = smo(p, 30)
+			#p = smoo(p)
 			f = p[0::6,1] + p[2::6,1] + p[4::6,1]
+			#f = smooth_line(f.flatten(),30)
+			f = smoo(f.flatten(),30)
 			r = p[1::6,1] + p[3::6,1] + p[5::6,1]
+			#r = smooth_line(r.flatten(), 30)
+			r = smoo(r.flatten(), 30)
 			ig = p[0::6,2] + p[2::6,2] + p[4::6,2] + p[1::6,2] + p[3::6,2] + p[5::6,2]
+			#ig = smooth_line(ig.flatten(), 30)
+			ig = smoo(ig.flatten(), 30)
 			signal = np.array([f.clip(0,1), r.clip(0,1), ig/6]).T
 			# detection
 			#algo = rpt.Pelt(model="rbf").fit(signal)
@@ -217,14 +224,11 @@ if __name__ == '__main__':
 			result = [x*3 for x in result]
 			print("# BASE VAL1  VAL2 VAL3  VAL4")
 			print("# colour 255:0:0 0:0:255 0:0:0 128:128:128 0:0:0")
-			for i in range(0,len(p), 6):
-				f = p[i+0,1] + p[i+2,1] + p[i+4,1]
-				r = p[i+1,1] + p[i+3,1] + p[i+5,1]
-				ig = (p[i+0,2] + p[i+2,2] + p[i+4,2] + p[i+1,2] + p[i+3,2] + p[i+5,2]) / 6
-				c = 1 if i//2 in result or i//2+1 in result or i//2+2 in result else 0
-				print(i // 2 + 1, f, r, ig, c, sep='\t')
-				print(i // 2 + 2, f, r, ig, c, sep='\t')
-				print(i // 2 + 3, f, r, ig, c, sep='\t')
+			for i in range(len(signal)):
+				c = 1 if 3*i in result or 3*i+1 in result or 3*i+2 in result else 0
+				print(3*i+1, signal[i,0], signal[i,1], signal[i,2], c, sep='\t')
+				print(3*i+2, signal[i,0], signal[i,1], signal[i,2], c, sep='\t')
+				print(3*i+3, signal[i,0], signal[i,1], signal[i,2], c, sep='\t')
 			exit()
 		if args.plot_frames:
 			print("# BASE VAL1  VAL2 VAL3  VAL4 VAL5 VAL6")

@@ -32,8 +32,8 @@ def gc_content(seq):
 	c = seq.count('c')
 	g = seq.count('g')
 	t = seq.count('t')
-	tot = a+c+g+t if a+c+g+t else 1
-	return (c+g) / tot
+	#tot = a+c+g+t if a+c+g+t else 1
+	return (c+g) / len(seq)
 
 
 def gc_fp(dna, strand):

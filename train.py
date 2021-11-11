@@ -40,6 +40,12 @@ class LearningRateReducerCb(tf.keras.callbacks.Callback):
 		print("\nEpoch: {}. Reducing Learning Rate from {} to {}".format(epoch, old_lr, new_lr))
 		self.model.optimizer.lr.assign(new_lr)
 
+class ClassifyCallback(tf.keras.callbacks.Callback):
+	def on_epoch_end(self, epoch, logs={}):
+		cmd = "python3 classi.py --model viruses/train/tsv_GC,1a,1c,1g,1t,2a,2c,2g,2t,3a,3c,3g,3t,DIMERS_2fold.ckpt genomes/fna/NC_001416.fna --plot_strands > singlesub_plusplus_2fold_strands" + str(epoch) + ".txt"
+		os.system(cmd) 
+
+
 
 def is_valid_file(x):
 	if not os.path.exists(x):
@@ -103,7 +109,8 @@ if __name__ == '__main__':
 	
 
 	model = mm.create_model_deep(len(selnames)-1)
-	#model.load_weights(filepath).expect_partial()
+	#if os.path.isfile(filepath):
+	#	model.load_weights(filepath).expect_partial()
 
 	##############################################
 	print("Using", len(selnames), "features")
@@ -117,7 +124,7 @@ if __name__ == '__main__':
 		#file_pattern        = args.directory + "/NC_0[01]*.tsv.gz",
 		#file_pattern        = args.directory + "/NC_001416.tsv.gz",
 		#                                        1234567890
-		#file_pattern       = "viruses/train/gbk/GCF_000836805",
+		#file_pattern        = "viruses/train/tsv/GCF_000836805*",
 		file_pattern        = "viruses/train/tsv/GCF_??????[^" +str(args.kfold) + "]??*",
 		field_delim         = '\t',
 		header              = False,
@@ -147,6 +154,7 @@ if __name__ == '__main__':
 		#file_pattern        = args.directory + "/NC_0[01]*.tsv",
 		#file_pattern        = args.directory + "/NC_02*.tsv.gz",
 		#file_pattern        = "data/train/single/NC_001416.tsv.gz",
+		#file_pattern        = "viruses/train/tsv/GCF_000836805*",
 		file_pattern        = "viruses/train/tsv/GCF_??????[" +str(args.kfold) + "]??*",
 		field_delim         = '\t',
 		header              = False,
@@ -169,10 +177,10 @@ if __name__ == '__main__':
 		#lr_callback = LRFinder()
 		model.fit(tdata,
 				  validation_data = vdata,
-				  epochs          = 20,
+				  epochs          = 10,
 				  #class_weight   = class_weight,
 				  verbose         = 0,
-				  callbacks       = [LossHistoryCallback(), cp_callback]
+				  callbacks       = [LossHistoryCallback(), cp_callback, ClassifyCallback()]
 		)
 	#lr_callback.plot()
 

@@ -50,7 +50,8 @@ for name,locus in genbank.items():
 	cwindows = cgw(dna)
 	pwindows = pgw(dna)
 	for i, windows in enumerate(zip(cwindows, pwindows), start=1):
-		#print('cw', windows[0]) ; print('pw', windows[1])
+		print('cw', windows[0]) ; print('pw', windows[1])
+		exit()
 		pw = [rround(item, 5) for item in windows[0] ]
 		cw = [rround(item, 5) for item in windows[1] ]
 		#print(i)
