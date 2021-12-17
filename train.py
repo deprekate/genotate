@@ -15,15 +15,11 @@ from tensorflow.keras.callbacks import Callback
 #sess = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(log_device_placement=True))
 
 # Helper libraries
-os.environ['OPENBLAS_NUM_THREADS'] = '8'
-os.environ['MKL_NUM_THREADS'] = '8'
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
 import numpy as np
 import pandas as pd
-<<<<<<< HEAD
-#import matplotlib.pyplot as plt
-=======
 import matplotlib.pyplot as plt
->>>>>>> 8baae49aed44c59f19e1c6e36492b2e1c6dd1b28
 
 
 
@@ -52,12 +48,7 @@ def is_valid_file(x):
 
 def pack(features, labels):
 	#return tf.stack(list(features.values()), axis=-1), labels
-<<<<<<< HEAD
-	#return tf.stack(list(features.values()), axis=-1), tf.one_hot(tf.add(labels,2), depth=4)
-	return tf.stack(list(features.values()), axis=-1), tf.one_hot(labels, depth=4)
-=======
 	return tf.stack(list(features.values()), axis=-1), tf.one_hot(labels, depth=3)
->>>>>>> 8baae49aed44c59f19e1c6e36492b2e1c6dd1b28
 
 
 
@@ -75,38 +66,20 @@ if __name__ == '__main__':
 	#colnames = ['TYPE', 'GC', 'a','c','g', 't'] + letters
 	#colnames = ['TYPE', 'GC', 'a','c','g', 't'] + letters + [str(a)+':'+str(b) for a in range(7) for b in range(7)]
 	#colnames =  ['TYPE', 'GC', 'a','t','g', 'c', 'P1', 'P2', 'P3'] + letters
-	#colnames =  ['TYPE', 'GC', 'GCw','a','c','g','t','GC1','GC2','GC3', '1a','1c','1g','1t', '2a','2c','2g','2t', '3a','3c','3g','3t'] + stops + letters + [str(a)+':'+str(b) for a in range(7) for b in range(7)]
-	colnames =  ['TYPE', 'GC', '1a','1c','1g','1t', '2a','2c','2g','2t', '3a','3c','3g','3t'] + stops + letters + [a+':'+b for a in stops+letters for b in stops+letters]
-	#colnames =  ['TYPE', 'GC', 'GCw','a','c','g','t','GC1','GC2','GC3', '1a','1c','1g','1t', '2a','2c','2g','2t', '3a','3c','3g','3t'] + stops + letters + [a+':'+b for a in stops+letters for b in stops+letters]
+	colnames =  ['TYPE', 'GC', 'GCw','a','c','g','t','GC1','GC2','GC3', '1a','1c','1g','1t', '2a','2c','2g','2t', '3a','3c','3g','3t'] + stops + letters + [str(a)+':'+str(b) for a in range(7) for b in range(7)]
 	######   glob   ######
 	#colnames =  ['TYPE', 'GC', 'a','t','g', 'c'] + [letter+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters]
 	#colnames =  ['TYPE', 'GC', 'a','t','g', 'c', 'P1', 'P2', 'P3'] + [letter+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters]
-	selnames = ['TYPE'] + args.columns.split(',') + letters 
-
-	selnames = colnames
-	
-	# BOTH
-	'''
-	colnames = ['TYPE', 'GC'] + [f+d for d in ['+','-'] for f in colnames[2:] ]
-	sel =  ['TYPE', 'GC', '1a','1c','1g','1t', '2a','2c','2g','2t', '3a','3c','3g','3t'] + stops + letters + [a+':'+b for a in stops+letters for b in stops+letters]
-	selnames = ['TYPE', 'GC'] + [f+d for d in ['+','-'] for f in sel[2:] ]
-	'''
-
-	#selnames = ['TYPE', 'GC'] + [f+d for d in ['+','-'] for f in args.columns.replace('GC,','').split(',') + letters ]
 
 	#colnames = ['TYPE', 'GC', 'a','t','g','c'] + [letter for pair in zip([l+'1' for l in letters], [l+'2' for l in letters]) for letter in pair]
 	#colnames = ['TYPE', 'GC', 'a1','t1','g1', 'c1'] + [c + '1' for c in letters] + ['a2','t2','g2', 'c2'] + [c + '2' for c in letters]
 	#colnames =  ['TYPE', 'GC', 'a','t','g', 'c'] + [letter+d+f for f in ['+0','-0','+1','-1','+2','-2'] for letter in letters for d in 'ab']
 	#selnames = colnames[:2] + colnames[2:]
+	
+	selnames = ['TYPE'] + args.columns.split(',') + letters 
 
 	tfiles = tf.data.experimental.make_csv_dataset(
-<<<<<<< HEAD
-		compression_type    = 'GZIP',
-		file_pattern        = args.directory + "/NC_0[01]*.tsv.gz",
-		#file_pattern        = args.directory + "/NC_001416.tsv",
-=======
 		file_pattern        = args.directory + "/NC_0[01]*.tsv",
->>>>>>> 8baae49aed44c59f19e1c6e36492b2e1c6dd1b28
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
@@ -131,11 +104,9 @@ if __name__ == '__main__':
 	#metrics = Metrics()
 	#exit()
 	vfiles = tf.data.experimental.make_csv_dataset(
-		compression_type    = 'GZIP',
 		#file_pattern        = args.directory + "/NC_?????[1357]*.tsv",
-		#file_pattern        = args.directory + "/NC_0[01]*.tsv",
-		file_pattern        = args.directory + "/NC_0*.tsv.gz",
-		#file_pattern        = "data/train/single/NC_001416.tsv.gz",
+		file_pattern        = args.directory + "/NC_0[01]*.tsv",
+		#file_pattern        = args.directory + "/NC_001416.tsv",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
@@ -157,23 +128,6 @@ if __name__ == '__main__':
 	model = mm.create_model(len(selnames)-1)
 
 	#class_weight = {0:1, 1:1, 2:1}
-<<<<<<< HEAD
-	with tf.device('/device:GPU:0'):
-		#cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_' + re.sub('0.*6', 'dicodings', args.columns) + '.ckpt',save_weights_only=True,verbose=1)
-		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_kmers.ckpt',save_weights_only=True,verbose=1)
-		#cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_self.ckpt',save_weights_only=True,verbose=1)
-		#es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=10, min_delta=0.001, baseline=None)
-		#lr_callback = LRFinder()
-		model.fit(tdata,
-				  validation_data = vdata,
-				  epochs          = 100,
-				  #class_weight   = class_weight,
-				  verbose         = 1,
-				  callbacks       = [LossHistoryCallback(), cp_callback]
-		)
-
-	#lr_callback.plot()
-=======
 	with tf.device('/device:CPU:0'):
 		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_' + re.sub('0.*6', 'dicodings', args.columns) + 'test.ckpt',save_weights_only=True,verbose=1)
 		#cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_self.ckpt',save_weights_only=True,verbose=1)
@@ -188,5 +142,4 @@ if __name__ == '__main__':
 		)
 
 	lr_callback.plot()
->>>>>>> 8baae49aed44c59f19e1c6e36492b2e1c6dd1b28
 

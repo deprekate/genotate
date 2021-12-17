@@ -4,93 +4,52 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 
-
 def create_model(i):
 	model = tf.keras.Sequential([
 					tf.keras.layers.Dense(i, input_shape=(i,)),
 					tf.keras.layers.Dense(i * 10, activation='relu'),
 					tf.keras.layers.Dense(i * 3, activation='relu'),
-					#tf.keras.layers.Dense(i * 2, activation='relu'),
-					#tf.keras.layers.Dense(i * 1, activation='relu'),
 					tf.keras.layers.Dense(3, activation='softmax')
 	])
-<<<<<<< HEAD
-	opt = tf.keras.optimizers.Adam(learning_rate=0.001)
-	model.compile(optimizer = opt,
-				  loss=tf.keras.losses.CategoricalCrossentropy(from_logits=False, label_smoothing=0.1),
-=======
 	opt = tf.keras.optimizers.Adam(learning_rate=0.00001)
 	model.compile(optimizer = opt,
 				  loss=tf.keras.losses.CategoricalCrossentropy(from_logits=False),
->>>>>>> 8baae49aed44c59f19e1c6e36492b2e1c6dd1b28
 				  #loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
-				  metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives','CategoricalAccuracy']
+				  metrics=['accuracy']
 				  )
 	return model
 
 
-
-def create_model_deep(i):
-	model = tf.keras.Sequential([
-					tf.keras.layers.Dense(i, input_shape=(i,)),
-					#tf.keras.layers.BatchNormalization(momentum=0.99),
-					tf.keras.layers.Dense(i * 2, activation='relu'),
-					tf.keras.layers.Dense(i * 1, activation='relu'),
-					tf.keras.layers.Dense(i * 1, activation='relu'),
-					tf.keras.layers.Dense(3, activation='softmax')
-	])
-	opt = tf.keras.optimizers.Adam()
-	#opt = tf.keras.optimizers.Adam(learning_rate=0.001)
-	#opt = tf.keras.optimizers.SGD(learning_rate=0.001)
-	model.compile(optimizer = opt,
-				  loss=tf.keras.losses.CategoricalCrossentropy(from_logits=False),
-				  #loss=tf.keras.losses.CategoricalCrossentropy(from_logits=False, label_smoothing=0.1),
-				  #loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
-				  metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives']
-				  )
-	return model
-
-def create_model_conv():
+def create_model3(i):
 	'''
 	This creates and returns a new model
 	'''
-	model = tf.keras.models.Sequential([
-		tf.keras.layers.InputLayer(input_shape=(1,), dtype=tf.string),
-		# These are for DNA
-		tf.keras.layers.experimental.preprocessing.TextVectorization(
-											split = lambda text : tf.strings.unicode_split(text, input_encoding='UTF-8', errors="ignore"),
-											max_tokens=6, 
-											output_sequence_length=117, 
-											vocabulary=['a','c','g','t'] 
-											),
-		tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot'),
-		tf.keras.layers.Conv1D(filters=90, kernel_size=3, padding='same', activation='relu'), #, kernel_regularizer=l2_reg(0.001)),
-		tf.keras.layers.MaxPooling1D(pool_size=3, strides=1),
-		tf.keras.layers.Conv1D(filters=90, kernel_size=3, padding='same', activation='relu'), #, kernel_regularizer=l2_reg(0.001)),
-		tf.keras.layers.MaxPooling1D(pool_size=3, strides=1),
-		# These are for protein
-		#tf.keras.layers.experimental.preprocessing.TextVectorization(
-		#									split = lambda text : tf.strings.unicode_split(text, input_encoding='UTF-8', errors="ignore"),
-		#									standardize=None,
-		#									max_tokens=25, 
-		#									output_sequence_length=39, 
-		#									vocabulary=list('CTSAGPEQKRDNHYFMLVIW*+#') 
-		#									),
-		#
-		#tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=25), name='one_hot'),
-		#tf.keras.layers.Conv1D(filters=30, kernel_size=5, strides=1, activation='relu'), #, kernel_regularizer=l2_reg(0.001)),
-		#tf.keras.layers.MaxPooling1D(pool_size=3, strides=1),
-		#tf.keras.layers.Conv1D(filters=30, kernel_size=3, strides=1, activation='relu'), #, kernel_regularizer=l2_reg(0.001)),
-		#tf.keras.layers.MaxPooling1D(pool_size=3, strides=1),
-		# Done
-		#tf.keras.layers.Embedding(6, output_dim=117, mask_zero=True),
-		tf.keras.layers.Flatten(),
-		tf.keras.layers.Dense(36, activation='relu'), #, kernel_regularizer=l2_reg(0.001)),
-		tf.keras.layers.Dropout(rate=0.05),
-		tf.keras.layers.Dense(36, activation='relu'), #, kernel_regularizer=l2_reg(0.001)),
-		tf.keras.layers.Dropout(rate=0.05),
-		tf.keras.layers.Dense(3, activation='softmax')
+	model = tf.keras.Sequential([
+					tf.keras.layers.Dense(i, input_shape=(i,)),
+					#tf.keras.layers.Dropout(0.05),
+					tf.keras.layers.Dense(1666, activation='relu'),
+					tf.keras.layers.Dense(166, activation='relu'),
+					tf.keras.layers.Dense(3, activation='softmax')
 	])
-	opt = tf.keras.optimizers.Adam()
-	model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
+	model.compile(optimizer = 'adam',
+				  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+				  metrics=['accuracy']
+				  )
+	return model
+
+
+def create_model4(i):
+	'''
+	This creates and returns a new model
+	'''
+	model = tf.keras.Sequential([
+					tf.keras.layers.Dense(i, input_shape=(i,)),
+					tf.keras.layers.Dense(i*10, activation='relu'),
+					tf.keras.layers.Dense(i*3, activation='relu'),
+					tf.keras.layers.Dense(1, activation='sigmoid')
+	])
+	model.compile(optimizer = 'adam',
+				  loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+				  metrics=['accuracy']
+				  )
 	return model
