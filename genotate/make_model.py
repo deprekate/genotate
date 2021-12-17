@@ -14,9 +14,15 @@ def create_model(i):
 					#tf.keras.layers.Dense(i * 1, activation='relu'),
 					tf.keras.layers.Dense(3, activation='softmax')
 	])
+<<<<<<< HEAD
 	opt = tf.keras.optimizers.Adam(learning_rate=0.001)
 	model.compile(optimizer = opt,
 				  loss=tf.keras.losses.CategoricalCrossentropy(from_logits=False, label_smoothing=0.1),
+=======
+	opt = tf.keras.optimizers.Adam(learning_rate=0.00001)
+	model.compile(optimizer = opt,
+				  loss=tf.keras.losses.CategoricalCrossentropy(from_logits=False),
+>>>>>>> 8baae49aed44c59f19e1c6e36492b2e1c6dd1b28
 				  #loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
 				  metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives','CategoricalAccuracy']
 				  )
