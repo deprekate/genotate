@@ -19,11 +19,7 @@ os.environ['OPENBLAS_NUM_THREADS'] = '8'
 os.environ['MKL_NUM_THREADS'] = '8'
 import numpy as np
 import pandas as pd
-<<<<<<< HEAD
 #import matplotlib.pyplot as plt
-=======
-import matplotlib.pyplot as plt
->>>>>>> 8baae49aed44c59f19e1c6e36492b2e1c6dd1b28
 
 
 
@@ -52,12 +48,7 @@ def is_valid_file(x):
 
 def pack(features, labels):
 	#return tf.stack(list(features.values()), axis=-1), labels
-<<<<<<< HEAD
-	#return tf.stack(list(features.values()), axis=-1), tf.one_hot(tf.add(labels,2), depth=4)
-	return tf.stack(list(features.values()), axis=-1), tf.one_hot(labels, depth=4)
-=======
 	return tf.stack(list(features.values()), axis=-1), tf.one_hot(labels, depth=3)
->>>>>>> 8baae49aed44c59f19e1c6e36492b2e1c6dd1b28
 
 
 
@@ -100,13 +91,9 @@ if __name__ == '__main__':
 	#selnames = colnames[:2] + colnames[2:]
 
 	tfiles = tf.data.experimental.make_csv_dataset(
-<<<<<<< HEAD
 		compression_type    = 'GZIP',
 		file_pattern        = args.directory + "/NC_0[01]*.tsv.gz",
 		#file_pattern        = args.directory + "/NC_001416.tsv",
-=======
-		file_pattern        = args.directory + "/NC_0[01]*.tsv",
->>>>>>> 8baae49aed44c59f19e1c6e36492b2e1c6dd1b28
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
@@ -157,7 +144,6 @@ if __name__ == '__main__':
 	model = mm.create_model(len(selnames)-1)
 
 	#class_weight = {0:1, 1:1, 2:1}
-<<<<<<< HEAD
 	with tf.device('/device:GPU:0'):
 		#cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_' + re.sub('0.*6', 'dicodings', args.columns) + '.ckpt',save_weights_only=True,verbose=1)
 		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_kmers.ckpt',save_weights_only=True,verbose=1)
@@ -173,20 +159,4 @@ if __name__ == '__main__':
 		)
 
 	#lr_callback.plot()
-=======
-	with tf.device('/device:CPU:0'):
-		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_' + re.sub('0.*6', 'dicodings', args.columns) + 'test.ckpt',save_weights_only=True,verbose=1)
-		#cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=args.directory + '_self.ckpt',save_weights_only=True,verbose=1)
-		#es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=10, min_delta=0.001, baseline=None)
-		lr_callback = LRFinder()
-		model.fit(tdata,
-				  validation_data=vdata,
-				  epochs==100,
-				  #class_weight=class_weight,
-				  verbose=0,
-				  callbacks=[LossHistoryCallback(), cp_callback]
-		)
-
-	lr_callback.plot()
->>>>>>> 8baae49aed44c59f19e1c6e36492b2e1c6dd1b28
 
