@@ -43,6 +43,31 @@ def is_valid_file(x):
 		raise argparse.ArgumentTypeError("{0} does not exist".format(x))
 	return x
 
+def write_feature(outfile, name, left, right, strand, locations=None):
+	left = max(1,left)
+
+	outfile.write('     ')
+	outfile.write( name.ljust(16) )
+	if not strand > 0:
+		outfile.write('complement(')
+	outfile.write( str(left) )
+	outfile.write('..')
+	outfile.write( str(right) )
+	if not strand > 0:
+		outfile.write(')')
+	outfile.write('\n')
+	outfile.write('                     /colour=100 100 100')
+	outfile.write('\n')
+	if locations and strand > 0:
+		outfile.write('                     /nearest_start=')
+		#outfile.write( str(left - locations.nearest_start(left,'+')) )
+		outfile.write( str(left - (1+locations.nearest_start(left,'+'))) )
+		outfile.write('\n')
+	elif locations:
+		outfile.write('                     /nearest_start=')
+		outfile.write( str(1+locations.nearest_start(right-2,'-') - (right-2)) )
+		outfile.write('\n')
+
 def mode(a, axis=0):
 	scores = np.unique(np.ravel(a))       # get ALL unique values
 	testshape = list(a.shape)
@@ -164,6 +189,8 @@ if __name__ == '__main__':
 	parser.add_argument('-a', '--amino', action="store_true")
 	parser.add_argument('-f', '--plot_frames', action="store_true")
 	parser.add_argument('-s', '--plot_strands', action="store_true")
+	parser.add_argument('-t', '--trim', action="store", default=0, type=int, help='how many bases to trim off window ends')
+	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 	'''
 	if args.labels: print("\t".join(['ID','TYPE','GC'] + translate.amino_acids))
@@ -172,17 +199,11 @@ if __name__ == '__main__':
 
 	outfile = args.outfile
 
-<<<<<<< HEAD
 	#ckpt_reader = tf.train.load_checkpoint(args.model)
 	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
 	#model = mm.create_model_deep(n)
-	model = mm.create_model_conv()
+	model = mm.create_model_conv2(args)
 	n = 1
-=======
-	ckpt_reader = tf.train.load_checkpoint(args.model)
-	n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
-	model = mm.create_model(n)
->>>>>>> 8baae49aed44c59f19e1c6e36492b2e1c6dd1b28
 	model.load_weights(args.model).expect_partial()
 	#print(model.summary())
 	#faulthandler.enable()
@@ -198,15 +219,11 @@ if __name__ == '__main__':
 										tf.TensorSpec(
 											#shape=model.input.type_spec.shape[1:],
 											shape=(n,),
-<<<<<<< HEAD
 											#dtype=tf.float32
 											dtype=tf.string
-=======
-											dtype=tf.float32
->>>>>>> 8baae49aed44c59f19e1c6e36492b2e1c6dd1b28
 											)
 										)
-								).batch(32)
+								).batch(5000)
 		#for feature in dataset.take(1):
 		#	print( feature )
 		#exit()
@@ -214,14 +231,7 @@ if __name__ == '__main__':
 			p = model.predict(dataset)
 		#p = smoo(p)
 		#p = best(p)
-		'''
-		if True:
-			for i in range(0,len(p), 6):
-				for f in range(6):
-					print('\t'.join([str(item) for item in p[i+f]]), end='\t')
-				print()
-		exit()
-		'''
+		
 		if args.plot_strands:
 			#p = smo(p, 30)
 			#p = smoo(p)
@@ -233,19 +243,6 @@ if __name__ == '__main__':
 									np.divide( reverse[:,:,2] + forward[:,:,2], 6).sum(axis=0).clip(0,1) , 
 									forward[:,:,1].sum(axis=0).clip(0,1) 
 									]).T
-			'''
-			f = p[0::6,1] + p[2::6,1] + p[4::6,1]
-			#f = smooth_line(f.flatten(),30)
-			#f = smoo(f.flatten(),30)
-			r = p[1::6,1] + p[3::6,1] + p[5::6,1]
-			#r = smooth_line(r.flatten(), 30)
-			#r = smoo(r.flatten(), 30)
-			ig = (p[0::6,2] + p[2::6,2] + p[4::6,2] + p[1::6,2] + p[3::6,2] + p[5::6,2]) / 6
-			#ig = smooth_line(ig.flatten(), 30)
-			#ig = smoo(ig.flatten(), 30)
-			signal = np.array([f.clip(0.1,0.9), r.clip(0.1,0.9), ig/6]).T
-			'''
-			
 			# detection
 			#algo = rpt.Pelt(model="rbf").fit(signal)
 			result = rpt.KernelCPD(kernel="linear", min_size=33).fit(strand_wise).predict(pen=15)
@@ -260,19 +257,22 @@ if __name__ == '__main__':
 				print(3*i+3, strand_wise[i,0], strand_wise[i,1], strand_wise[i,2], c, sep='\t')
 			exit()
 		if args.plot_frames:
-			print("# BASE VAL1  VAL2 VAL3  VAL4 VAL5 VAL6")
-			print("# colour 255:0:0 0:0:255 0:0:0 255:0:255 0:128:128 128:128:128")
+			print("# BASE VAL1  VAL2 VAL3  VAL4 VAL5 VAL6 VAL7")
+			print("# colour 255:0:0 0:0:255 0:0:0 255:0:255 0:128:128 128:128:128 255:195:0")
 			for i in range(0,len(p), 6):
 				val = []
+				ig = []
 				for j in range(6):
 					val.append(p[i+j,1])
-				v = [None] * 6
+					ig.append(p[i+j, 2])
+				v = [None] * 7
 				v[0] = val[0]
 				v[1] = val[2]
 				v[2] = val[4]
 				v[3] = val[1]
 				v[4] = val[3]
 				v[5] = val[5]
+				v[6] = max(ig)
 				print(i // 2 + 1, end='\t')
 				print('\t'.join(map(str,v)))
 				print(i // 2 + 2, end='\t')
@@ -296,13 +296,19 @@ if __name__ == '__main__':
 			# forward[ frame : bp : type ]
 			forward = np.array([ p[0::6,:] , p[2::6,:] , p[4::6,:] ])
 			reverse = np.array([ p[1::6,:] , p[3::6,:] , p[5::6,:] ])
+			both = np.array([ p[0::6,:] + p[1::6,:] , p[2::6,:] + p[3::6,:] , p[4::6,:] + p[5::6,:] ]).clip(0,1)
 			'''
+			print(forward)
+			print(reverse)
+			print(both)
+			exit()
 			print("# BASE VAL1  VAL2 VAL3 ")
 			print("# colour 255:0:0 0:0:255 0:0:0")
-			for n,row in enumerate(forward.mean(axis=0)):
-				print((3*n)+1, row[0], row[1], row[2], sep='\t')
-				print((3*n)+2, row[0], row[1], row[2], sep='\t')
-				print((3*n)+3, row[0], row[1], row[2], sep='\t')
+			for n in range(both.shape[1]):
+				print((3*n)+1, both[0,n,1], both[1,n,1], both[2,n,1], sep='\t')
+				print((3*n)+2, both[0,n,1], both[1,n,1], both[2,n,1], sep='\t')
+				print((3*n)+3, both[0,n,1], both[1,n,1], both[2,n,1], sep='\t')
+			exit()
 			'''
 			# detection
 			strand_wise = np.array([ 
@@ -311,49 +317,44 @@ if __name__ == '__main__':
 									forward[:,:,1].sum(axis=0).clip(0,1) 
 									]).T
 			strand_result = rpt.KernelCPD(kernel="linear", min_size=33).fit(strand_wise[:-3,:]).predict(pen=33)
+			#forward[:,:,1] = forward[:,:,1] + reverse[:,:,1]
+			#reverse[:,:,1] = forward[:,:,1] + reverse[:,:,1]
 
 			last = 0
 			for curr in strand_result: 
+				curr = curr + 30
 				strand = np.argmax(strand_wise[last : curr, ].mean(axis=0)) - 1
 				#print("mrna", last*3, curr*3, strand, sep='\t')
 				# forward
 				if strand > 0:
+					write_feature(args.outfile, 'mRNA', 3*last, 3*curr, strand)
 					for frame in [0,1,2]:
 						local = forward[frame, last : curr, :]
-						result_frame = rpt.KernelCPD(kernel="linear", min_size=33).fit(local).predict(pen=20)
+						#local = both[frame, last : curr, :]
+						try:
+							result_frame = rpt.KernelCPD(kernel="linear", min_size=33).fit(local).predict(pen=10)
+						except:
+							result_frame = [local.shape[0]]
 						left = 0
 						for right in result_frame:
 							label = np.argmax(local[left : right, : ].mean(axis=0))
 							if label == 1:
-								print('     CDS             ', 3*(last+left)+frame+1, "..", 3*(last+right)+frame+1, sep='')
-								print('                     /colour=100 100 100')
+								write_feature(args.outfile, 'CDS', 3*(last+left)+frame+1, 3*(last+right)+frame+1, strand, locations)
 							left = right
 						
-					pass
-					'''
-					outfile.write("     mRNA            " + str(left) + ".." + str(right))
-					outfile.write('\n')
-					outfile.write("                     /colour=200 0 0\n" )
-					'''
 				# reverse
 				elif strand < 0:
+					write_feature(args.outfile, 'mRNA', 3*last, 3*curr, strand)
 					for frame in [0,1,2]:
 						local = reverse[frame, last : curr, :]
-						result_frame = rpt.KernelCPD(kernel="linear", min_size=33).fit(local).predict(pen=20)
+						result_frame = rpt.KernelCPD(kernel="linear", min_size=11).fit(local).predict(pen=10)
 						left = 0
 						for right in result_frame:
 							label = np.argmax(local[left : right, : ].mean(axis=0))
 							if label == 1:
-								print('     CDS             complement(', 3*(last+left)+frame, "..", 3*(last+right)+frame, ")", sep='')
-								print('                     /colour=100 100 100')
+								write_feature(args.outfile, 'CDS', 3*(last+left)+frame, 3*(last+right)+frame, strand, locations)
 							left = right
-					pass
-					'''
-					outfile.write("     mRNA            complement(" + str(left) + ".." + str(right) + ")" )
-					outfile.write('\n')
-					outfile.write("                     /colour=200 0 0\n" )
-					'''
-				last = curr
+				last = max(0, curr-60)
 		else:
 			if p.shape[1] == 1:
 				Y = np.round(p.flatten())

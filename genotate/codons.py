@@ -21,12 +21,13 @@ class Locations:
 		nearest = lst[0] if self.abs(n, lst[0]) < self.abs(n, lst[1]) else lst[1]
 		return nearest
 
-	def nearest_start(self, n, forward=True):
-		lst = [ self.last_start[n].last , self.next_start[n].next ] if forward else [ self.last_start_[n].last , self.next_start_[n].next ]
+	def nearest_start(self, n, strand):
+		n = n - 1
+		lst = [ self.last_start[n].last , self.next_start[n].next ] if strand=='+' else [ self.last_start_[n].last , self.next_start_[n].next ]
 		return self.nearest(n, lst)
 
-	def nearest_stop(self, n, forward=True):
-		lst = [ self.last_stop[n].last , self.next_stop[n].next ] if forward else [ self.last_stop_[n].last , self.next_stop_[n].next ]
+	def nearest_stop(self, n, strand):
+		lst = [ self.last_stop[n].last , self.next_stop[n].next ] if strand=='+' else [ self.last_stop_[n].last , self.next_stop_[n].next ]
 		return self.nearest(n, lst)
 
 	def __init__(self, dna):
