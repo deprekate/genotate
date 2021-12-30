@@ -56,24 +56,28 @@ if __name__ == '__main__':
 	parser.add_argument('directory', type=is_valid_file, help='input directory')
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
 	parser.add_argument('-k', '--kfold', action="store", default=0, type=int, help='which kfold')
+	parser.add_argument('-t', '--trim', action="store", default=0, type=int, help='how many bases to trim off window ends')
+	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
-	filepath = args.directory + "_" + str(args.kfold) + 'fold_winconv.ckpt'
+	class_weight = {0:1, 1:1, 2:1}
+
+	filepath = args.directory + "_" + 'trim='+str(args.trim) + ',reg='+str(args.reg) + ',fold='+str(args.kfold) + ',weights=[%s,%s,%s]' % tuple(class_weight.values()) +'.ckpt'
 	cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=filepath,save_weights_only=True,verbose=1)
 
 
 	#if os.path.isfile(filepath):
 	#	model.load_weights(filepath).expect_partial()
+	model = mm.create_model_conv2(args)
+	print(model.summary())
 
 	colnames =  ['TYPE', 'GC', 'DNA']
 	selnames =  ['TYPE', 'DNA']
 	
 	tfiles = tf.data.experimental.make_csv_dataset(
-		#file_pattern        = "viruses/train/21/GCF_000836805*",
-		#file_pattern        = "viruses/train/aa/GCF_??????[^" +str(args.kfold) + "]??*",
+		#compression_type    = 'GZIP',
+		file_pattern        = "viruses/train/win/GCF_000836805*",
 		#file_pattern        = "viruses/train/win/GCF_??????[^" +str(args.kfold) + "]??*",
-		file_pattern        = "viruses/train/21/GCF_??????[^" +str(args.kfold) + "]??*",
-		#file_pattern        = "viruses/train/aa/GCF_??????[^" +str(args.kfold) + "]??*",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
@@ -82,53 +86,14 @@ if __name__ == '__main__':
 		shuffle             = True,
 		num_parallel_reads  = 200,
 		shuffle_buffer_size = 5000,
-		batch_size          = 100,
+		batch_size          = 10,
 		num_epochs          = 1,
 		sloppy				= True,
 		label_name          = colnames[0]
 		)
 
 	tdata = tfiles.map(pack)
-	
-	model = tf.keras.models.Sequential([
-		tf.keras.layers.InputLayer(input_shape=(1,), dtype=tf.string),
-		# These are for DNA
-		tf.keras.layers.experimental.preprocessing.TextVectorization(
-															split = lambda text : tf.strings.unicode_split(text, input_encoding='UTF-8', errors="ignore"),
-															max_tokens=6, 
-															output_sequence_length=21, 
-															vocabulary=['a','c','g','t'] 
-															),
-		tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot'),
-		tf.keras.layers.Conv1D(filters=16, kernel_size=5, activation='relu'), #, kernel_regularizer=l2_reg(0.001)),
-		tf.keras.layers.MaxPooling1D(pool_size=3, strides=1),
-		tf.keras.layers.Conv1D(filters=16, kernel_size=3, activation='relu'), #, kernel_regularizer=l2_reg(0.001)),
-		tf.keras.layers.MaxPooling1D(pool_size=3, strides=1),
-		# These are for protein
-		#tf.keras.layers.experimental.preprocessing.TextVectorization(
-		#													split = lambda text : tf.strings.unicode_split(text, input_encoding='UTF-8', errors="ignore"),
-		#													standardize=None,
-		#													max_tokens=25, 
-		#													output_sequence_length=39, 
-		#													vocabulary=list('CTSAGPEQKRDNHYFMLVIW*+#') 
-		#													),
-		#tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=25), name='one_hot'),
-		#tf.keras.layers.Conv1D(filters=30, kernel_size=5, strides=1, activation='relu'), #, kernel_regularizer=l2_reg(0.001)),
-		#tf.keras.layers.MaxPooling1D(pool_size=3, strides=1),
-		#tf.keras.layers.Conv1D(filters=30, kernel_size=3, strides=1, activation='relu'), #, kernel_regularizer=l2_reg(0.001)),
-		#tf.keras.layers.MaxPooling1D(pool_size=3, strides=1),
-		# Done
-		#tf.keras.layers.Embedding(6, output_dim=117, mask_zero=True),
-		tf.keras.layers.Flatten(),
-		tf.keras.layers.Dense(6, activation='relu'), #, kernel_regularizer=l2_reg(0.001)),
-		tf.keras.layers.Dropout(rate=0.05),
-		tf.keras.layers.Dense(6, activation='relu'), #, kernel_regularizer=l2_reg(0.001)),
-		tf.keras.layers.Dropout(rate=0.05),
-		tf.keras.layers.Dense(3, activation='softmax')
-	])
-	opt = tf.keras.optimizers.Adam(learning_rate=0.001)
-	model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
-	print(model.summary())
+
 	'''
 	for feature in tdata.take(1):
 		print( feature )
@@ -136,18 +101,14 @@ if __name__ == '__main__':
 	'''
 
 	vfiles = tf.data.experimental.make_csv_dataset(
-		#compression_type    = 'GZIP',
-		#file_pattern        = "viruses/train/21/GCF_000836805*",
-		#file_pattern        = "viruses/train/aa/GCF_??????[" +str(args.kfold) + "]??*",
-		file_pattern        = "viruses/train/21/GCF_??????[" +str(args.kfold) + "]??*",
+		file_pattern        = "viruses/train/win/GCF_000836805*",
 		#file_pattern        = "viruses/train/win/GCF_??????[" +str(args.kfold) + "]??*",
-		#file_pattern        = "viruses/train/aa/GCF_??????[" +str(args.kfold) + "]??*",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
 		select_columns      = selnames,
 		column_defaults     = [tf.int32] + [tf.string],
-		batch_size          = 100,
+		batch_size          = 10,
 		num_epochs          = 1,
 		shuffle             = True,
 		num_parallel_reads  = 10,
@@ -157,16 +118,23 @@ if __name__ == '__main__':
 		)
 	vdata = vfiles.map(pack)
 
-	#class_weight = {0:1, 1:1, 2:1}
-	with tf.device('/device:CPU:0'):
+
+
+	
+
+	with tf.device('/device:GPU:0'):
 		#es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=10, min_delta=0.001, baseline=None)
 		#lr_callback = LRFinder()
-		model.fit(tdata,
+		model.fit(
+				  tdata.shard(num_shards=5, index=0),
 				  validation_data = vdata,
-				  epochs          = 50,
-				  #class_weight   = class_weight,
-				  verbose         = 0,
-				  callbacks       = [LossHistoryCallback()] #, cp_callback]
+				  epochs          = 3,
+				  class_weight   = class_weight,
+				  verbose         = 1,
+				  callbacks       = [LossHistoryCallback(), cp_callback]
 		)
-	#lr_callback.plot()
+
+
+
+
 
