@@ -223,7 +223,7 @@ if __name__ == '__main__':
 											dtype=tf.string
 											)
 										)
-								).batch(5000)
+								).batch(100)
 		#for feature in dataset.take(1):
 		#	print( feature )
 		#exit()
