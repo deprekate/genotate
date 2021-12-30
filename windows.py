@@ -16,6 +16,10 @@ import tensorflow as tf
 from tensorflow.keras.callbacks import Callback
 #sess = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(log_device_placement=True))
 
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+if len(physical_devices) > 0:
+	tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
 # Helper libraries
 os.environ['OPENBLAS_NUM_THREADS'] = '9'
 os.environ['MKL_NUM_THREADS'] = '9'
@@ -76,8 +80,8 @@ if __name__ == '__main__':
 	
 	tfiles = tf.data.experimental.make_csv_dataset(
 		#compression_type    = 'GZIP',
-		file_pattern        = "viruses/train/win/GCF_000836805*",
-		#file_pattern        = "viruses/train/win/GCF_??????[^" +str(args.kfold) + "]??*",
+		#file_pattern        = "viruses/train/win/GCF_000836805*",
+		file_pattern        = "viruses/train/win/GCF_??????[^" +str(args.kfold) + "]??*",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
@@ -85,8 +89,8 @@ if __name__ == '__main__':
 		column_defaults     = [tf.int32] + [tf.string],
 		shuffle             = True,
 		num_parallel_reads  = 200,
-		shuffle_buffer_size = 5000,
-		batch_size          = 10,
+		shuffle_buffer_size = 4000,
+		batch_size          = 4000,
 		num_epochs          = 1,
 		sloppy				= True,
 		label_name          = colnames[0]
@@ -101,14 +105,14 @@ if __name__ == '__main__':
 	'''
 
 	vfiles = tf.data.experimental.make_csv_dataset(
-		file_pattern        = "viruses/train/win/GCF_000836805*",
-		#file_pattern        = "viruses/train/win/GCF_??????[" +str(args.kfold) + "]??*",
+		#file_pattern        = "viruses/train/win/GCF_000836805*",
+		file_pattern        = "viruses/train/win/GCF_??????[" +str(args.kfold) + "]??*",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
 		select_columns      = selnames,
 		column_defaults     = [tf.int32] + [tf.string],
-		batch_size          = 10,
+		batch_size          = 4000,
 		num_epochs          = 1,
 		shuffle             = True,
 		num_parallel_reads  = 10,
@@ -128,9 +132,9 @@ if __name__ == '__main__':
 		model.fit(
 				  tdata.shard(num_shards=5, index=0),
 				  validation_data = vdata,
-				  epochs          = 3,
-				  class_weight   = class_weight,
-				  verbose         = 1,
+				  epochs          = 20,
+				  class_weight    = class_weight,
+				  verbose         = 0,
 				  callbacks       = [LossHistoryCallback(), cp_callback]
 		)
 
