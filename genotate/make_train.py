@@ -13,7 +13,7 @@ from argparse import RawTextHelpFormatter
 from collections import Counter
 import pathlib
 
-#sign = lambda x: (1, -1)[x<0]
+si = lambda x: (1, -1)[x<0]
 
 #import faulthandler
 #sys.settrace
@@ -23,6 +23,8 @@ signal(SIGPIPE,SIG_DFL)
 
 #from genotate.windows import get_windows
 #from genotate.make_train import get_windows
+
+#import LinearFold as lf
 
 from read_genbank import GenbankFile
 try:
@@ -113,6 +115,20 @@ def parse_genbank(infile):
 		for i, window in enumerate(windows, start=1):
 			pos = -((i+1)//2) if (i+1)%2 else ((i+1)//2)
 			yield [positions.get(pos, 2)] + [rround(w, 5) for w in window]
+			'''
+			if positions.get(pos-57, 2) == positions.get(pos, 2) == positions.get(pos+57, 2):
+				yield [positions.get(pos, 2)] + [rround(w, 5) for w in window]
+			'''
+			'''
+			p2 = pos + si(pos)
+			p3 = pos + si(pos) + si(pos)
+			if any([ positions.get(pos, 0) , positions.get(p2, 0) , positions.get(p3, 0) ]):
+				yield [1] + [rround(w, 5) for w in window]
+			elif any([ positions.get(pos, 1) , positions.get(p2, 1) , positions.get(p3, 1) ]):
+				yield [2] + [rround(w, 5) for w in window]
+			else:
+				yield [0] + [rround(w, 5) for w in window]
+			'''
 			#yield [positions.get(pos, 2)] + window
 
 def rev_comp(seq):
@@ -122,54 +138,6 @@ def rev_comp(seq):
                 'b':'v','v':'b','d':'h','h':'d'}
 	return "".join([seq_dict[base] for base in reversed(seq)])
 
-def codon_usage(dna, strand):
-	row = []
-	codons = dict()
-	for f in [0,1,2]:
-		frame = dna[f::3]
-		for codon in re.findall('...',dna): 
-			if strand > 0:
-				codons[codon] = codons.get(codon, 0) + 1
-			else:
-				codons[rev_comp(codon)] = codons.get(rev_comp(codon), 0) + 1
-	return codons
-
-
-def gc_fp(dna, strand):
-	row = []
-	for f in [0,1,2]:
-		frame = dna[f::3]
-		row.append( frame.count('g') + frame.count('c') )
-	row = [count / sum(row) for count in row ] if sum(row) else [0,0,0]
-	return row[::strand]
-
-def nucl_fp(dna, strand):
-	row = []
-	for f in [0,1,2]:
-		frame = dna[f::3]
-		r = []
-		r.append( frame.count('a') )
-		r.append( frame.count('c') )
-		r.append( frame.count('g') )
-		r.append( frame.count('t') )
-		t = sum(r) if sum(r) else 1
-		r = [count / t for count in r ]
-		row.extend(r)
-	return row[::strand]
-
-def nucl_freq(dna, strand):
-	n = len(dna) 
-	a = dna.count('a') / n if n else 0
-	c = dna.count('c') / n if n else 0
-	g = dna.count('g') / n if n else 0
-	t = dna.count('t') / n if n else 0
-	if strand > 0:
-		return [a, c, g, t]
-	else:
-		return [t, g, c, a]
-
-						
-	
 
 def single_window(dna, n, strand, translate):
 	'''
@@ -178,84 +146,22 @@ def single_window(dna, n, strand, translate):
 	'''
 	row = []
 	#translate = Translate()
-	window = dna[ max( n%3 , n-57) : n+60]
+	#window = dna[ max( n%3 , n-57) : n+60]
+	#window = dna[ max( n%3 , n-72) : n+75]
+	window = dna[ max( 0 , n-72) : n+75]
+	if n-72 < 0:
+		window = window.rjust(147, 'n')
+	elif len(window) < 147:
+		window = window.ljust(147, 'n')
 
-	#translate.image(window, strand)
-	if strand > 0:
-		row.extend([window])
-	else:
-		row.extend([rev_comp(window)])
-
+		
 	#row.extend([window])	
-	#row.extend([strand])	
-	#row.extend([translate.seq(window, strand)])	
-	#row.extend([gc_content(window)])	
-	#row.extend(nucl_freq(window, strand))
-	#row.extend(gc_fp(window, strand))
-	#row.extend(nucl_fp(window, strand))
-	#freqs = translate.frequencies(window, strand)
-	#for aa in translate.amino_acids:
-	#	row.append(freqs.get(aa,0.0))
-	#row.extend(translate.codings(window, strand))
-	#row.extend(translate.dicodings(window, strand))
-	#row.extend(translate.tricodings(window, strand))
-	#row.extend(translate.dimers(window, strand))
-	#row.extend(translate.dipeps(window, strand))
-	#row.extend(translate.trimers(window, strand))
-	#row.extend(translate.structure(window, strand))
-	#row.extend( [translate.array(window, strand)] )
-	#ents = translate.codon_entropy(window, strand)
+	if strand > 0:
+		row.extend([window])	
+	else:
+		row.extend([rev_comp(window)])	
 	return row
 
-def double_window(dna, n, strand):
-	'''
-	get TWO windows of 60 bases centered at the CODon
-				.....COD        => translate => count aminoacids => [1,2,...,19,20]
-					 COD.....   => translate => count aminoacids => [1,2,...,19,20]
-																		  |
-																		  V
-															[1,2,...,19,20 , 1,2,...,19,20]
-	'''
-	row = []
-	translate = Translate()
-	# first
-	window = dna[ max( n%3 , n-57 ) : n+3  ]
-	#row.extend(nucl_freq(window, strand))
-	freqs = translate.frequencies(window, strand)
-	for aa in translate.amino_acids:
-		row.append(freqs.get(aa,0))
-	# second
-	window = dna[            n      : n+60 ]
-	#row.extend(nucl_freq(window, strand))
-	freqs = translate.frequencies(window, strand)
-	for aa in translate.amino_acids:
-		row.append(freqs.get(aa,0))
-	return row
-
-def glob_window(dna, n, strand):
-	'''
-	lol go crazy with windows
-	'''
-	row = []
-	window = dna[ max( n%3 , n-57) : n+60]
-	#row = [gc_content(window), n+1] + nucl_freq(window, strand) + gcpos_freq(window, strand)
-	row.extend(nucl_freq(window, strand))
-	for j in [0,1,2]:
-		row.extend(single_window(dna, n+(j*strand),  strand )[4:])
-		row.extend(single_window(dna, n+(j*strand), -strand )[4:])
-	return row	
-
-def dglob_window(dna, n, strand):
-	row = []
-	window = dna[ max( n%3 , n-57 ) : n+3  ]
-	row.extend(nucl_freq(window, strand))
-	window = dna[            n      : n+60 ]
-	row.extend(nucl_freq(window, strand))
-	for j in [0,1,2]:
-		row.extend(double_window(dna, n+(j*strand),  strand ))
-		row.extend(double_window(dna, n+(j*strand), -strand ))
-
-	return row	
 
 def get_windows(dna):
 	'''
@@ -277,20 +183,8 @@ def get_windows(dna):
 	#args = lambda: None
 	for n in range(0, len(dna)-2, 3):
 		for f in [0,1,2]:
-			#yield [gc] + single_window(dna, n+f, +1, translate)
-			#yield [gc] + single_window(dna, n+f, -1, translate)
-			yield single_window(dna, n+f, +1, translate)
-			yield single_window(dna, n+f, -1, translate)
-			#yield [gc] + single_window(dna, n+f, +1) +  single_window(dna, n+f, -1 )
-			#yield [gc] + double_window(dna, n+f, +1)
-			#yield [gc] + double_window(dna, n+f, -1 )
-			#yield [gc] + glob_window(dna, n+f, +1 )
-			#yield [gc] + glob_window(dna, n+f, -1 )
-			#yield [gc] + dglob_window(dna, n+f, +1 )
-			#yield [gc] + dglob_window(dna, n+f, -1 )
-	#for n in range(0, len(dna)-2, 3):
-	#	for f in [0,1,2]:
-	#		yield [gc] + single_window(dna, n+f, -1)
+			yield [gc] + single_window(dna, n+f, +1, translate)
+			yield [gc] + single_window(dna, n+f, -1, translate)
 
 def rround(item, n):
 	try:
@@ -341,6 +235,12 @@ if __name__ == '__main__':
 			rows = get_windows(s)
 		
 		for row in rows:
+			#if len(row[-1]) < 147:
+			#	continue
+			#seq = row[-1].replace('t','u')
+			#args.outfile.write( seq )
+			#args.outfile.write('\t')
+			#args.outfile.write( str(lf.fold( seq )[1]) )
 			args.outfile.write('\t'.join(map(str,[rround(item, 5) for item in row])))
 			#args.outfile.write('\t'.join(map(str,row)))
 			args.outfile.write('\n')
