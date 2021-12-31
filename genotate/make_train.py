@@ -183,8 +183,9 @@ def get_windows(dna):
 	#args = lambda: None
 	for n in range(0, len(dna)-2, 3):
 		for f in [0,1,2]:
-			yield [gc] + single_window(dna, n+f, +1, translate)
-			yield [gc] + single_window(dna, n+f, -1, translate)
+			#yield [gc] + single_window(dna, n+f, +1, translate)
+			yield single_window(dna, n+f, +1, translate)
+			yield single_window(dna, n+f, -1, translate)
 
 def rround(item, n):
 	try:

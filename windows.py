@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
 	class_weight = {0:1, 1:1, 2:1}
 
-	filepath = args.directory + "_" + 'trim='+str(args.trim) + ',reg='+str(args.reg) + ',fold='+str(args.kfold) + ',weights=[%s,%s,%s]' % tuple(class_weight.values()) +'.ckpt'
+	filepath = args.directory + "_" + 'trim='+str(args.trim) + ',reg='+str(args.reg) + ',fold='+str(args.kfold) + ',weights=%s;%s;%s' % tuple(class_weight.values()) +'.ckpt'
 	cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=filepath,save_weights_only=True,verbose=1)
 
 
@@ -81,7 +81,7 @@ if __name__ == '__main__':
 	tfiles = tf.data.experimental.make_csv_dataset(
 		#compression_type    = 'GZIP',
 		#file_pattern        = "viruses/train/win/GCF_000836805*",
-		file_pattern        = "viruses/train/win/GCF_??????[^" +str(args.kfold) + "]??*",
+		file_pattern        = "viruses/train/for/GCF_??????[^" +str(args.kfold) + "]??*",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
@@ -106,7 +106,7 @@ if __name__ == '__main__':
 
 	vfiles = tf.data.experimental.make_csv_dataset(
 		#file_pattern        = "viruses/train/win/GCF_000836805*",
-		file_pattern        = "viruses/train/win/GCF_??????[" +str(args.kfold) + "]??*",
+		file_pattern        = "viruses/train/for/GCF_??????[" +str(args.kfold) + "]??*",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
@@ -130,11 +130,11 @@ if __name__ == '__main__':
 		#es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=10, min_delta=0.001, baseline=None)
 		#lr_callback = LRFinder()
 		model.fit(
-				  tdata.shard(num_shards=5, index=0),
+				  tdata.shard(num_shards=9, index=0),
 				  validation_data = vdata,
 				  epochs          = 20,
 				  class_weight    = class_weight,
-				  verbose         = 0,
+				  verbose         = 1,
 				  callbacks       = [LossHistoryCallback(), cp_callback]
 		)
 

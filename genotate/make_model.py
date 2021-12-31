@@ -61,9 +61,9 @@ def create_model_conv(args):
 											),
 		tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot'),
 		tf.keras.layers.Cropping1D(cropping=(args.trim, args.trim)),
-		tf.keras.layers.Conv1D(filters=90-(2*args.trim), kernel_size=3, padding='same', activation='relu', kernel_regularizer=kreg, name="conv1" + reg ),
+		tf.keras.layers.Conv1D(filters=90-(2*args.trim), kernel_size=6, padding='same', activation='relu', kernel_regularizer=kreg, name="conv1" + reg ),
 		#tf.keras.layers.MaxPooling1D(pool_size=3, strides=1),
-		tf.keras.layers.Conv1D(filters=90-(2*args.trim), kernel_size=3, padding='same', activation='relu', kernel_regularizer=kreg, name="conv2" + reg ),
+		tf.keras.layers.Conv1D(filters=90-(2*args.trim), kernel_size=6, padding='same', activation='relu', kernel_regularizer=kreg, name="conv2" + reg ),
 		#tf.keras.layers.MaxPooling1D(pool_size=3, strides=1),
 		# These are for protein
 		#tf.keras.layers.experimental.preprocessing.TextVectorization(
