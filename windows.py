@@ -51,7 +51,7 @@ def is_valid_file(x):
 
 def pack(ordered_dict, labels):
 	features = ordered_dict['DNA']
-	return tf.expand_dims(features, axis=-1),  tf.one_hot(labels, depth=3)
+	return tf.expand_dims(features, axis=-1),  tf.one_hot(labels, depth=4)
 
 
 if __name__ == '__main__':
@@ -64,9 +64,9 @@ if __name__ == '__main__':
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
-	class_weight = {0:1, 1:1, 2:1}
+	class_weight = {0:0.5, 1:2, 2:1, 3:1}
 
-	filepath = args.directory + "_" + 'trim='+str(args.trim) + ',reg='+str(args.reg) + ',fold='+str(args.kfold) + ',weights=%s;%s;%s' % tuple(class_weight.values()) +'.ckpt'
+	filepath = args.directory + "_" + 'trim='+str(args.trim) + ',reg='+str(args.reg) + ',fold='+str(args.kfold) + ',weights=%s;%s;%s;%s' % tuple(class_weight.values()) +'.ckpt'
 	cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=filepath,save_weights_only=True,verbose=1)
 
 
@@ -81,7 +81,7 @@ if __name__ == '__main__':
 	tfiles = tf.data.experimental.make_csv_dataset(
 		#compression_type    = 'GZIP',
 		#file_pattern        = "viruses/train/win/GCF_000836805*",
-		file_pattern        = "viruses/train/for/GCF_??????[^" +str(args.kfold) + "]??*",
+		file_pattern        = args.directory + "/GCF_??????[^" +str(args.kfold) + "]??*",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
@@ -106,7 +106,7 @@ if __name__ == '__main__':
 
 	vfiles = tf.data.experimental.make_csv_dataset(
 		#file_pattern        = "viruses/train/win/GCF_000836805*",
-		file_pattern        = "viruses/train/for/GCF_??????[" +str(args.kfold) + "]??*",
+		file_pattern        = args.directory + "/GCF_??????[" +str(args.kfold) + "]??*",
 		field_delim         = '\t',
 		header              = False,
 		column_names        = colnames,
@@ -132,9 +132,9 @@ if __name__ == '__main__':
 		model.fit(
 				  tdata.shard(num_shards=9, index=0),
 				  validation_data = vdata,
-				  epochs          = 20,
+				  epochs          = 10,
 				  class_weight    = class_weight,
-				  verbose         = 1,
+				  verbose         = 0,
 				  callbacks       = [LossHistoryCallback(), cp_callback]
 		)
 

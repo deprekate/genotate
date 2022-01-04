@@ -115,5 +115,5 @@ def create_model_conv2(args):
 		tf.keras.layers.Dense(3, activation='softmax')
 	])
 	opt = tf.keras.optimizers.Adam(learning_rate=0.001)
-	model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
+	model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
 	return model

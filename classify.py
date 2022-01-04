@@ -9,7 +9,7 @@ import faulthandler
 #sys.path.pop(0)
 import genotate.make_train as mt
 import genotate.make_model as mm
-import genotate.codons as cd
+from genotate.write_genbank import Locus
 #from genotate.features import Features
 
 #from genotate.windows import get_windows
@@ -17,7 +17,6 @@ from genotate.make_train import get_windows
 #from genotate.mt import get_windows
 
 import ruptures as rpt
-
 # TensorFlow and tf.keras
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
@@ -43,30 +42,6 @@ def is_valid_file(x):
 		raise argparse.ArgumentTypeError("{0} does not exist".format(x))
 	return x
 
-def write_feature(outfile, name, left, right, strand, locations=None):
-	left = max(1,left)
-
-	outfile.write('     ')
-	outfile.write( name.ljust(16) )
-	if not strand > 0:
-		outfile.write('complement(')
-	outfile.write( str(left) )
-	outfile.write('..')
-	outfile.write( str(right) )
-	if not strand > 0:
-		outfile.write(')')
-	outfile.write('\n')
-	outfile.write('                     /colour=100 100 100')
-	outfile.write('\n')
-	if locations and strand > 0:
-		outfile.write('                     /nearest_start=')
-		#outfile.write( str(left - locations.nearest_start(left,'+')) )
-		outfile.write( str(left - (1+locations.nearest_start(left,'+'))) )
-		outfile.write('\n')
-	elif locations:
-		outfile.write('                     /nearest_start=')
-		outfile.write( str(1+locations.nearest_start(right-2,'-') - (right-2)) )
-		outfile.write('\n')
 
 def mode(a, axis=0):
 	scores = np.unique(np.ravel(a))       # get ALL unique values
@@ -192,10 +167,6 @@ if __name__ == '__main__':
 	parser.add_argument('-t', '--trim', action="store", default=0, type=int, help='how many bases to trim off window ends')
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
-	'''
-	if args.labels: print("\t".join(['ID','TYPE','GC'] + translate.amino_acids))
-		exit()
-	'''
 
 	outfile = args.outfile
 
@@ -203,22 +174,24 @@ if __name__ == '__main__':
 	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
 	#model = mm.create_model_deep(n)
 	model = mm.create_model_conv2(args)
-	n = 1
-	model.load_weights(args.model).expect_partial()
+	name = args.infile.split('/')[-1]
+	me = name[10]
+	model.load_weights( "models/win_trim=15,reg=False,fold=" + str(me) + ",weights=1;1;1.ckpt" ).expect_partial()
+	#model.load_weights(args.model).expect_partial()
 	#print(model.summary())
 	#faulthandler.enable()
 
 	contigs = mt.read_fasta(args.infile)
 	for header in contigs:
 		dna = contigs[header]
-		locations = cd.Locations(dna)
+		locus = Locus(header, dna)
 		generator = lambda : get_windows(dna)
 		dataset = tf.data.Dataset.from_generator(
 								generator,
 								output_signature=(
 										tf.TensorSpec(
 											#shape=model.input.type_spec.shape[1:],
-											shape=(n,),
+											shape=(1,),
 											#dtype=tf.float32
 											dtype=tf.string
 											)
@@ -281,18 +254,6 @@ if __name__ == '__main__':
 				print('\t'.join(map(str,v)))
 			exit()
 		if args.genes or args.amino:
-			if not args.amino:
-				outfile.write('LOCUS       ')
-				outfile.write(header)
-				outfile.write(str(len(dna)).rjust(10))
-				outfile.write(' bp    DNA             UNK')
-				outfile.write('\n')
-				outfile.write('DEFINITION  ' + header + '\n')
-				outfile.write('FEATURES             Location/Qualifiers\n')
-				outfile.write('     source          1..')
-				outfile.write(str(len(dna)))
-				outfile.write('\n')
-		
 			# forward[ frame : bp : type ]
 			forward = np.array([ p[0::6,:] , p[2::6,:] , p[4::6,:] ])
 			reverse = np.array([ p[1::6,:] , p[3::6,:] , p[5::6,:] ])
@@ -310,6 +271,7 @@ if __name__ == '__main__':
 				print((3*n)+3, both[0,n,1], both[1,n,1], both[2,n,1], sep='\t')
 			exit()
 			'''
+
 			# detection
 			strand_wise = np.array([ 
 									reverse[:,:,1].sum(axis=0).clip(0,1) , 
@@ -327,7 +289,7 @@ if __name__ == '__main__':
 				#print("mrna", last*3, curr*3, strand, sep='\t')
 				# forward
 				if strand > 0:
-					write_feature(args.outfile, 'mRNA', 3*last, 3*curr, strand)
+					locus.add_feature('mRNA', +1, [[3*last, 3*curr]] )
 					for frame in [0,1,2]:
 						local = forward[frame, last : curr, :]
 						#local = both[frame, last : curr, :]
@@ -339,12 +301,12 @@ if __name__ == '__main__':
 						for right in result_frame:
 							label = np.argmax(local[left : right, : ].mean(axis=0))
 							if label == 1:
-								write_feature(args.outfile, 'CDS', 3*(last+left)+frame+1, 3*(last+right)+frame+1, strand, locations)
+								locus.add_feature('CDS', +1, [[3*(last+left)+frame+1, 3*(last+right)+frame]] )
 							left = right
 						
 				# reverse
 				elif strand < 0:
-					write_feature(args.outfile, 'mRNA', 3*last, 3*curr, strand)
+					locus.add_feature('mRNA', -11, [[3*last, 3*curr]] )
 					for frame in [0,1,2]:
 						local = reverse[frame, last : curr, :]
 						result_frame = rpt.KernelCPD(kernel="linear", min_size=11).fit(local).predict(pen=10)
@@ -352,24 +314,13 @@ if __name__ == '__main__':
 						for right in result_frame:
 							label = np.argmax(local[left : right, : ].mean(axis=0))
 							if label == 1:
-								write_feature(args.outfile, 'CDS', 3*(last+left)+frame, 3*(last+right)+frame, strand, locations)
+								locus.add_feature('CDS', -1, [[3*(last+left)+frame, 3*(last+right)+frame]] )
 							left = right
 				last = max(0, curr-60)
+			locus.check()
+			locus.write(args.outfile)
 		else:
-			if p.shape[1] == 1:
-				Y = np.round(p.flatten())
-			else:
-				Y = np.argmax(p,axis=-1)
-	
-			#contig_features = Features(**vars(args))
-			#contig_features.parse_contig(header, contigs[header], Y)
-			#for orfs in contig_features.iter_orfs('longest'):
-			#	for orf in orfs:
-			#		print(orf)
-
-			#find_frameshifts(dna, p)
-			#exit()
-		
+			Y = np.argmax(p,axis=-1)
 			#Y = smooth(Y)
 			#Y = cutoff(Y)
 			for i,row in enumerate(Y[:-4]):
@@ -383,14 +334,5 @@ if __name__ == '__main__':
 					else:
 						print('     CDS             ', (i//2)+1 , '..', (i//2)+3, sep='')
 					print('                     /colour=100 100 100')
-				# BOTH
-				'''
-				if row == 1:
-					print('     CDS             ', i+1 , '..', i+3, sep='')
-					print('                     /colour=100 100 100')
-				elif row == 3:
-					print('     CDS             complement(', i+1, '..', i+3, ')', sep='')
-					print('                     /colour=100 100 100')
-				'''
-			outfile.write("//\n")
+			print("//")
 	

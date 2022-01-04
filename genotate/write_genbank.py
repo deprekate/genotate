@@ -11,6 +11,7 @@ from collections import Counter
 from argparse import RawTextHelpFormatter
 from itertools import zip_longest, chain
 
+import genotate.codons as cd
 
 def is_valid_file(x):
 	if not os.path.exists(x):
@@ -111,6 +112,7 @@ class Feature:
 		self.pairs = tuple([tuple(pair) for pair in pairs])
 		self.tags = dict()
 		self.dna = ''
+		self.partial = False
 
 	def hypothetical(self):
 		function = self.tags['product'] if 'product' in self.tags else ''
@@ -143,8 +145,8 @@ class Feature:
 		if full and self.partial == 'left': 
 			for i in range(-((3 - len(self.dna) % 3) % 3), 0, 1):
 				yield i+1
-		for pair in self.pairs:
-			left,right = map(int, [ item.replace('<','').replace('>','') for item in pair ] )
+		for left,right in self.pairs:
+			#left,right = map(int, [ item.replace('<','').replace('>','') for item in pair ] )
 			for i in range(left,right+1):
 				yield i
 
@@ -158,14 +160,14 @@ class Feature:
 		global translate
 		aa = []
 		codon = ''
-		first = 0 if '<' not in self.pairs[0][0] else len(self.dna) % 3
+		first = 0 if not self.partial else len(self.dna) % 3
 		for i in range(first, len(self.dna), 3):
 			codon = self.dna[ i : i+3 ]
-			if self.direction > 0:
+			if self.strand > 0:
 				aa.append(translate.codon(codon))
 			else:
 				aa.append(translate.codon(rev_comp(codon)))
-		if self.direction < 0:
+		if self.strand < 0:
 			aa = aa[::-1]
 		if aa[-1] in '#*+':
 			aa.pop()
@@ -202,7 +204,9 @@ class Feature:
 		outfile.write('\n')
 		outfile.write('                     /colour=100 100 100')
 		outfile.write('\n')
-		if locations and self.trand > 0:
+		if self.type != 'CDS':
+			return
+		if locations and self.strand > 0:
 			outfile.write('                     /nearest_start=')
 			outfile.write( str(left - (1+locations.nearest_start(left,'+'))) )
 			outfile.write('\n')
@@ -215,6 +219,7 @@ class Locus(dict):
 	def __init__(self, locus, dna):
 		self.locus = locus
 		self.dna = dna
+		self.locations = cd.Locations(self.dna)
 		
 	def check(self):	
 		# set dna for features and check integrity
@@ -224,8 +229,6 @@ class Locus(dict):
 			if feature.type == 'CDS':
 				if len(feature.dna) % 3 and not feature.partial and 'transl_except' not in feature.tags:
 					raise ValueError("Out of frame: %s" % feature)
-				if feature.integrity_check() < 0.95:
-					raise ValueError("Error in translation:\n%s\n%s" % (feature.tags['translation'], feature.translation()) )
 
 	def features(self, include=None, exclude=None):
 		for  feature in self:
@@ -267,7 +270,7 @@ class Locus(dict):
 		outfile.write('\n')
 
 		for feature in self:
-			feature.write(outfile)
+			feature.write(outfile, self.locations)
 			
 
 	
