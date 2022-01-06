@@ -56,14 +56,13 @@ def create_model_conv(args):
 		tf.keras.layers.experimental.preprocessing.TextVectorization(
 											split = lambda text : tf.strings.unicode_split(text, input_encoding='UTF-8', errors="ignore"),
 											max_tokens=6, 
-											output_sequence_length=117, 
+											output_sequence_length=147, 
 											vocabulary=['a','c','g','t'] 
 											),
 		tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot'),
 		tf.keras.layers.Cropping1D(cropping=(args.trim, args.trim)),
-		tf.keras.layers.Conv1D(filters=90-(2*args.trim), kernel_size=6, padding='same', activation='relu', kernel_regularizer=kreg, name="conv1" + reg ),
-		#tf.keras.layers.MaxPooling1D(pool_size=3, strides=1),
-		tf.keras.layers.Conv1D(filters=90-(2*args.trim), kernel_size=6, padding='same', activation='relu', kernel_regularizer=kreg, name="conv2" + reg ),
+		tf.keras.layers.Conv1D(filters=120-(2*args.trim), kernel_size=3, padding='same', activation='relu', kernel_regularizer=kreg, name="conv1" + reg ),
+		tf.keras.layers.Conv1D(filters=120-(2*args.trim), kernel_size=3, padding='same', activation='relu', kernel_regularizer=kreg, name="conv2" + reg ),
 		#tf.keras.layers.MaxPooling1D(pool_size=3, strides=1),
 		# These are for protein
 		#tf.keras.layers.experimental.preprocessing.TextVectorization(
@@ -82,9 +81,9 @@ def create_model_conv(args):
 		# Done
 		#tf.keras.layers.Embedding(6, output_dim=117, mask_zero=True),
 		tf.keras.layers.Flatten(),
-		tf.keras.layers.Dense(90-(2*args.trim), activation='relu', kernel_regularizer=kreg),
+		tf.keras.layers.Dense(120-(2*args.trim), activation='relu', kernel_regularizer=kreg),
 		tf.keras.layers.Dropout(rate=0.05),
-		tf.keras.layers.Dense(90-(2*args.trim), activation='relu', kernel_regularizer=kreg),
+		tf.keras.layers.Dense(120-(2*args.trim), activation='relu', kernel_regularizer=kreg),
 		tf.keras.layers.Dropout(rate=0.05),
 		tf.keras.layers.Dense(3, activation='softmax')
 	])
@@ -105,9 +104,13 @@ def create_model_conv2(args):
 											),
 		tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot'),
 		tf.keras.layers.Cropping1D(cropping=(args.trim, args.trim)),
-		tf.keras.layers.Conv1D(filters=120-(2*args.trim), kernel_size=3, padding='same', activation='relu', kernel_regularizer=kreg, name="conv1" + reg ),
-		tf.keras.layers.Conv1D(filters=120-(2*args.trim), kernel_size=3, padding='same', activation='relu', kernel_regularizer=kreg, name="conv2" + reg ),
+		#tf.keras.layers.Conv1D(filters=1, kernel_size=3, strides=3, padding='same', activation='relu' ),
+		tf.keras.layers.Conv1D(filters=120-(2*args.trim), kernel_size=3, padding='same', activation=args.activation, kernel_regularizer=kreg, name="conv1" + reg ),
+		tf.keras.layers.Conv1D(filters=120-(2*args.trim), kernel_size=3, padding='same', activation=args.activation, kernel_regularizer=kreg, name="conv2" + reg ),
+		tf.keras.layers.Conv1D(filters=120-(2*args.trim), kernel_size=3, padding='same', activation=args.activation, kernel_regularizer=kreg, name="conv3" + reg ),
 		tf.keras.layers.Flatten(),
+		tf.keras.layers.Dense(120-(2*args.trim), activation='relu', kernel_regularizer=kreg),
+		tf.keras.layers.Dropout(rate=0.05),
 		tf.keras.layers.Dense(120-(2*args.trim), activation='relu', kernel_regularizer=kreg),
 		tf.keras.layers.Dropout(rate=0.05),
 		tf.keras.layers.Dense(120-(2*args.trim), activation='relu', kernel_regularizer=kreg),

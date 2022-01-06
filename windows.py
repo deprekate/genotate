@@ -51,7 +51,7 @@ def is_valid_file(x):
 
 def pack(ordered_dict, labels):
 	features = ordered_dict['DNA']
-	return tf.expand_dims(features, axis=-1),  tf.one_hot(labels, depth=4)
+	return tf.expand_dims(features, axis=-1),  tf.one_hot(labels, depth=3)
 
 
 if __name__ == '__main__':
@@ -61,15 +61,16 @@ if __name__ == '__main__':
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
 	parser.add_argument('-k', '--kfold', action="store", default=0, type=int, help='which kfold')
 	parser.add_argument('-t', '--trim', action="store", default=0, type=int, help='how many bases to trim off window ends')
+	parser.add_argument('-a', '--activation', action="store", default=None, type=str, help='activation function')
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
-	class_weight = {0:0.5, 1:2, 2:1, 3:1}
+	#class_weight = {0:0.5, 1:2, 2:1, 3:1}
 
-	filepath = args.directory + "_" + 'trim='+str(args.trim) + ',reg='+str(args.reg) + ',fold='+str(args.kfold) + ',weights=%s;%s;%s;%s' % tuple(class_weight.values()) +'.ckpt'
+	filepath = args.directory + "_" + 'trim='+str(args.trim) + ',reg='+str(args.reg) + ',fold='+str(args.kfold) + '.ckpt'
 	cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=filepath,save_weights_only=True,verbose=1)
 
-
+	#args.activation = tf.keras.layers.LeakyReLU(alpha=0.01)
 	#if os.path.isfile(filepath):
 	#	model.load_weights(filepath).expect_partial()
 	model = mm.create_model_conv2(args)
@@ -99,6 +100,9 @@ if __name__ == '__main__':
 	tdata = tfiles.map(pack)
 
 	'''
+	import numpy as np
+	np.set_printoptions(edgeitems=10)
+	np.core.arrayprint._line_width = 180
 	for feature in tdata.take(1):
 		print( feature )
 	exit()
@@ -133,8 +137,8 @@ if __name__ == '__main__':
 				  tdata.shard(num_shards=9, index=0),
 				  validation_data = vdata,
 				  epochs          = 10,
-				  class_weight    = class_weight,
-				  verbose         = 0,
+				  #class_weight    = class_weight,
+				  verbose         = 1,
 				  callbacks       = [LossHistoryCallback(), cp_callback]
 		)
 

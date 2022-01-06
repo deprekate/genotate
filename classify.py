@@ -161,7 +161,8 @@ if __name__ == '__main__':
 	parser.add_argument('-m', '--model', help='', required=True)
 	parser.add_argument('-c', '--cutoff', help='The minimum cutoff length for runs', type=int, default=29)
 	parser.add_argument('-g', '--genes', action="store_true")
-	parser.add_argument('-a', '--amino', action="store_true")
+	#parser.add_argument('-a', '--amino', action="store_true")
+	parser.add_argument('-a', '--activation', action="store", default=None, type=str, help='activation function')
 	parser.add_argument('-f', '--plot_frames', action="store_true")
 	parser.add_argument('-s', '--plot_strands', action="store_true")
 	parser.add_argument('-t', '--trim', action="store", default=0, type=int, help='how many bases to trim off window ends')
@@ -173,11 +174,11 @@ if __name__ == '__main__':
 	#ckpt_reader = tf.train.load_checkpoint(args.model)
 	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
 	#model = mm.create_model_deep(n)
-	model = mm.create_model_conv2(args)
+	model = mm.create_model_conv(args)
 	name = args.infile.split('/')[-1]
 	me = name[10]
-	model.load_weights( "models/win_trim=15,reg=False,fold=" + str(me) + ",weights=1;1;1.ckpt" ).expect_partial()
-	#model.load_weights(args.model).expect_partial()
+	#model.load_weights( "models/win_trim=15,reg=False,fold=" + str(me) + ",weights=1;1;1.ckpt" ).expect_partial()
+	model.load_weights(args.model).expect_partial()
 	#print(model.summary())
 	#faulthandler.enable()
 
@@ -253,7 +254,7 @@ if __name__ == '__main__':
 				print(i // 2 + 3, end='\t')
 				print('\t'.join(map(str,v)))
 			exit()
-		if args.genes or args.amino:
+		if args.genes: # or args.amino:
 			# forward[ frame : bp : type ]
 			forward = np.array([ p[0::6,:] , p[2::6,:] , p[4::6,:] ])
 			reverse = np.array([ p[1::6,:] , p[3::6,:] , p[5::6,:] ])
@@ -272,53 +273,58 @@ if __name__ == '__main__':
 			exit()
 			'''
 
-			# detection
+			# predict strands
 			strand_wise = np.array([ 
 									reverse[:,:,1].sum(axis=0).clip(0,1) , 
 									np.divide( reverse[:,:,2] + forward[:,:,2], 6).sum(axis=0).clip(0,1) , 
 									forward[:,:,1].sum(axis=0).clip(0,1) 
 									]).T
-			strand_result = rpt.KernelCPD(kernel="linear", min_size=33).fit(strand_wise[:-3,:]).predict(pen=33)
+			switches = rpt.KernelCPD(kernel="linear", min_size=33).fit(strand_wise[:-3,:]).predict(pen=33)
 			#forward[:,:,1] = forward[:,:,1] + reverse[:,:,1]
 			#reverse[:,:,1] = forward[:,:,1] + reverse[:,:,1]
 
-			last = 0
-			for curr in strand_result: 
-				curr = curr + 30
-				strand = np.argmax(strand_wise[last : curr, ].mean(axis=0)) - 1
-				#print("mrna", last*3, curr*3, strand, sep='\t')
-				# forward
+			# merge adjacent regions of the same type
+			strand_switches = dict()
+			for left,right in zip([0] + switches, switches): 
+				strand = np.argmax(strand_wise[left : right, ].mean(axis=0)) - 1
+				if strand_switches and strand_switches[last] == strand:
+					del strand_swithces[last]
+					last = (last[0] , right)
+					strand_switches[ last ] = strand
+				else:
+					last = (left , right)
+					strand_switches[ last ] = strand
+
+			# predict frames of strand
+			for (index,offset),strand in strand_switches.items():
+				index , offset = max(index - 30, 0) ,min(offset + 30, len(strand_wise))
 				if strand > 0:
-					locus.add_feature('mRNA', +1, [[3*last, 3*curr]] )
+					locus.add_feature('mRNA', +1, [[3*index+1, 3*offset+1]] )
 					for frame in [0,1,2]:
-						local = forward[frame, last : curr, :]
-						#local = both[frame, last : curr, :]
+						local = forward[frame, index : offset, :]
 						try:
-							result_frame = rpt.KernelCPD(kernel="linear", min_size=33).fit(local).predict(pen=10)
+							switches = rpt.KernelCPD(kernel="linear", min_size=33).fit(local).predict(pen=10)
 						except:
-							result_frame = [local.shape[0]]
-						left = 0
-						for right in result_frame:
+							switches = [local.shape[0]]
+						for left,right in zip([0] + switches, switches): 
 							label = np.argmax(local[left : right, : ].mean(axis=0))
 							if label == 1:
-								locus.add_feature('CDS', +1, [[3*(last+left)+frame+1, 3*(last+right)+frame]] )
-							left = right
-						
-				# reverse
+								locus.add_feature('CDS', +1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
 				elif strand < 0:
-					locus.add_feature('mRNA', -11, [[3*last, 3*curr]] )
+					locus.add_feature('mRNA', -1, [[3*index+1, 3*offset+1]] )
 					for frame in [0,1,2]:
-						local = reverse[frame, last : curr, :]
-						result_frame = rpt.KernelCPD(kernel="linear", min_size=11).fit(local).predict(pen=10)
-						left = 0
-						for right in result_frame:
+						local = reverse[frame, index : offset, :]
+						try:
+							switches = rpt.KernelCPD(kernel="linear", min_size=33).fit(local).predict(pen=10)
+						except:
+							switches = [local.shape[0]]
+						for left,right in zip([0] + switches, switches): 
 							label = np.argmax(local[left : right, : ].mean(axis=0))
 							if label == 1:
-								locus.add_feature('CDS', -1, [[3*(last+left)+frame, 3*(last+right)+frame]] )
-							left = right
-				last = max(0, curr-60)
+								locus.add_feature('CDS', -1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
 			locus.check()
 			locus.write(args.outfile)
+			exit()
 		else:
 			Y = np.argmax(p,axis=-1)
 			#Y = smooth(Y)

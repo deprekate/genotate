@@ -220,6 +220,9 @@ class Locus(dict):
 		self.locus = locus
 		self.dna = dna
 		self.locations = cd.Locations(self.dna)
+
+	def length(self):
+		return len(self.dna)
 		
 	def check(self):	
 		# set dna for features and check integrity
