@@ -136,9 +136,9 @@ if __name__ == '__main__':
 		model.fit(
 				  tdata.shard(num_shards=9, index=0),
 				  validation_data = vdata,
-				  epochs          = 10,
+				  epochs          = 20,
 				  #class_weight    = class_weight,
-				  verbose         = 1,
+				  verbose         = 0,
 				  callbacks       = [LossHistoryCallback(), cp_callback]
 		)
 

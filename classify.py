@@ -37,6 +37,28 @@ amino_acids = 'FFLLSSSSYY#+CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG'
 translate_codon = dict(zip(codons, amino_acids))
 translate = lambda dna : ''.join([translate_codon[dna[i:i+3].upper()] for i in range(0,len(dna),3) ])
 
+def predict_switches(data, min_size, pen):
+	try:
+		#switches = rpt.KernelCPD(kernel="linear", min_size=33).fit(strand_wise[:-3,:]).predict(pen=33)
+		switches = rpt.KernelCPD(kernel="linear", min_size=min_size).fit(data).predict(pen=pen)
+	except:
+		switches = [data.shape[0]]
+	#return switches
+
+	# merge adjacent regions of the same type
+	merged = dict()
+	for left,right in zip([0] + switches, switches): 
+		label = np.argmax(data[left : right, ].mean(axis=0))
+		#label = np.argmax(local[left : right, : ].mean(axis=0))
+		if merged and merged[last] == label:
+			del merged[last]
+			last = (last[0] , right)
+			merged[ last ] = label
+		else:
+			last = (left , right)
+			merged[ last ] = label
+	return merged
+
 def is_valid_file(x):
 	if not os.path.exists(x):
 		raise argparse.ArgumentTypeError("{0} does not exist".format(x))
@@ -162,7 +184,7 @@ if __name__ == '__main__':
 	parser.add_argument('-c', '--cutoff', help='The minimum cutoff length for runs', type=int, default=29)
 	parser.add_argument('-g', '--genes', action="store_true")
 	#parser.add_argument('-a', '--amino', action="store_true")
-	parser.add_argument('-a', '--activation', action="store", default=None, type=str, help='activation function')
+	parser.add_argument('-a', '--activation', action="store", default='relu', type=str, help='activation function')
 	parser.add_argument('-f', '--plot_frames', action="store_true")
 	parser.add_argument('-s', '--plot_strands', action="store_true")
 	parser.add_argument('-t', '--trim', action="store", default=0, type=int, help='how many bases to trim off window ends')
@@ -174,7 +196,7 @@ if __name__ == '__main__':
 	#ckpt_reader = tf.train.load_checkpoint(args.model)
 	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
 	#model = mm.create_model_deep(n)
-	model = mm.create_model_conv(args)
+	model = mm.create_model_conv2(args)
 	name = args.infile.split('/')[-1]
 	me = name[10]
 	#model.load_weights( "models/win_trim=15,reg=False,fold=" + str(me) + ",weights=1;1;1.ckpt" ).expect_partial()
@@ -279,49 +301,31 @@ if __name__ == '__main__':
 									np.divide( reverse[:,:,2] + forward[:,:,2], 6).sum(axis=0).clip(0,1) , 
 									forward[:,:,1].sum(axis=0).clip(0,1) 
 									]).T
-			switches = rpt.KernelCPD(kernel="linear", min_size=33).fit(strand_wise[:-3,:]).predict(pen=33)
 			#forward[:,:,1] = forward[:,:,1] + reverse[:,:,1]
 			#reverse[:,:,1] = forward[:,:,1] + reverse[:,:,1]
-
-			# merge adjacent regions of the same type
-			strand_switches = dict()
-			for left,right in zip([0] + switches, switches): 
-				strand = np.argmax(strand_wise[left : right, ].mean(axis=0)) - 1
-				if strand_switches and strand_switches[last] == strand:
-					del strand_swithces[last]
-					last = (last[0] , right)
-					strand_switches[ last ] = strand
-				else:
-					last = (left , right)
-					strand_switches[ last ] = strand
+			
+			strand_switches = predict_switches(strand_wise, 33, 33)
 
 			# predict frames of strand
 			for (index,offset),strand in strand_switches.items():
-				index , offset = max(index - 30, 0) ,min(offset + 30, len(strand_wise))
+				index , offset , strand = max(index - 30, 0) , min(offset + 30, len(strand_wise)) , strand-1
 				if strand > 0:
 					locus.add_feature('mRNA', +1, [[3*index+1, 3*offset+1]] )
 					for frame in [0,1,2]:
-						local = forward[frame, index : offset, :]
-						try:
-							switches = rpt.KernelCPD(kernel="linear", min_size=33).fit(local).predict(pen=10)
-						except:
-							switches = [local.shape[0]]
-						for left,right in zip([0] + switches, switches): 
-							label = np.argmax(local[left : right, : ].mean(axis=0))
+						local = forward[frame, index : offset//3*3, :]
+						switches = predict_switches(local, 33, 10)
+						for (left,right),label in switches.items(): 
 							if label == 1:
 								locus.add_feature('CDS', +1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
 				elif strand < 0:
 					locus.add_feature('mRNA', -1, [[3*index+1, 3*offset+1]] )
 					for frame in [0,1,2]:
 						local = reverse[frame, index : offset, :]
-						try:
-							switches = rpt.KernelCPD(kernel="linear", min_size=33).fit(local).predict(pen=10)
-						except:
-							switches = [local.shape[0]]
-						for left,right in zip([0] + switches, switches): 
-							label = np.argmax(local[left : right, : ].mean(axis=0))
+						switches = predict_switches(local, 33, 10)
+						for (left,right),label in switches: 
 							if label == 1:
 								locus.add_feature('CDS', -1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
+
 			locus.check()
 			locus.write(args.outfile)
 			exit()

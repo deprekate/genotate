@@ -104,8 +104,74 @@ class Translate:
 
 translate = Translate()
 
-class Feature:
-	def __init__(self, type_, strand, pairs):
+
+class Locus(dict):
+	def __init__(self, locus, dna):
+		self.locus = locus
+		self.dna = dna
+		self.locations = cd.Locations(self.dna)
+
+	def length(self):
+		return len(self.dna)
+		
+	def check(self):	
+		# set dna for features and check integrity
+		last = None
+		for feature in sorted(self):
+			for i in feature.base_locations():
+				feature.dna += self.dna[ i-1 : i ]
+			if feature.type == 'CDS':
+				if len(feature.dna) % 3 and not feature.partial and 'transl_except' not in feature.tags:
+					raise ValueError("Out of frame: %s" % feature)
+			last = feature
+
+	def features(self, include=None, exclude=None):
+		for feature in self:
+			if not include or feature.type in include:
+				yield feature
+
+	def add_feature(self, key, strand, pairs):
+		"""Add a feature to the factory."""
+		feature = Feature(key, strand, pairs, self)
+		feature.locus = self.locus
+		if feature not in self:
+			self[feature] = True
+			self.current = feature
+
+	def gene_coverage(self):
+		''' This calculates the protein coding gene coverage, which should be around 1 '''
+		cbases = tbases = 0	
+		for locus in self.values():
+			dna = [False] * len(locus.dna)
+			seen = dict()
+			for feature in locus.features(include=['CDS']):
+				for i in feature.codon_locations():
+					dna[i-1] = True
+			cbases += sum(dna)
+			tbases += len(dna)
+		return 3 * cbases / tbases
+
+	def write(self, outfile):
+		outfile.write('LOCUS       ')
+		outfile.write(self.locus)
+		outfile.write(str(len(self.dna)).rjust(10))
+		outfile.write(' bp    DNA             UNK')
+		outfile.write('\n')
+		outfile.write('DEFINITION  ' + self.locus + '\n')
+		outfile.write('FEATURES             Location/Qualifiers\n')
+		outfile.write('     source          1..')
+		outfile.write(str(len(self.dna)))
+		outfile.write('\n')
+
+		for feature in sorted(self):
+			feature.write(outfile, self.locations)
+		outfile.write('//')
+		outfile.write('\n')
+
+			
+class Feature(Locus):
+	def __init__(self, type_, strand, pairs, locus):
+		super().__init__(locus.locus, locus.dna)
 		self.type = type_
 		self.strand = strand
 		# tuplize the pairs
@@ -124,6 +190,12 @@ class Feature:
 		else:
 			return False
 
+	def left(self):
+		return self.pairs[0][0]
+	
+	def right(self):
+		return self.pairs[-1][-1]
+
 	def __str__(self):
 		"""Compute the string representation of the feature."""
 		return "%s\t%s\t%s\t%s" % (
@@ -140,6 +212,13 @@ class Feature:
 				repr(self.type),
 				repr(self.pairs),
 				repr(self.tags))
+	def __hash__(self):
+		return hash(self.pairs)
+	#def __eq__(self, other):
+	#	return self.pairs == other.pairs()
+
+	def __lt__(self, other):
+		return self.left() < other.left()
 
 	def base_locations(self, full=False):
 		if full and self.partial == 'left': 
@@ -204,77 +283,26 @@ class Feature:
 		outfile.write('\n')
 		outfile.write('                     /colour=100 100 100')
 		outfile.write('\n')
-		if self.type != 'CDS':
-			return
-		if locations and self.strand > 0:
+		if self.type == 'CDS':
 			outfile.write('                     /nearest_start=')
-			outfile.write( str(left - (1+locations.nearest_start(left,'+'))) )
+			outfile.write( str(self.nearest_start()) )
 			outfile.write('\n')
-		elif locations:
-			outfile.write('                     /nearest_start=')
-			outfile.write( str(1+locations.nearest_start(right-2,'-') - (right-2)) )
+			outfile.write('                     /nearest_stop=')
+			outfile.write( str(self.nearest_stop()) )
 			outfile.write('\n')
 
-class Locus(dict):
-	def __init__(self, locus, dna):
-		self.locus = locus
-		self.dna = dna
-		self.locations = cd.Locations(self.dna)
+	def nearest_start(self):
+		if self.strand > 0:
+			return self.left() - (1+self.locations.nearest_start(self.left(),'+'))
+		else:
+			return 1+self.locations.nearest_start(self.right()-2,'-') - (self.right()-2)
 
-	def length(self):
-		return len(self.dna)
+	def nearest_stop(self):
+		if self.strand < 0:
+			return self.left() - (1+self.locations.nearest_stop(self.left(),'-'))
+		else:
+			return 1+self.locations.nearest_stop(self.right()-2,'+') - (self.right()-2)
 		
-	def check(self):	
-		# set dna for features and check integrity
-		for feature in self.features():
-			for i in feature.base_locations():
-				feature.dna += self.dna[ i-1 : i ]
-			if feature.type == 'CDS':
-				if len(feature.dna) % 3 and not feature.partial and 'transl_except' not in feature.tags:
-					raise ValueError("Out of frame: %s" % feature)
-
-	def features(self, include=None, exclude=None):
-		for  feature in self:
-			if not include or feature.type in include:
-				yield feature
-
-	def add_feature(self, key, strand, pairs):
-		"""Add a feature to the factory."""
-		feature = Feature(key, strand, pairs)
-		feature.locus = self.locus
-		if feature not in self:
-			self[feature] = True
-			self.current = feature
-
-
-	def gene_coverage(self):
-		''' This calculates the protein coding gene coverage, which should be around 1 '''
-		cbases = tbases = 0	
-		for locus in self.values():
-			dna = [False] * len(locus.dna)
-			seen = dict()
-			for feature in locus.features(include=['CDS']):
-				for i in feature.codon_locations():
-					dna[i-1] = True
-			cbases += sum(dna)
-			tbases += len(dna)
-		return 3 * cbases / tbases
-
-	def write(self, outfile):
-		outfile.write('LOCUS       ')
-		outfile.write(self.locus)
-		outfile.write(str(len(self.dna)).rjust(10))
-		outfile.write(' bp    DNA             UNK')
-		outfile.write('\n')
-		outfile.write('DEFINITION  ' + self.locus + '\n')
-		outfile.write('FEATURES             Location/Qualifiers\n')
-		outfile.write('     source          1..')
-		outfile.write(str(len(self.dna)))
-		outfile.write('\n')
-
-		for feature in self:
-			feature.write(outfile, self.locations)
-			
 
 	
 
