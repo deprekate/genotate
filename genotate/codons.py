@@ -31,14 +31,14 @@ class Locations:
 		return self.nearest(n, lst)
 
 	def __init__(self, dna):
-		self.last_start = [None] * (len(dna) - 2)
-		self.last_stop  = [None] * (len(dna) - 2)
-		self.next_start = [None] * (len(dna) - 2)
-		self.next_stop  = [None] * (len(dna) - 2)
-		self.last_start_ = [None] * (len(dna) - 2)
-		self.last_stop_  = [None] * (len(dna) - 2)
-		self.next_start_ = [None] * (len(dna) - 2)
-		self.next_stop_  = [None] * (len(dna) - 2)
+		self.last_start = [None] * (len(dna) - 1)
+		self.last_stop  = [None] * (len(dna) - 1)
+		self.next_start = [None] * (len(dna) - 1)
+		self.next_stop  = [None] * (len(dna) - 1)
+		self.last_start_ = [None] * (len(dna) - 1)
+		self.last_stop_  = [None] * (len(dna) - 1)
+		self.next_start_ = [None] * (len(dna) - 1)
+		self.next_stop_  = [None] * (len(dna) - 1)
 	
 		lstarts = {0: Last(), 1: Last(), 2: Last() }
 		lstops  = {0: Last(), 1: Last(), 2: Last() }
@@ -49,7 +49,7 @@ class Locations:
 		nstarts_ = {0: Next(), 1: Next(), 2: Next() }
 		nstops_  = {0: Next(), 1: Next(), 2: Next() }
 		
-		for i,_ in enumerate(dna[:-2]):
+		for i,_ in enumerate(dna[:-1]):
 			codon = dna[i:i+3]
 			frame = i % 3
 

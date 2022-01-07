@@ -322,7 +322,7 @@ if __name__ == '__main__':
 					for frame in [0,1,2]:
 						local = reverse[frame, index : offset, :]
 						switches = predict_switches(local, 33, 10)
-						for (left,right),label in switches: 
+						for (left,right),label in switches.items(): 
 							if label == 1:
 								locus.add_feature('CDS', -1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
 
