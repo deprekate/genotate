@@ -25,6 +25,10 @@ os.environ['OPENBLAS_NUM_THREADS'] = '9'
 os.environ['MKL_NUM_THREADS'] = '9'
 #import matplotlib.pyplot as plt
 
+def compute_loss():
+	y_pred_model_w_temp = tf.math.divide(y_pred, temp)
+	loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(tf.convert_to_tensor(tf.keras.utils.to_categorical(Y)), y_pred_model_w_temp))
+	return loss
 
 class LossHistoryCallback(tf.keras.callbacks.Callback):
 	def on_epoch_end(self, batch, logs=None):
@@ -53,6 +57,12 @@ def pack(ordered_dict, labels):
 	features = ordered_dict['DNA']
 	return tf.expand_dims(features, axis=-1),  tf.one_hot(labels, depth=3)
 
+def features(features, labels):
+	return features
+
+def labels(features, labels):
+	return labels
+
 
 if __name__ == '__main__':
 	usage = '%s [-opt1, [-opt2, ...]] directory' % __file__
@@ -61,7 +71,6 @@ if __name__ == '__main__':
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
 	parser.add_argument('-k', '--kfold', action="store", default=0, type=int, help='which kfold')
 	parser.add_argument('-t', '--trim', action="store", default=0, type=int, help='how many bases to trim off window ends')
-	parser.add_argument('-a', '--activation', action="store", default=None, type=str, help='activation function')
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
@@ -96,7 +105,6 @@ if __name__ == '__main__':
 		sloppy				= True,
 		label_name          = colnames[0]
 		)
-
 	tdata = tfiles.map(pack)
 
 	'''
@@ -128,21 +136,16 @@ if __name__ == '__main__':
 
 
 
-	
+	import numpy as np	
 
 	with tf.device('/device:GPU:0'):
 		#es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=10, min_delta=0.001, baseline=None)
 		#lr_callback = LRFinder()
 		model.fit(
-				  tdata.shard(num_shards=9, index=0),
+				  tdata,
 				  validation_data = vdata,
-				  epochs          = 20,
+				  epochs          = 10,
 				  #class_weight    = class_weight,
 				  verbose         = 0,
 				  callbacks       = [LossHistoryCallback(), cp_callback]
 		)
-
-
-
-
-

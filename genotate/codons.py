@@ -24,32 +24,33 @@ class Locations:
 	def nearest_start(self, n, strand):
 		n = n - 1
 		lst = [ self.last_start[n].last , self.next_start[n].next ] if strand=='+' else [ self.last_start_[n].last , self.next_start_[n].next ]
-		return self.nearest(n, lst)
+		return self.nearest(n, lst) + 1
 
 	def nearest_stop(self, n, strand):
+		n = n - 1
 		lst = [ self.last_stop[n].last , self.next_stop[n].next ] if strand=='+' else [ self.last_stop_[n].last , self.next_stop_[n].next ]
-		return self.nearest(n, lst)
+		return self.nearest(n, lst) + 1
 
 	def __init__(self, dna):
-		self.last_start = [None] * (len(dna) - 1)
-		self.last_stop  = [None] * (len(dna) - 1)
-		self.next_start = [None] * (len(dna) - 1)
-		self.next_stop  = [None] * (len(dna) - 1)
-		self.last_start_ = [None] * (len(dna) - 1)
-		self.last_stop_  = [None] * (len(dna) - 1)
-		self.next_start_ = [None] * (len(dna) - 1)
-		self.next_stop_  = [None] * (len(dna) - 1)
+		self.last_start = [None] * len(dna)
+		self.last_stop  = [None] * len(dna)
+		self.next_start = [None] * len(dna)
+		self.next_stop  = [None] * len(dna)
+		self.last_start_ = [None] * len(dna)
+		self.last_stop_  = [None] * len(dna)
+		self.next_start_ = [None] * len(dna)
+		self.next_stop_  = [None] * len(dna)
 	
-		lstarts = {0: Last(), 1: Last(), 2: Last() }
-		lstops  = {0: Last(), 1: Last(), 2: Last() }
+		lstarts = {0: Last(-1), 1: Last(-1), 2: Last(-1) }
+		lstops  = {0: Last(-1), 1: Last(-1), 2: Last(-1) }
 		nstarts = {0: Next(), 1: Next(), 2: Next() }
 		nstops  = {0: Next(), 1: Next(), 2: Next() }
-		lstarts_ = {0: Last(), 1: Last(), 2: Last() }
-		lstops_  = {0: Last(), 1: Last(), 2: Last() }
+		lstarts_ = {0: Last(-1), 1: Last(-1), 2: Last(-1) }
+		lstops_  = {0: Last(-1), 1: Last(-1), 2: Last(-1) }
 		nstarts_ = {0: Next(), 1: Next(), 2: Next() }
 		nstops_  = {0: Next(), 1: Next(), 2: Next() }
-		
-		for i,_ in enumerate(dna[:-1]):
+	
+		for i,_ in enumerate(dna):
 			codon = dna[i:i+3]
 			frame = i % 3
 
@@ -101,5 +102,6 @@ class Locations:
 			self.next_start_[i-frame].next = i + 3
 		#for i, obj in enumerate(self.next_stop):
 		#	print(i, obj)
+
 
 

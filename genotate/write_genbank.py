@@ -110,14 +110,33 @@ class Locus(dict):
 		self.locus = locus
 		self.dna = dna
 		self.locations = cd.Locations(self.dna)
+		
+		seq = self.dna + rev_comp(self.dna)
+		length = len(seq)
+		self.p = dict()
+		self.p['a'] = seq.count('a') / length
+		self.p['c'] = seq.count('c') / length
+		self.p['g'] = seq.count('g') / length
+		self.p['t'] = seq.count('t') / length
 
 	def length(self):
 		return len(self.dna)
+
+	def pcodon(self, codon):
+		codon = codon.lower()
+		return self.p[codon[0]] * self.p[codon[1]] * self.p[codon[2]]
+
+	def pstart(self):
+		return self.pcodon('atg') + self.pcodon('gtg') + self.pcodon('ttg')
+
+	def pstop(self):
+		return self.pcodon('taa') + self.pcodon('tag') + self.pcodon('tga')
 		
 	def check(self):	
 		# set dna for features and check integrity
 		last = None
 		for feature in sorted(self):
+			# this just mkes sure the feature locations are in the same frame
 			for i in feature.base_locations():
 				feature.dna += self.dna[ i-1 : i ]
 			if feature.type == 'CDS':
@@ -134,6 +153,8 @@ class Locus(dict):
 		"""Add a feature to the factory."""
 		feature = Feature(key, strand, pairs, self)
 		feature.locus = self.locus
+		feature.nearest_start = self.nearest_start(feature)
+		feature.nearest_stop = self.nearest_stop(feature)
 		if feature not in self:
 			self[feature] = True
 			self.current = feature
@@ -164,9 +185,21 @@ class Locus(dict):
 		outfile.write('\n')
 
 		for feature in sorted(self):
-			feature.write(outfile, self.locations)
+			feature.write(outfile)
 		outfile.write('//')
 		outfile.write('\n')
+
+	def nearest_start(self, feature):
+		if feature.strand > 0:
+			return self.locations.nearest_start(feature.left(),'+')
+		else:
+			return self.locations.nearest_start(feature.right()-2,'-')
+
+	def nearest_stop(self, feature):
+		if feature.strand < 0:
+			return self.locations.nearest_stop(feature.left(),'-')
+		else:
+			return self.locations.nearest_stop(feature.right()-2,'+')
 
 			
 class Feature(Locus):
@@ -179,6 +212,8 @@ class Feature(Locus):
 		self.tags = dict()
 		self.dna = ''
 		self.partial = False
+		self.nearest_start = None
+		self.nearest_stop = None
 
 	def hypothetical(self):
 		function = self.tags['product'] if 'product' in self.tags else ''
@@ -195,6 +230,18 @@ class Feature(Locus):
 	
 	def right(self):
 		return self.pairs[-1][-1]
+
+	def start_distance(self):
+		if self.strand > 0:
+			return self.left() - self.nearest_start
+		else:
+			return self.nearest_start - (self.right()-2)
+
+	def stop_distance(self):
+		if self.strand > 0:
+			return self.nearest_stop - (self.right()-2)
+		else:
+			return self.left() - self.nearest_stop
 
 	def __str__(self):
 		"""Compute the string representation of the feature."""
@@ -265,7 +312,9 @@ class Feature(Locus):
 					fuzz.ratio(seq1, seq2),
 					fuzz.ratio(seq1, seq2.replace('*', 'W'))
 					) / 100
-	def write(self, outfile, locations=None):
+
+
+	def write(self, outfile):
 
 		outfile.write('     ')
 		outfile.write( self.type.ljust(16) )
@@ -285,23 +334,21 @@ class Feature(Locus):
 		outfile.write('\n')
 		if self.type == 'CDS':
 			outfile.write('                     /nearest_start=')
-			outfile.write( str(self.nearest_start()) )
+			#outfile.write( str(self.nearest_start) )
+			outfile.write(str( self.start_distance() ))
 			outfile.write('\n')
 			outfile.write('                     /nearest_stop=')
-			outfile.write( str(self.nearest_stop()) )
+			#outfile.write( str(self.nearest_stop) )
+			outfile.write(str( self.stop_distance() ))
 			outfile.write('\n')
 
-	def nearest_start(self):
-		if self.strand > 0:
-			return self.left() - (1+self.locations.nearest_start(self.left(),'+'))
-		else:
-			return 1+self.locations.nearest_start(self.right()-2,'-') - (self.right()-2)
+			outfile.write('                     /nearest_start_prob=')
+			outfile.write(str( (1-self.pstart()) ** abs(2*self.start_distance()/3)  ))
+			outfile.write('\n')
+			outfile.write('                     /nearest_stop_prob=')
+			outfile.write(str( (1-self.pstop()) ** abs(2*self.stop_distance()/3)  ))
+			outfile.write('\n')
 
-	def nearest_stop(self):
-		if self.strand < 0:
-			return self.left() - (1+self.locations.nearest_stop(self.left(),'-'))
-		else:
-			return 1+self.locations.nearest_stop(self.right()-2,'+') - (self.right()-2)
 		
 
 	

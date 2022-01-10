@@ -105,18 +105,20 @@ def create_model_conv2(args):
 		tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot'),
 		tf.keras.layers.Cropping1D(cropping=(args.trim, args.trim)),
 		#tf.keras.layers.Conv1D(filters=1, kernel_size=3, strides=3, padding='same', activation='relu' ),
-		tf.keras.layers.Conv1D(filters=120-(2*args.trim), kernel_size=3, padding='same', activation=args.activation, kernel_regularizer=kreg, name="conv1" + reg ),
-		tf.keras.layers.Conv1D(filters=120-(2*args.trim), kernel_size=3, padding='same', activation=args.activation, kernel_regularizer=kreg, name="conv2" + reg ),
-		tf.keras.layers.Conv1D(filters=120-(2*args.trim), kernel_size=3, padding='same', activation=args.activation, kernel_regularizer=kreg, name="conv3" + reg ),
+		tf.keras.layers.Conv1D(filters=147-(2*args.trim), kernel_size=3, padding='same', activation='relu', kernel_regularizer=kreg, name="conv1" + reg ),
+		tf.keras.layers.Conv1D(filters=147-(2*args.trim), kernel_size=3, padding='same', activation='relu', kernel_regularizer=kreg, name="conv2" + reg ),
+		tf.keras.layers.Conv1D(filters=147-(2*args.trim), kernel_size=3, padding='same', activation='relu', kernel_regularizer=kreg, name="conv3" + reg ),
 		tf.keras.layers.Flatten(),
-		tf.keras.layers.Dense(120-(2*args.trim), activation='relu', kernel_regularizer=kreg),
+		tf.keras.layers.Dense(147-(2*args.trim), activation='relu', kernel_regularizer=kreg),
 		tf.keras.layers.Dropout(rate=0.05),
-		tf.keras.layers.Dense(120-(2*args.trim), activation='relu', kernel_regularizer=kreg),
+		tf.keras.layers.Dense(147-(2*args.trim), activation='relu', kernel_regularizer=kreg),
 		tf.keras.layers.Dropout(rate=0.05),
-		tf.keras.layers.Dense(120-(2*args.trim), activation='relu', kernel_regularizer=kreg),
+		tf.keras.layers.Dense(147-(2*args.trim), activation='relu', kernel_regularizer=kreg),
 		tf.keras.layers.Dropout(rate=0.05),
 		tf.keras.layers.Dense(3, activation='softmax')
 	])
 	opt = tf.keras.optimizers.Adam(learning_rate=0.001)
-	model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
+	custom_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
+	model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
+	#model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
 	return model
