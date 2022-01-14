@@ -135,16 +135,13 @@ if __name__ == '__main__':
 	vdata = vfiles.map(pack)
 
 
-
-	import numpy as np	
-
 	with tf.device('/device:GPU:0'):
 		#es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=10, min_delta=0.001, baseline=None)
 		#lr_callback = LRFinder()
 		model.fit(
 				  tdata,
 				  validation_data = vdata,
-				  epochs          = 10,
+				  epochs          = 20,
 				  #class_weight    = class_weight,
 				  verbose         = 0,
 				  callbacks       = [LossHistoryCallback(), cp_callback]

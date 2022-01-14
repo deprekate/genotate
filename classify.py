@@ -39,7 +39,6 @@ translate = lambda dna : ''.join([translate_codon[dna[i:i+3].upper()] for i in r
 
 def predict_switches(data, min_size, pen):
 	try:
-		#switches = rpt.KernelCPD(kernel="linear", min_size=33).fit(strand_wise[:-3,:]).predict(pen=33)
 		switches = rpt.KernelCPD(kernel="linear", min_size=min_size).fit(data).predict(pen=pen)
 	except:
 		switches = [data.shape[0]]
@@ -199,7 +198,7 @@ if __name__ == '__main__':
 	model = mm.create_model_conv2(args)
 	name = args.infile.split('/')[-1]
 	me = name[10]
-	#model.load_weights( "models/win_trim=15,reg=False,fold=" + str(me) + ",weights=1;1;1.ckpt" ).expect_partial()
+	#model.load_weights( "out/win_sub_w117_kern3/win_sub_trim=15,reg=False,fold=" + str(me) + ".ckpt" ).expect_partial()
 	model.load_weights(args.model).expect_partial()
 	#print(model.summary())
 	#faulthandler.enable()
@@ -225,27 +224,17 @@ if __name__ == '__main__':
 		#exit()
 		with tf.device('/device:CPU:0'):
 			p = model.predict(dataset)
+		#import genotate.file_handling as fh
+		#fh.plot_frames(p)
+		#exit()
 		#p = tf.nn.softmax(p).numpy()
 		#p = smoo(p)
 		#p = best(p)
 		
-		# forward[ frame : bp : type ]
+		# create arrays of form: array[ frame : bp : type ]
 		forward = np.array([ p[0::6,:] , p[2::6,:] , p[4::6,:] ])
 		reverse = np.array([ p[1::6,:] , p[3::6,:] , p[5::6,:] ])
-		both = np.array([ p[0::6,:] + p[1::6,:] , p[2::6,:] + p[3::6,:] , p[4::6,:] + p[5::6,:] ]).clip(0,1)
-		'''
-		print(forward)
-		print(reverse)
-		print(both)
-		exit()
-		print("# BASE VAL1  VAL2 VAL3 ")
-		print("# colour 255:0:0 0:0:255 0:0:0")
-		for n in range(both.shape[1]):
-			print((3*n)+1, both[0,n,1], both[1,n,1], both[2,n,1], sep='\t')
-			print((3*n)+2, both[0,n,1], both[1,n,1], both[2,n,1], sep='\t')
-			print((3*n)+3, both[0,n,1], both[1,n,1], both[2,n,1], sep='\t')
-		exit()
-		'''
+		#both = np.array([ p[0::6,:] + p[1::6,:] , p[2::6,:] + p[3::6,:] , p[4::6,:] + p[5::6,:] ]).clip(0,1)
 
 		# predict strands
 		strand_wise = np.array([ 
@@ -269,6 +258,8 @@ if __name__ == '__main__':
 					for (left,right),label in switches.items(): 
 						if label == 1:
 							locus.add_feature('CDS', +1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
+						#elif label == 2:
+						#	locus.add_feature('misc_feature', +1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
 			elif strand < 0:
 				locus.add_feature('mRNA', -1, [[3*index+1, 3*offset+1]] )
 				for frame in [0,1,2]:
@@ -277,6 +268,8 @@ if __name__ == '__main__':
 					for (left,right),label in switches.items(): 
 						if label == 1:
 							locus.add_feature('CDS', -1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
+						#elif label == 2:
+						#	locus.add_feature('misc_feature', -1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
 
 		locus.check()
 		locus.write(args.outfile)

@@ -104,6 +104,15 @@ def create_model_conv2(args):
 											),
 		tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot'),
 		tf.keras.layers.Cropping1D(cropping=(args.trim, args.trim)),
+		# aminoacid space
+		#tf.keras.layers.experimental.preprocessing.TextVectorization(split = None, max_tokens=66, output_sequence_length=49,
+		#									vocabulary=[a+b+c for a in 'acgt' for b in 'acgt' for c in 'acgt'],
+		#									),
+		#tf.split(num_or_size_splits=3, axis=1),
+		#tf.cast('int32'),
+		#tf.strings.unicode_encode(output_encoding='UTF-8'),
+		#tf.transpose(),
+		#tf.keras.layers.experimental.preprocessing.TextVectorization(split = None,max_tokens=5,output_sequence_length=3,vocabulary=
 		#tf.keras.layers.Conv1D(filters=1, kernel_size=3, strides=3, padding='same', activation='relu' ),
 		tf.keras.layers.Conv1D(filters=147-(2*args.trim), kernel_size=3, padding='same', activation='relu', kernel_regularizer=kreg, name="conv1" + reg ),
 		tf.keras.layers.Conv1D(filters=147-(2*args.trim), kernel_size=3, padding='same', activation='relu', kernel_regularizer=kreg, name="conv2" + reg ),
