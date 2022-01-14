@@ -10,8 +10,19 @@ import tempfile
 from collections import Counter
 from argparse import RawTextHelpFormatter
 from itertools import zip_longest, chain
+from itertools import cycle
 
 import genotate.codons as cd
+
+from itertools import tee, islice
+
+def previous_and_next(some_iterable):
+    prevs, items, nexts = tee(some_iterable, 3)
+    prevs = chain([None], prevs)
+    nexts = chain(islice(nexts, 1, None), [None])
+    return zip(prevs, items, nexts)
+
+
 
 def is_valid_file(x):
 	if not os.path.exists(x):
@@ -143,25 +154,34 @@ class Locus(dict):
 		
 	def check(self):	
 		# set dna for features and check integrity
-		last = None
-		for feature in sorted(self):
+		for _last, _curr, _next in previous_and_next(sorted(self)):
 			# this just mkes sure the feature locations are in the same frame
-			for i in feature.base_locations():
-				feature.dna += self.dna[ i-1 : i ]
-			#if feature.type == 'CDS':
-			#	if len(feature.dna) % 3 and not feature.partial and 'transl_except' not in feature.tags:
-			#		raise ValueError("Out of frame: %s" % feature)
-			if last is not None and (feature.type == 'CDS') and (feature.frame() == last.frame()):
-				seq = self.seq(last.right()-29 , feature.left()+30)
-				last.tags['seq'] = seq
+			#for i in _curr.base_locations():
+			#	_curr.dna += self.dna[ i-1 : i ]
+			if _last is None:
+				pass
+			elif (_curr.type == 'CDS') and (_curr.frame() == _last.frame()):
+				# this merges adjacent frames
+				seq = self.seq(_last.right()-29 , _curr.left()+30)
 				if not has_stop(seq):
-					del self[last]
-					del self[feature]
-					last.pairs = ((last.left() , feature.right()),)
-					last.tags['merged'] = 'true'
-					self[last] = True
-			else:
-				last = feature
+					del self[_last]
+					del self[_curr]
+					_last.pairs = ((_last.left() , _curr.right()),)
+					_last.tags['seq'] = seq
+					_last.tags['merged'] = 'true'
+					self[_last] = True
+			elif _next is not None and (_last.type == 'CDS') and (_last.frame() == _next.frame()):
+				# this merges frames broken by an embedded gene
+				seq = self.seq(_last.right()-29 , _next.left()+30)
+				if not has_stop(seq):
+					del self[_last]
+					del self[_next]
+					_last.pairs = ((_last.left() , _next.right()),)
+					_last.tags['seq'] = seq
+					_last.tags['merged'] = 'true'
+					_curr.tags['embedded'] = 'true'
+					self[_last] = True
+		'''
 		last = None
 		for feature in sorted(self):
 			if last is not None and (last.type == 'CDS') and (feature.type == 'CDS') and (feature.strand == last.strand):
@@ -173,7 +193,7 @@ class Locus(dict):
 					self[last] = True
 					continue
 			last = feature
-
+		'''
 
 	def features(self, include=None, exclude=None):
 		for feature in self:

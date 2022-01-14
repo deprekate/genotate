@@ -249,7 +249,7 @@ if __name__ == '__main__':
 
 		# predict frames of strand
 		for (index,offset),strand in strand_switches.items():
-			index , offset , strand = max(index - 30, 0) , min(offset + 30, len(strand_wise)) , strand-1
+			index , offset , strand = max(index - 30, 0) , min(offset + 30, len(strand_wise)-1) , strand-1
 			if strand > 0:
 				locus.add_feature('mRNA', +1, [[3*index+1, 3*offset+1]] )
 				for frame in [0,1,2]:
