@@ -56,6 +56,7 @@ def is_valid_file(x):
 def pack(ordered_dict, labels):
 	features = ordered_dict['DNA']
 	return tf.expand_dims(features, axis=-1),  tf.one_hot(labels, depth=3)
+	#return tf.stack(list(ordered_dict.values()), axis=-1), tf.one_hot(labels, depth=3)
 
 def features(features, labels):
 	return features
@@ -96,7 +97,7 @@ if __name__ == '__main__':
 		header              = False,
 		column_names        = colnames,
 		select_columns      = selnames,
-		column_defaults     = [tf.int32] + [tf.string],
+		column_defaults     = [tf.int32, tf.string],
 		shuffle             = True,
 		num_parallel_reads  = 200,
 		shuffle_buffer_size = 4000,
@@ -115,7 +116,6 @@ if __name__ == '__main__':
 		print( feature )
 	exit()
 	'''
-
 	vfiles = tf.data.experimental.make_csv_dataset(
 		#file_pattern        = "viruses/train/win/GCF_000836805*",
 		file_pattern        = args.directory + "/GCF_??????[" +str(args.kfold) + "]??*",
@@ -123,7 +123,7 @@ if __name__ == '__main__':
 		header              = False,
 		column_names        = colnames,
 		select_columns      = selnames,
-		column_defaults     = [tf.int32] + [tf.string],
+		column_defaults     = [tf.int32, tf.string],
 		batch_size          = 4000,
 		num_epochs          = 1,
 		shuffle             = True,

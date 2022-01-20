@@ -26,6 +26,7 @@ signal(SIGPIPE,SIG_DFL)
 
 #import LinearFold as lf
 
+import numpy as np
 from read_genbank import GenbankFile
 try:
 	from aminoacid import Translate
@@ -43,6 +44,48 @@ def same_frame(a,b):
 
 def nint(x):
 	return int(x.replace('<','').replace('>',''))
+
+def at_skew(seq):
+	self = lambda : none
+	self.sequence = seq
+	self.windowsize = self.stepsize = 100 #int(len(self.sequence) / 1000)
+	self.nuc_1 = 'a'
+	self.nuc_2 = 't'
+	
+	
+	x = []
+	y1 = []
+	y2 = []
+	y2_scaled = []
+	cumulative_unscaled = 0
+	cm_list = []
+	i = int(self.windowsize / 2)
+	for each in range(len(self.sequence) // self.stepsize):
+		if i < len(self.sequence):
+			a = self.sequence[i - int(self.windowsize / 2):i + int(self.windowsize / 2)].count(self.nuc_1)
+			b = self.sequence[i - int(self.windowsize / 2):i + int(self.windowsize / 2)].count(self.nuc_2)
+			skew = (a - b) / (a + b)
+			y1.append(skew)
+			cumulative_unscaled = cumulative_unscaled + skew
+			y2.append(cumulative_unscaled)
+			x.append(i + 1)
+			cm_list.append(cumulative_unscaled)
+			i = i + self.stepsize
+	cm = max(cm_list)
+	m = max(y1)
+	scale = m / cm
+	max_position = y2.index(max(y2)) * self.stepsize
+	min_position = y2.index(min(y2)) * self.stepsize
+	for j in cm_list:
+		y2_scaled.append(j * scale)
+	slopes = []
+	for i in range(len(y2_scaled)):
+		win = y2_scaled[max(i-50,0):i+50]
+		m,b = np.polyfit(list(range(len(win))),win, 1)
+		slopes.append(m)
+	return slopes
+
+
 
 def gc_content(seq):
 	a = seq.count('a')
@@ -149,6 +192,7 @@ def single_window(dna, n, strand, translate):
 	#window = dna[ max( n%3 , n-57) : n+60]
 	#window = dna[ max( n%3 , n-72) : n+75]
 	window = dna[ max( 0 , n-72) : n+75]
+
 	if n-72 < 0:
 		window = window.rjust(147, 'n')
 	elif len(window) < 147:
@@ -179,13 +223,14 @@ def get_windows(dna):
 	translate = Translate()
 	gc = gc_content(dna) 
 
+	skew = at_skew(dna)
 	# get the aminoacid frequency window
 	#args = lambda: None
 	for n in range(0, len(dna)-2, 3):
 		for f in [0,1,2]:
 			#yield [gc] + single_window(dna, n+f, +1, translate)
-			yield single_window(dna, n+f, +1, translate)
-			yield single_window(dna, n+f, -1, translate)
+			yield [gc, skew[n//100]] + single_window(dna, n+f, +1, translate)
+			yield [gc, -skew[n//100]] + single_window(dna, n+f, -1, translate)
 
 def rround(item, n):
 	try:

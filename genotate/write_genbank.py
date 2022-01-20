@@ -38,9 +38,10 @@ def rev_comp(dna):
 	tab = str.maketrans(a,b)
 	return dna.translate(tab)[::-1]
 
-def has_stop(dna):
+def has_stop(dna, strand):
+	codons = ['taa','tag','tga'] if strand > 0 else ['tta','cta','tca']
 	for i in range(0, len(dna), 3):
-		if dna[i:i+3] in ['taa','tag','tga']:
+		if dna[i:i+3] in codons:
 			return True
 	return False
 
@@ -149,51 +150,72 @@ class Locus(dict):
 	def pstart(self):
 		return self.pcodon('atg') + self.pcodon('gtg') + self.pcodon('ttg')
 
-	def pstop(self):
-		return self.pcodon('taa') + self.pcodon('tag') + self.pcodon('tga')
+	def pstop(self, seq=None):
+		if seq is None:
+			return self.pcodon('taa') + self.pcodon('tag') + self.pcodon('tga')
+		else:
+			length = len(seq)
+			pa = seq.count('a') / length
+			pc = seq.count('c') / length
+			pg = seq.count('g') / length
+			pt = seq.count('t') / length
+			return pt*pa*pa + pt*pa*pg + pt*pg*pa
 		
 	def check(self):	
 		# set dna for features and check integrity
-		for _last, _curr, _next in previous_and_next(sorted(self)):
+		_last = _curr = None
+		for _, _, _next in previous_and_next(sorted(self)):
 			# this just mkes sure the feature locations are in the same frame
 			#for i in _curr.base_locations():
 			#	_curr.dna += self.dna[ i-1 : i ]
-			if _last is None:
+			if _last is None or (_last.type != 'CDS') or (_curr.type != 'CDS'):
 				pass
-			elif (_curr.type == 'CDS') and (_curr.frame() == _last.frame()):
+			elif _curr.strand != _last.strand:
+				pass
+			elif _curr.frame('left') == _last.frame('right'):
 				# this merges adjacent frames
-				seq = self.seq(_last.right()-29 , _curr.left()+30)
-				if not has_stop(seq):
+				seq = self.seq(_last.right()-30 , _curr.left()+32)
+				if not has_stop(seq, _last.strand):
 					del self[_last]
 					del self[_curr]
-					_last.pairs = ((_last.left() , _curr.right()),)
+					_last.tags['merged'] = _last.pairs + _curr.pairs
+					_last.pairs = ( (_last.left() , _curr.right()), )
 					_last.tags['seq'] = seq
-					_last.tags['merged'] = 'true'
+					_last.tags['other'] = _last.pairs
 					self[_last] = True
-			elif _next is not None and (_last.type == 'CDS') and (_last.frame() == _next.frame()):
+					_curr = _next
+					continue
+			elif _next is None:
+				pass
+			elif _last.frame('right') == _next.frame('left'):
 				# this merges frames broken by an embedded gene
-				seq = self.seq(_last.right()-29 , _next.left()+30)
-				if not has_stop(seq):
+				seq = self.seq(_last.right()-30 , _next.left()+32)
+				if not has_stop(seq, _last.strand):
 					del self[_last]
 					del self[_next]
+					_last.tags['merged'] = _last.pairs + _curr.pairs
 					_last.pairs = ((_last.left() , _next.right()),)
 					_last.tags['seq'] = seq
-					_last.tags['merged'] = 'true'
+					_last.tags['pstop'] = (1-self.pstop()) ** (len(seq)/3)
+					_last.tags['pstopl'] = (1-self.pstop(rev_comp(seq))) ** (len(seq)/3)
+					#_last.tags['merged'] = 'true'
 					_curr.tags['embedded'] = 'true'
 					self[_last] = True
-		'''
-		last = None
-		for feature in sorted(self):
-			if last is not None and (last.type == 'CDS') and (feature.type == 'CDS') and (feature.strand == last.strand):
-				if (feature.strand > 0) and (abs(last.stop_distance()) > 100):
-					del self[last]
-					del self[feature]
-					last.pairs = last.pairs + feature.pairs
-					last.tags['joined'] = 'true'
-					self[last] = True
+					_last,_curr = _curr,_last
 					continue
-			last = feature
-		'''
+			elif _curr.strand > 0:
+				pass
+			elif _curr.strand < 0:
+				if abs(_curr.stop_distance()) > 100 and _curr.nearest_stop() < _last.right():
+					del self[_last]
+					del self[_curr]
+					_last.pairs = _last.pairs + _curr.pairs
+					_last.tags['joined'] = 'true'
+					self[_last] = True
+					_curr = _next
+					continue
+			_last = _curr
+			_curr = _next
 
 	def features(self, include=None, exclude=None):
 		for feature in self:
@@ -203,7 +225,6 @@ class Locus(dict):
 	def add_feature(self, key, strand, pairs):
 		"""Add a feature to the factory."""
 		feature = Feature(key, strand, pairs, self)
-		feature.locus = self.locus
 		if feature not in self:
 			self[feature] = True
 
@@ -238,25 +259,25 @@ class Locus(dict):
 		outfile.write('\n')
 
 			
-class Feature(Locus):
+class Feature():
 	def __init__(self, type_, strand, pairs, locus):
-		super().__init__(locus.locus, locus.dna)
+		#super().__init__(locus.locus, locus.dna)
 		self.type = type_
 		self.strand = strand
 		# tuplize the pairs
 		self.pairs = tuple([tuple(pair) for pair in pairs])
+		self.locus = locus
 		self.tags = dict()
 		self.dna = ''
 		self.partial = False
 
-	def frame(self):
+	def frame(self, end):
 		if self.type != 'CDS':
-			return None
-		else:
-			if self.left()%3 != (self.right()-2)%3:
-				print(self)
-			assert self.left()%3 == (self.right()-2)%3
-			return self.left()%3 * self.strand
+			return 0
+		elif end == 'right':
+			return ((self.right()%3)+1) * self.strand
+		elif end == 'left':
+			return ((self.left()%3)+1) * self.strand
 
 	def hypothetical(self):
 		function = self.tags['product'] if 'product' in self.tags else ''
@@ -276,32 +297,32 @@ class Feature(Locus):
 
 	def nearest_start(self):
 		if self.strand > 0:
-			return self.locations.nearest_start(self.left(),'+')
+			return self.locus.locations.nearest_start(self.left(),'+')
 		else:
-			return self.locations.nearest_start(self.right()-2,'-')
+			return self.locus.locations.nearest_start(self.right(),'-')
 
 	def nearest_stop(self):
 		if self.strand < 0:
-			return self.locations.nearest_stop(self.left(),'-')
+			return self.locus.locations.nearest_stop(self.left(),'-')
 		else:
-			return self.locations.nearest_stop(self.right()-2,'+')
+			return self.locus.locations.nearest_stop(self.right(),'+')
 
 	def start_distance(self):
 		if self.strand > 0:
 			return self.left() - self.nearest_start()
 		else:
-			return self.nearest_start() - (self.right()-2)
+			return self.nearest_start() - (self.right())
 
 	def stop_distance(self):
 		if self.strand > 0:
-			return self.nearest_stop() - (self.right()-2)
+			return self.nearest_stop() - (self.right())
 		else:
 			return self.left() - self.nearest_stop()
 
 	def __str__(self):
 		"""Compute the string representation of the feature."""
 		return "%s\t%s\t%s\t%s" % (
-				repr(self.locus),
+				repr(self.locus.locus),
 				repr(self.type),
 				repr(self.pairs),
 				repr(self.tags))
@@ -328,7 +349,7 @@ class Feature(Locus):
 				yield i+1
 		for left,right in self.pairs:
 			#left,right = map(int, [ item.replace('<','').replace('>','') for item in pair ] )
-			for i in range(left,right+1):
+			for i in range(left,right):
 				yield i
 
 	def codon_locations(self):
@@ -370,7 +391,6 @@ class Feature(Locus):
 
 
 	def write(self, outfile):
-
 		outfile.write('     ')
 		outfile.write( self.type.ljust(16) )
 		if not self.strand > 0:
@@ -381,7 +401,7 @@ class Feature(Locus):
 		pairs = []
 		for left, right in self.pairs:
 			left = max(1,left)
-			pair = str(left) + '..' + str(right)
+			pair = str(left) + '..' + str(right+2)
 			pairs.append(pair)
 		outfile.write(','.join(pairs))
 		if len(self.pairs) > 1:
@@ -394,9 +414,9 @@ class Feature(Locus):
 		outfile.write('\n')
 		for key,value in self.tags.items():
 			outfile.write('                     /')
-			outfile.write(key)
+			outfile.write(str(key))
 			outfile.write('=')
-			outfile.write(value)
+			outfile.write(str(value))
 			outfile.write('\n')
 		
 		if self.type == 'CDS':
@@ -409,14 +429,6 @@ class Feature(Locus):
 			outfile.write(str( self.stop_distance() ))
 			outfile.write('\n')
 
-			outfile.write('                     /nearest_start_prob=')
-			outfile.write(str( (1-self.pstart()) ** abs(2*self.start_distance()/3)  ))
-			outfile.write('\n')
-			outfile.write('                     /nearest_stop_prob=')
-			outfile.write(str( (1-self.pstop()) ** abs(2*self.stop_distance()/3)  ))
-			outfile.write('\n')
-
-		
 
 	
 

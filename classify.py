@@ -224,9 +224,11 @@ if __name__ == '__main__':
 		#exit()
 		with tf.device('/device:CPU:0'):
 			p = model.predict(dataset)
-		#import genotate.file_handling as fh
-		#fh.plot_frames(p)
-		#exit()
+
+		if args.plot_frames:
+			import genotate.file_handling as fh
+			fh.plot_frames(p)
+			exit()
 		#p = tf.nn.softmax(p).numpy()
 		#p = smoo(p)
 		#p = best(p)
@@ -257,7 +259,7 @@ if __name__ == '__main__':
 					switches = predict_switches(local, 33, 10)
 					for (left,right),label in switches.items(): 
 						if label == 1:
-							locus.add_feature('CDS', +1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
+							locus.add_feature('CDS', +1, [[3*(index+left)+frame+1, 3*(index+right)+frame-2]] )
 						#elif label == 2:
 						#	locus.add_feature('misc_feature', +1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
 			elif strand < 0:
@@ -267,7 +269,7 @@ if __name__ == '__main__':
 					switches = predict_switches(local, 33, 10)
 					for (left,right),label in switches.items(): 
 						if label == 1:
-							locus.add_feature('CDS', -1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
+							locus.add_feature('CDS', -1, [[3*(index+left)+frame+1, 3*(index+right)+frame-2]] )
 						#elif label == 2:
 						#	locus.add_feature('misc_feature', -1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
 
