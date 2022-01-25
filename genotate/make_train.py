@@ -45,12 +45,11 @@ def same_frame(a,b):
 def nint(x):
 	return int(x.replace('<','').replace('>',''))
 
-def at_skew(seq):
+def skew(seq, nucs):
 	self = lambda : none
 	self.sequence = seq
 	self.windowsize = self.stepsize = 100 #int(len(self.sequence) / 1000)
-	self.nuc_1 = 'a'
-	self.nuc_2 = 't'
+	(self.nuc_1,self.nuc_2) = nucs
 	
 	
 	x = []
@@ -64,9 +63,9 @@ def at_skew(seq):
 		if i < len(self.sequence):
 			a = self.sequence[i - int(self.windowsize / 2):i + int(self.windowsize / 2)].count(self.nuc_1)
 			b = self.sequence[i - int(self.windowsize / 2):i + int(self.windowsize / 2)].count(self.nuc_2)
-			skew = (a - b) / (a + b)
-			y1.append(skew)
-			cumulative_unscaled = cumulative_unscaled + skew
+			s = (a - b) / (a + b)
+			y1.append(s)
+			cumulative_unscaled = cumulative_unscaled + s
 			y2.append(cumulative_unscaled)
 			x.append(i + 1)
 			cm_list.append(cumulative_unscaled)
@@ -83,6 +82,7 @@ def at_skew(seq):
 		win = y2_scaled[max(i-50,0):i+50]
 		m,b = np.polyfit(list(range(len(win))),win, 1)
 		slopes.append(m)
+	slopes.append(m)
 	return slopes
 
 
@@ -223,15 +223,16 @@ def get_windows(dna):
 	translate = Translate()
 	gc = gc_content(dna) 
 
-	skew = at_skew(dna)
+	at_skew = skew(dna, 'at')
+	gc_skew = skew(dna, 'gc')
 	# get the aminoacid frequency window
 	#args = lambda: None
 	for n in range(0, len(dna)-2, 3):
 		for f in [0,1,2]:
 			#yield single_window(dna, n+f, +1, translate)
 			#yield single_window(dna, n+f, -1, translate)
-			yield [str(gc), str(skew[n//100])] + single_window(dna, n+f, +1, translate)
-			yield [str(gc), str(-skew[n//100])] + single_window(dna, n+f, -1, translate)
+			yield [str(gc), str( at_skew[n//100]), str( gc_skew[n//100])] + single_window(dna, n+f, +1, translate)
+			yield [str(gc), str(-at_skew[n//100]), str(-gc_skew[n//100])] + single_window(dna, n+f, -1, translate)
 
 def rround(item, n):
 	try:
