@@ -78,8 +78,10 @@ def mode(a, axis=0):
 		oldmostfreq = mostfrequent
 	return mostfrequent[0] #, oldcounts
 
-def pack(features, label):
-  return tf.stack(list(features.values()), axis=-1), label
+def pack(features):
+	#return tf.stack(list(features.values()), axis=-1)
+	a,b = tf.split(features, [2,1], axis=-1)
+	return ((b,a),)
 
 def smo(data, l=10):
 	out = np.zeros_like(data)
@@ -195,7 +197,7 @@ if __name__ == '__main__':
 	#ckpt_reader = tf.train.load_checkpoint(args.model)
 	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
 	#model = mm.create_model_deep(n)
-	model = mm.create_model_conv2(args)
+	model = mm.create_model_blend(args)
 	name = args.infile.split('/')[-1]
 	me = name[10]
 	#model.load_weights( "out/win_sub_w117_kern3/win_sub_trim=15,reg=False,fold=" + str(me) + ".ckpt" ).expect_partial()
@@ -213,17 +215,22 @@ if __name__ == '__main__':
 								output_signature=(
 										tf.TensorSpec(
 											#shape=model.input.type_spec.shape[1:],
-											shape=(1,),
+											shape=(3,),
 											#dtype=tf.float32
 											dtype=tf.string
 											)
 										)
-								).batch(100)
+								).batch(10)
+		tdata = dataset.map(pack)
 		#for feature in dataset.take(1):
-		#	print( feature )
-		#exit()
+		'''
+		for feature in tdata:
+			print( feature )
+			exit()
+		exit()
+		'''
 		with tf.device('/device:CPU:0'):
-			p = model.predict(dataset)
+			p = model.predict(tdata)
 
 		if args.plot_frames:
 			import genotate.file_handling as fh
@@ -273,7 +280,8 @@ if __name__ == '__main__':
 						#elif label == 2:
 						#	locus.add_feature('misc_feature', -1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
 
-		locus.check()
+		locus.merge()
+		locus.rbs()
 		locus.write(args.outfile)
 		exit()
 	

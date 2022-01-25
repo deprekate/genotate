@@ -13,6 +13,7 @@ from itertools import zip_longest, chain
 from itertools import cycle
 
 import genotate.codons as cd
+import LinearFold as lf
 
 from itertools import tee, islice
 
@@ -160,8 +161,18 @@ class Locus(dict):
 			pg = seq.count('g') / length
 			pt = seq.count('t') / length
 			return pt*pa*pa + pt*pa*pg + pt*pg*pa
+
+	def rbs(self):
+		for feature in self:
+			if feature.type == 'CDS':
+				if feature.strand > 0:
+					start = feature.left()+2
+					feature.tags['rbs'] = self.seq(start-30,start)
+				else:
+					start = feature.right()
+					feature.tags['rbs'] = rev_comp(self.seq(start,start+30))
 		
-	def check(self):	
+	def merge(self):	
 		# set dna for features and check integrity
 		_last = _curr = None
 		for _, _, _next in previous_and_next(sorted(self)):
