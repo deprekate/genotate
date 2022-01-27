@@ -280,8 +280,8 @@ if __name__ == '__main__':
 						#	locus.add_feature('misc_feature', -1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
 
 		locus.merge()
-		locus.rbs()
-		locus.mfe()
+		#locus.rbs()
+		#locus.mfe()
 		locus.write(args.outfile)
 		exit()
 	
