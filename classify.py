@@ -187,7 +187,7 @@ if __name__ == '__main__':
 	parser.add_argument('-a', '--activation', action="store", default='relu', type=str, help='activation function')
 	parser.add_argument('-f', '--plot_frames', action="store_true")
 	parser.add_argument('-s', '--plot_strands', action="store_true")
-	parser.add_argument('-t', '--trim', action="store", default=0, type=int, help='how many bases to trim off window ends')
+	parser.add_argument('-t', '--trim', action="store", default=15, type=int, help='how many bases to trim off window ends')
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 

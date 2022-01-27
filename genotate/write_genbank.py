@@ -186,7 +186,7 @@ class Locus(dict):
 					mfe.append( lf.fold(seq[i:i+30])[1] )
 				Q25,Q75  = np.percentile(mfe, [75 ,25])
 				IQR = Q75 - Q25
-				_last.tags['mfes'] = mfe
+				#_last.tags['mfes'] = mfe
 				_last.tags['mfe'] = any(Q75 + 2*IQR > mfe)
 
 
