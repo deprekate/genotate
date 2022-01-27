@@ -14,6 +14,7 @@ from itertools import cycle
 
 import genotate.codons as cd
 import LinearFold as lf
+import numpy as np
 
 from itertools import tee, islice
 
@@ -172,6 +173,24 @@ class Locus(dict):
 					start = feature.right()
 					feature.tags['rbs'] = rev_comp(self.seq(start,start+30))
 		
+	def mfe(self):	
+		for _last, _curr, _next in previous_and_next(sorted(self)):
+			if _last is None or (_last.type != 'CDS') or (_curr.type != 'CDS'):
+				pass
+			elif _last.strand != _curr.strand:
+				pass
+			elif _last.strand > 0:
+				seq = self.seq(_last.right()-30 , _curr.left()+32)
+				mfe = []
+				for i in range(0, len(seq), 3):
+					mfe.append( lf.fold(seq[i:i+30])[1] )
+				Q25,Q75  = np.percentile(mfe, [75 ,25])
+				IQR = Q75 - Q25
+				_last.tags['mfes'] = any(Q75 + 2*IQR > mfe)
+				_last.tags['mfe'] = any(Q75 + 2*IQR > mfe)
+
+
+
 	def merge(self):	
 		# set dna for features and check integrity
 		_last = _curr = None

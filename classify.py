@@ -80,7 +80,7 @@ def mode(a, axis=0):
 
 def pack(features):
 	#return tf.stack(list(features.values()), axis=-1)
-	a,b = tf.split(features, [2,1], axis=-1)
+	a,b = tf.split(features, [3,1], axis=-1)
 	return ((b,a),)
 
 def smo(data, l=10):
@@ -215,7 +215,7 @@ if __name__ == '__main__':
 								output_signature=(
 										tf.TensorSpec(
 											#shape=model.input.type_spec.shape[1:],
-											shape=(3,),
+											shape=(4,),
 											#dtype=tf.float32
 											dtype=tf.string
 											)
@@ -282,6 +282,7 @@ if __name__ == '__main__':
 
 		locus.merge()
 		locus.rbs()
+		locus.mfe()
 		locus.write(args.outfile)
 		exit()
 	

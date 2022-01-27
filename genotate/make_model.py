@@ -116,8 +116,8 @@ def create_model_blend(args):
 	model_ = tf.keras.layers.Conv1D(filters=147-(2*args.trim), kernel_size=9, padding='same', activation='relu' )(model_)
 	model_ = tf.keras.layers.Flatten()(model_)
 
-	other_ = tf.keras.layers.Input(shape=(2,), dtype=tf.string)
-	extra_ = tf.keras.layers.Lambda(lambda x: tf.strings.to_number(x))(other_)
+	other_ = tf.keras.layers.Input(shape=(3,), dtype=tf.string)
+	extra_ = tf.keras.layers.Lambda(lambda x: tf.strings.to_number(x), name='strtonum')(other_)
 
 	model_ = tf.keras.layers.concatenate([model_, extra_], axis=-1)
 
