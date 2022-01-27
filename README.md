@@ -33,5 +33,5 @@ gene layout:
 ![](https://github.com/deprekate/genotate/blob/main/src/genes.png)
 
 The predictions.gb file can then be loaded using the 'File>Read An Entry' menu, and the
-predictions will be overlaid as grey 'coding regions' gene layout window:
+predictions will be overlaid as grey 'coding regions' in the gene layout window:
 ![](https://github.com/deprekate/genotate/blob/main/src/predictions.png)
