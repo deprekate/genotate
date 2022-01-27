@@ -28,10 +28,6 @@ signal(SIGPIPE,SIG_DFL)
 
 import numpy as np
 from read_genbank import GenbankFile
-try:
-	from aminoacid import Translate
-except:
-	from genotate.aminoacid import Translate
 
 
 def is_valid_file(x):
@@ -182,13 +178,12 @@ def rev_comp(seq):
 	return "".join([seq_dict[base] for base in reversed(seq)])
 
 
-def single_window(dna, n, strand, translate):
+def single_window(dna, n, strand):
 	'''
 	get ONE window of 117 bases centered at the CODon
 				.....COD.....   => translate => count aminoacids => [1,2,...,19,20]
 	'''
 	row = []
-	#translate = Translate()
 	#window = dna[ max( n%3 , n-57) : n+60]
 	#window = dna[ max( n%3 , n-72) : n+75]
 	window = dna[ max( 0 , n-72) : n+75]
@@ -220,7 +215,6 @@ def get_windows(dna):
 	if type(dna) is not str:
 		dna = dna.decode()
 
-	translate = Translate()
 	gc = gc_content(dna) 
 
 	at_skew = skew(dna, 'at')
@@ -231,8 +225,8 @@ def get_windows(dna):
 		for f in [0,1,2]:
 			#yield single_window(dna, n+f, +1, translate)
 			#yield single_window(dna, n+f, -1, translate)
-			yield [str(gc), str( at_skew[n//100]), str( gc_skew[n//100])] + single_window(dna, n+f, +1, translate)
-			yield [str(gc), str(-at_skew[n//100]), str(-gc_skew[n//100])] + single_window(dna, n+f, -1, translate)
+			yield [str(gc), str( at_skew[n//100]), str( gc_skew[n//100])] + single_window(dna, n+f, +1)
+			yield [str(gc), str(-at_skew[n//100]), str(-gc_skew[n//100])] + single_window(dna, n+f, -1)
 
 def rround(item, n):
 	try:

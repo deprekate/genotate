@@ -52,7 +52,7 @@ def main():
 		],
 		python_requires='>3.5.2',
 		packages=find_packages(),
-		#install_requires=['fastpath>=1.4'],
+		install_requires=['LinearFold','numpy','tensorflow==2.6.2','ruptures'],
 		ext_modules = [extension()]
 	)
 

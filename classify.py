@@ -10,25 +10,24 @@ import faulthandler
 import genotate.make_train as mt
 import genotate.make_model as mm
 from genotate.write_genbank import Locus
-#from genotate.features import Features
-
-#from genotate.windows import get_windows
 from genotate.make_train import get_windows
+#from genotate.features import Features
+#from genotate.windows import get_windows
 #from genotate.mt import get_windows
 
-import ruptures as rpt
-# TensorFlow and tf.keras
-#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-import tensorflow as tf
 
-physical_devices = tf.config.experimental.list_physical_devices('GPU')
-if len(physical_devices) > 0:
-	tf.config.experimental.set_memory_growth(physical_devices[0], True)
 	
 # Helper libraries
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 import numpy as np
+# TensorFlow and tf.keras
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+import tensorflow as tf
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+if len(physical_devices) > 0:
+	tf.config.experimental.set_memory_growth(physical_devices[0], True)
+import ruptures as rpt
 
 
 nucs = ['T', 'C', 'A', 'G']
