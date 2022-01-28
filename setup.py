@@ -44,16 +44,16 @@ def main():
 		long_description = readme(),
 		long_description_content_type="text/markdown",
 		url =  "https://github.com/deprekate/genotate",
-		scripts=['genotate.py'],
+		scripts=['classify.py'],
 		classifiers=[
 			"Programming Language :: Python :: 3",
 			"License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
 			"Operating System :: OS Independent",
 		],
 		python_requires='>3.5.2',
-		packages=find_packages(),
-		install_requires=['LinearFold','numpy','tensorflow==2.6.2','ruptures'],
-		ext_modules = [extension()]
+		install_requires=['read_genbank', 'LinearFold','numpy','tensorflow>=2.6.2','ruptures'],
+		#ext_modules = [extension()],
+		packages=find_packages()
 	)
 
 

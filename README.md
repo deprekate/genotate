@@ -10,14 +10,14 @@ at every position along the genome.
 To install `Genotate`,
 ```sh
  git clone https://github.com/deprekate/genotate.git
- cd genotate
+ pip install genotate/
 ```
 
 And to run `Genotate` you only need to specify the FASTA formatted genome file, and which
 model to use (provided is the most basic model trained on the first 800 phage genomes from
 RefSeq). To run on the provided phiX174 genome, use the command:
 ```
- python3 classify.py phiX174.fna --model models/fold0.ckpt > predictions.gb
+ classify.py --model genotate/models/fold0.ckpt genotate/phiX174.fna > predictions.gb
 ```
 
 The output of the script are 'coding region' predictions, in GenBank format.  They *should*
