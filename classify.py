@@ -283,7 +283,7 @@ if __name__ == '__main__':
 
 		locus.merge()
 		#locus.rbs()
-		#locus.mfe()
+		locus.mfe()
 		locus.write(args.outfile)
 		exit()
 	
