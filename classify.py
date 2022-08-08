@@ -200,12 +200,11 @@ if __name__ == '__main__':
 	#model = mm.create_model_deep(n)
 	model = mm.create_model_blend(args)
 	name = args.infile.split('/')[-1]
-	me = name[10]
+	me = name[10] if len(name) > 10 else None
 	#model.load_weights( "out/win_sub_w117_kern3/win_sub_trim=15,reg=False,fold=" + str(me) + ".ckpt" ).expect_partial()
 	model.load_weights(args.model).expect_partial()
 	#print(model.summary())
 	#faulthandler.enable()
-
 	contigs = mt.read_fasta(args.infile)
 	for header in contigs:
 		dna = contigs[header]

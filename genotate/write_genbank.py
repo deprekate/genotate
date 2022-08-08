@@ -172,7 +172,7 @@ class Locus(dict):
 				else:
 					start = feature.right()
 					feature.tags['rbs'] = rev_comp(self.seq(start,start+30))
-		
+	'''
 	def mfe(self):	
 		for _last, _curr, _next in previous_and_next(sorted(self)):
 			if _last is None or (_last.type != 'CDS') or (_curr.type != 'CDS'):
@@ -188,7 +188,7 @@ class Locus(dict):
 				IQR = Q75 - Q25
 				_last.tags['mfes'] = mfe
 				_last.tags['mfe'] = any(Q75 + 2*IQR > mfe)
-
+	'''
 
 
 	def merge(self):	
