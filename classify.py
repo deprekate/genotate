@@ -65,116 +65,11 @@ def is_valid_file(x):
 	return x
 
 
-def mode(a, axis=0):
-	scores = np.unique(np.ravel(a))       # get ALL unique values
-	testshape = list(a.shape)
-	testshape[axis] = 1
-	oldmostfreq = np.zeros(testshape)
-	oldcounts = np.zeros(testshape)
-	for score in scores:
-		template = (a == score)
-		counts = np.expand_dims(np.sum(template, axis),axis)
-		mostfrequent = np.where(counts > oldcounts, score, oldmostfreq)
-		oldcounts = np.maximum(counts, oldcounts)
-		oldmostfreq = mostfrequent
-	return mostfrequent[0] #, oldcounts
-
 def pack(features):
 	#return tf.stack(list(features.values()), axis=-1)
 	a,b = tf.split(features, [3,1], axis=-1)
 	return ((b,a),)
 
-def smo(data, l=10):
-	out = np.zeros_like(data)
-	for i in range(6):
-		for j in range(3):
-			out[i::6,j] = smooth_line(data[i::6,j], window_len=l)
-	return out
-
-
-def smooth_line(x,window_len=10,window='hamming'):
-    if x.ndim != 1:
-        raise ValueError("smooth only accepts 1 dimension arrays.")
-    if x.size < window_len:
-        raise ValueError("Input vector needs to be bigger than window size.")
-    if window_len<3:
-        return x
-    if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-        raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
-    s = np.r_[x[window_len-1:0:-1],x,x[-2:-window_len-1:-1]]
-    if window == 'flat': #moving average
-        w = np.ones(window_len,'d')
-    else:
-        w = eval('np.'+window+'(window_len)')
-    y = np.convolve(w/w.sum(),s,mode='valid')
-    return y[ (window_len-1)//2 : -(window_len-1)//2 ]
-
-def smooth(data):
-	out = np.zeros_like(data)
-	var = np.array([
-					data[0::6], 
-					data[1::6],
-					data[2::6],
-					data[3::6],
-					data[4::6],
-					data[5::6]
-					])
-	for i in range(var.shape[1]):
-		#counts = np.count_nonzero(var[:,max(i-19, 0) : i+20] == 2, axis=1)
-		#idx = np.argmax(counts)
-		#if counts[idx] >= 3:
-		#	out[6*i+idx] = 2
-		#out[i:i+5] = np.apply_along_axis(lambda x: np.bincount(x).argmax(), axis=1, arr = var[ : , max(i-19, 0) : i+20 ] )
-		for j in range(6):
-			window = var[ j , max(i-19, 0) : i+20 ]
-			#window = var[ j , max(i-1, 0) : i+2 ]
-			out[6*i+j] = mode(window)
-	return out
-
-def smoo(data, n=10):
-	out = np.zeros_like(data)
-	for i in range(len(data)):
-		window = data[ max(i-69, i % 6) : i+80 : 6 ]
-		out[i] = np.mean(window, axis=0)
-	return out
-
-def best(data):
-	out = np.zeros_like(data)
-	for i in range(0, len(data), 6):
-		idx = np.argmax(data[i:i+6, 1])
-		out[i+idx][1] = data[i+idx, 1]
-	return out
-
-def cutoff(data, c=29):
-	out = np.zeros_like(data)
-	data[6] = 1
-	data[12] = 1
-	var = np.array([
-					data[0::6], 
-					data[1::6],
-					data[2::6],
-					data[3::6],
-					data[4::6],
-					data[5::6]
-					])
-	for i in range(var.shape[1]):
-		for j in range(6):
-			if var[j,i] == 1:
-				befor = np.flip( var[ j , max(i-39, 0) : i+1  ] )
-				after =          var[ j ,     i        : i+40 ]
-				b = np.where(np.append(befor, 0) != 1)[0][0]
-				a = np.where(np.append(after, 0) != 1)[0][0]
-				if b+a > c:
-					out[6*i+j] = 1
-				else:
-					out[6*i+j] = 0
-			else:
-				out[6*i+j] = var[j,i]
-	return out
-
-def wrapper(thing):
-	for item in get_windows(thing):
-		yield item
 
 
 if __name__ == '__main__':
@@ -231,7 +126,7 @@ if __name__ == '__main__':
 		'''
 		with tf.device('/device:CPU:0'):
 			p = model.predict(tdata)
-
+		
 		if args.plot_frames:
 			import genotate.file_handling as fh
 			fh.plot_frames(p)
@@ -282,7 +177,7 @@ if __name__ == '__main__':
 
 		locus.merge()
 		#locus.rbs()
-		locus.mfe()
+		#locus.mfe()
 		locus.write(args.outfile)
 		exit()
 	
