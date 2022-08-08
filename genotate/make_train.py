@@ -212,7 +212,7 @@ def get_windows(dna):
 
 	'''
 	# this is to fix python variable passing issues
-	if type(dna) is not str:
+	if type(dna) is not str and hasattr(dna,'decode'):
 		dna = dna.decode()
 
 	gc = gc_content(dna) 
