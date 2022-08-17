@@ -72,34 +72,10 @@ def has_stop(dna, strand):
 
 
 
-
 class Locus(Locus, feature=Feature):
 	def init(self, args):
-		self.locations = cd.Locations(self.dna)
-		self.wobble = {'gcc':'cgg', 'gct':'cgg', 'gca':'cgt', 'gcg':'cgt',
-					   'aga':'tct', 'agg':'tct', 'cga':'gct', 'cgg':'gct', 'cgt':'gcg', 'cgc':'gcg',
-					   'gac':'ctg', 'gat':'ctg', 
-					   'aac':'ttg', 'aat':'ttg',
-					   'tgc':'acg', 'tgt':'acg',
-					   'gaa':'ctt', 'gag':'ctt',
-					   'caa':'gtt', 'cag':'gtt',
-					   'gga':'cct', 'ggg':'cct', 'ggc':'ccg', 'ggt':'ccg',
-					   'cac':'gtg', 'cat':'gtg',
-					   'ata':'tat', 'atc':'tag', 'att': 'tag',
-					   'tta':'aat', 'ttg':'aat', 'cta':'gta', 'ctg':'gta', 'ctt':'gtg', 'ctc':'gtg',
-					   'aaa':'ttt', 'aag':'ttt',
-					   'atg':'tac',
-					   'ttc':'aag', 'ttt':'aag',
-					   'cca':'ggt', 'ccg':'ggt', 'cct':'ggg', 'ccc':'ggg',
-					   'agc':'tcg', 'agt':'tcg', 'tca':'atg', 'tcg':'atg', 'tcc':'agg', 'tct':'agg',
-					   'aca':'tgt', 'acg':'tgt', 'acc':'tgg', 'act':'tgg',
-					   'tgg':'acc',
-					   'tac':'atg', 'tat':'atg',
-					   'gta':'cat', 'gtg':'cat', 'gtc':'cag', 'gtt':'cag',
-					   'tag':'atc', 'taa':'att', 'tga':'act'
-					   }
-		self.slippage_sites = self.find_slippage()
-
+		pass
+		#self.locations = cd.Locations(self.dna)
 
 	def pstart(self):
 		return self.pcodon('atg') + self.pcodon('gtg') + self.pcodon('ttg')
@@ -118,21 +94,21 @@ class Locus(Locus, feature=Feature):
 	def merge(self):	
 		_last = _curr = None
 		for _, _, _next in previous_and_next(sorted(self)):
-			# this just mkes sure the feature locations are in the same frame
+			# THIS JUST MKES SURE THE FEATURE LOCATIONS ARE IN THE SAME FRAME
 			#for i in _curr.base_locations():
 			#	_curr.dna += self.dna[ i-1 : i ]
 			if _last is None or (_last.type != 'CDS') or (_curr.type != 'CDS'):
 				pass
 			elif _curr.strand != _last.strand:
 				pass
-			elif _curr.frame('left') == _last.frame('right'):
-				# this merges adjacent frames
+			elif _last.frame('right') == _curr.frame('left'):
+				# THIS MERGES ADJACENT FRAMES
 				seq = self.seq(_last.right()-30 , _curr.left()+32)
 				if not has_stop(seq, _last.strand):
 					del self[_last]
 					del self[_curr]
 					_last.tags['merged'] = _last.pairs + _curr.pairs
-					_last.pairs = ( (_last.left() , _curr.right()), )
+					_last.pairs = (( str(_last.left()),str(_curr.right()) ),)
 					#_last.tags['seq'] = seq
 					_last.tags['other'] = _last.pairs
 					self[_last] = True
@@ -141,13 +117,13 @@ class Locus(Locus, feature=Feature):
 			elif _next is None:
 				pass
 			elif _last.frame('right') == _next.frame('left'):
-				# this merges frames broken by an embedded gene
+				# THIS MERGES FRAMES BROKEN BY AN EMBEDDED GENE
 				seq = self.seq(_last.right()-30 , _next.left()+32)
 				if not has_stop(seq, _last.strand):
 					del self[_last]
 					del self[_next]
 					_last.tags['merged'] = _last.pairs + _curr.pairs
-					_last.pairs = ((_last.left() , _next.right()),)
+					_last.pairs = (( str(_last.left()),str(_next.right()) ),)
 					#_last.tags['seq'] = seq
 					#_last.tags['pstop'] = (1-self.pstop()) ** (len(seq)/3)
 					#_last.tags['pstopl'] = (1-self.pstop(rev_comp(seq))) ** (len(seq)/3)
@@ -159,6 +135,8 @@ class Locus(Locus, feature=Feature):
 			elif _curr.strand > 0:
 				pass
 			elif _curr.strand < 0:
+				pass
+				'''
 				if abs(_curr.stop_distance()) > 100 and _curr.nearest_stop() < _last.right():
 					del self[_last]
 					del self[_curr]
@@ -167,6 +145,8 @@ class Locus(Locus, feature=Feature):
 					self[_last] = True
 					_curr = _next
 					continue
+				'''
+					
 			_last = _curr
 			_curr = _next
 

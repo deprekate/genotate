@@ -106,9 +106,6 @@ if __name__ == '__main__':
 	file = File(args.infile)
 	for locus in file:
 		dna = locus.seq()
-		#for k,v in locus.slippage_sites.items():
-		#	print(k,v)
-		#exit()
 		generator = lambda : get_windows(dna)
 		dataset = tf.data.Dataset.from_generator(
 								generator,
@@ -160,23 +157,23 @@ if __name__ == '__main__':
 		for (index,offset),strand in strand_switches.items():
 			index , offset , strand = max(index - 30, 0) , min(offset + 30, len(strand_wise)-1) , strand-1
 			if strand > 0:
-				locus.add_feature('mRNA', +1, [[str(3*index+1), str(3*offset+1)]] )
+				#locus.add_feature('mRNA', +1, [[str(3*index+1), str(3*offset+1)]] )
 				for frame in [0,1,2]:
 					local = forward[frame, index : offset//3*3, :]
 					switches = predict_switches(local, 33, 10)
 					for (left,right),label in switches.items(): 
 						if label == 1:
-							locus.add_feature('CDS', +1, [[str(3*(index+left)+frame+1), str(3*(index+right)+frame-2)]] )
+							locus.add_feature('CDS', +1, [[str(3*(index+left)+frame+1), str(3*(index+right)+frame)]] )
 						#elif label == 2:
 						#	locus.add_feature('misc_feature', +1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
 			elif strand < 0:
-				locus.add_feature('mRNA', -1, [[3*index+1, 3*offset+1]] )
+				#locus.add_feature('mRNA', -1, [[str(3*index+1), str(3*offset+1)]] )
 				for frame in [0,1,2]:
 					local = reverse[frame, index : offset, :]
 					switches = predict_switches(local, 33, 10)
 					for (left,right),label in switches.items(): 
 						if label == 1:
-							locus.add_feature('CDS', -1, [[str(3*(index+left)+frame+1), str(3*(index+right)+frame-2)]] )
+							locus.add_feature('CDS', -1, [[str(3*(index+left)+frame+1), str(3*(index+right)+frame)]] )
 						#elif label == 2:
 						#	locus.add_feature('misc_feature', -1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
 
