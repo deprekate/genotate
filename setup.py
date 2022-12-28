@@ -51,7 +51,7 @@ def main():
 			"Operating System :: OS Independent",
 		],
 		python_requires='>3.5.2',
-		install_requires=['read_genbank', 'LinearFold','numpy','tensorflow>=2.6.2','ruptures'],
+		install_requires=['genbank', 'numpy','tensorflow>=2.6.2','ruptures'],
 		#ext_modules = [extension()],
 		packages=find_packages()
 	)

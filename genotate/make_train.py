@@ -212,8 +212,8 @@ def get_windows(dna):
 
 	'''
 	# this is to fix python variable passing issues
-	if type(dna) is not str:
-		dna = dna.decode()
+	#if type(dna) is not str:
+	#	dna = dna.decode()
 
 	gc = gc_content(dna) 
 

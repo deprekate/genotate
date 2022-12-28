@@ -9,9 +9,10 @@ from statistics import mode
 import faulthandler
 
 #sys.path.pop(0)
+from genotate.file import File
 import genotate.make_train as mt
 import genotate.make_model as mm
-from genotate.write_genbank import Locus
+#from genotate.write_genbank import Locus
 from genotate.make_train import get_windows
 #from genotate.features import Features
 #from genotate.windows import get_windows
@@ -100,13 +101,10 @@ if __name__ == '__main__':
 	model.load_weights(args.model).expect_partial()
 	#print(model.summary())
 	#faulthandler.enable()
-	contigs = mt.read_fasta(args.infile)
-	print(contigs)
-	exit()
-	for header in contigs:
-		dna = contigs[header]
-		locus = Locus(header, dna)
-		generator = lambda : get_windows(dna)
+	
+	genbank = File(args.infile)
+	for locus in genbank:
+		generator = lambda : get_windows(locus.seq())
 		dataset = tf.data.Dataset.from_generator(
 								generator,
 								output_signature=(
@@ -129,10 +127,10 @@ if __name__ == '__main__':
 		with tf.device('/device:CPU:0'):
 			p = model.predict(tdata)
 		
-		if args.plot_frames:
-			import genotate.file_handling as fh
-			fh.plot_frames(p)
-			exit()
+		#if args.plot_frames:
+		#	import genotate.file_handling as fh
+		#	fh.plot_frames(p)
+		#	exit()
 		#p = tf.nn.softmax(p).numpy()
 		#p = smoo(p)
 		#p = best(p)
@@ -150,36 +148,29 @@ if __name__ == '__main__':
 								]).T
 		#forward[:,:,1] = forward[:,:,1] + reverse[:,:,1]
 		#reverse[:,:,1] = forward[:,:,1] + reverse[:,:,1]
-		
 		strand_switches = predict_switches(strand_wise, 33, 33)
-
+		
 		# predict frames of strand
 		for (index,offset),strand in strand_switches.items():
 			index , offset , strand = max(index - 30, 0) , min(offset + 30, len(strand_wise)-1) , strand-1
-			if strand > 0:
-				locus.add_feature('mRNA', +1, [[3*index+1, 3*offset+1]] )
-				for frame in [0,1,2]:
-					local = forward[frame, index : offset//3*3, :]
-					switches = predict_switches(local, 33, 10)
-					for (left,right),label in switches.items(): 
-						if label == 1:
-							locus.add_feature('CDS', +1, [[3*(index+left)+frame+1, 3*(index+right)+frame-2]] )
-						#elif label == 2:
-						#	locus.add_feature('misc_feature', +1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
-			elif strand < 0:
-				locus.add_feature('mRNA', -1, [[3*index+1, 3*offset+1]] )
-				for frame in [0,1,2]:
-					local = reverse[frame, index : offset, :]
-					switches = predict_switches(local, 33, 10)
-					for (left,right),label in switches.items(): 
-						if label == 1:
-							locus.add_feature('CDS', -1, [[3*(index+left)+frame+1, 3*(index+right)+frame-2]] )
-						#elif label == 2:
-						#	locus.add_feature('misc_feature', -1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
+			#pairs = [map(str,[3*index+1, 3*offset+1])]
+			#locus.add_feature('mRNA', strand, pairs )
+			if strand == 0:continue
+			for frame in [0,1,2]:
+				local = forward[frame, index : offset//3*3, :] if strand > 0 else reverse[frame, index : offset, :]
+				switches = predict_switches(local, 33, 10)
+				for (left,right),label in switches.items(): 
+					if label == 1:
+						pairs = [ list(map(str,[3*(index+left)+frame+1, 3*(index+right)+frame])) ]
+						feature = locus.add_feature('CDS', strand, pairs) 
 
 		locus.merge()
 		#locus.rbs()
-		#locus.mfe()
+		# sort them so they are in numerical order instead of by frame
+		# this may be a bad way to do this
+		for key in sorted(locus):
+			locus[key] = locus.pop(key)
+		
 		locus.write(args.outfile)
 		exit()
 	
