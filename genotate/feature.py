@@ -43,31 +43,25 @@ class Feature(Feature):
 					fuzz.ratio(seq1, seq2.replace('*', 'W'))
 					) / 100
 
-	def wwrite(self, outfile):
-		outfile.write('     ')
-		outfile.write( self.type.ljust(16) )
-		if not self.strand > 0:
-			outfile.write('coomplement(')
-		# the pairs
-		if len(self.pairs) > 1:
-			outfile.write('join(')
-		pairs = []
-		for left, right in self.pairs:
-			left = max(1,left)
-			pair = str(left) + '..' + str(right+2)
-			pairs.append(pair)
-		outfile.write(','.join(pairs))
-		if len(self.pairs) > 1:
-			outfile.write(')')
-		# the pairs
-		if not self.strand > 0:
-			outfile.write(')')
-		outfile.write('\n')
-		for key,value in self.tags.items():
-			for line in textwrap.wrap( '/' + str(key) + '=' + str(value) , 58):
-				outfile.write('                     ')
-				outfile.write(line)
-				outfile.write('\n')
+    def set_left(self, left):
+        if left:
+            pairs = [list(tup) for tup in self.pairs]
+            pairs[0][0] = str(left)
+            self.pairs = tuple([tuple(lis) for lis in pairs])
+
+    def set_right(self, right):
+        if right:
+            pairs = [list(tup) for tup in self.pairs]
+            pairs[-1][-1] = str(right)
+            self.pairs = tuple([tuple(lis) for lis in pairs])
+
+
+    def adjust_stop(self):
+        if self.stop_codon() not in ['taa','tag','tga']:
+            if self.strand > 0:
+                self.set_right(self.nearest_stop())
+            else:
+                self.set_right(self.nearest_stop())
 
 
 

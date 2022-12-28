@@ -157,3 +157,19 @@ class Locus(Locus, feature=Feature):
 				pass
 			_last = _curr
 			_curr = _next
+
+    def check_sequencing_error(self):
+        for _last, _curr, _ in previous_and_next(sorted(self)):
+            if _last is None or (_last.type != 'CDS') or (_curr.type != 'CDS'):
+                pass
+            elif _curr.strand != _last.strand:
+                pass
+            elif _curr.strand > 0:
+                print(_last.right(), _curr.left(), _curr.start_distance())
+            elif _curr.strand < 0:
+                pass
+
+    def adjust_ends(self, starts, stops):
+        pass
+        for feature in self:
+            feature.adjust_stop()
