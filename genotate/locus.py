@@ -1,32 +1,65 @@
-import os
-import sys
-from itertools import zip_longest, chain, tee, islice
-from termcolor import colored
-from math import log10, exp, sqrt
-import pickle
-import pkgutil
-import pkg_resources
-from math import log
+#!/usr/bin/env python3
 
-import score_rbs
+import os
+import io
+import sys
+import gzip
+import re
+import argparse
+import tempfile
+from collections import Counter
+from argparse import RawTextHelpFormatter
+from itertools import zip_longest, chain, tee, islice
+from itertools import cycle
 
 from genbank.locus import Locus
 from genotate.feature import Feature
 
 
+import genotate.codons as cd
 
-def rint(s):
-	return int(s.replace('<','').replace('>',''))
+def previous_and_next(some_iterable):
+	prevs, items, nexts = tee(some_iterable, 3)
+	prevs = chain([None], prevs)
+	nexts = chain(islice(nexts, 1, None), [None])
+	return zip(prevs, items, nexts)
 
+def count(dq, item):
+    return sum(elem == item for elem in dq)
+def nint(x):
+	return int(x.replace('<','').replace('>',''))
 
-def rround(item, n=4):
-    try:
-        return round(item, n)
-    except:
-        try:
-            return item.decode()
-        except:
-            return item
+def find_median(sorted_list):
+    indices = []
+    list_size = len(sorted_list)
+    median = 0
+    if list_size % 2 == 0:
+        indices.append(int(list_size / 2) - 1)  # -1 because index starts from 0
+        indices.append(int(list_size / 2))
+        median = (sorted_list[indices[0]] + sorted_list[indices[1]]) / 2
+        pass
+    else:
+        indices.append(int(list_size / 2))
+        median = sorted_list[indices[0]]
+        pass
+    return median, indices
+    pass
+
+def has_outlier(unsorted_list):
+	if min(unsorted_list) < (np.mean(unsorted_list) - 2*np.std(unsorted_list)):
+		return True
+	else:
+		return False
+	sorted_list = sorted(unsorted_list)
+	median, median_indices = find_median(sorted_list)
+	q25, q25_indices = find_median(sorted_list[:median_indices[0]])
+	q75, q75_indices = find_median(sorted_list[median_indices[-1] + 1:])
+	iqr = q75 - q25
+	lower = q25 - (iqr * 1.5)
+	if sorted_list[0] < lower:
+		return True
+	else:
+		return False
 
 def has_stop(dna, strand):
 	codons = ['taa','tag','tga'] if strand > 0 else ['tta','cta','tca']
@@ -42,13 +75,6 @@ def previous_and_next(some_iterable):
     return zip(prevs, items, nexts)
 
 class Locus(Locus, feature=Feature):
-	#def __init__(self,parent, *args, **kwargs):
-		#self = dict(parent)
-		#self.__class__ = type(parent.__class__.__name__,(self.__class__, parent.__class__),{})
-		#self.__dict__ = parent.__dict__
-		#self.update(dict(parent))
-		#for key,value in parent.items():
-		#	self[key] = value
 
 	def init(self, args):
 		#self._rbs = score_rbs.ScoreXlationInit()
@@ -58,19 +84,33 @@ class Locus(Locus, feature=Feature):
 	def score_rbs(self, rbs):
 		return self._rbs.score_init_rbs(rbs,20)[0]
 
+
+	def pstart(self):
+		return self.pcodon('atg') + self.pcodon('gtg') + self.pcodon('ttg')
+
+	def pstop(self, seq=None):
+		if seq is None:
+			return self.pcodon('taa') + self.pcodon('tag') + self.pcodon('tga')
+		else:
+			length = len(seq)
+			pa = seq.count('a') / length
+			pc = seq.count('c') / length
+			pg = seq.count('g') / length
+			pt = seq.count('t') / length
+			return pt*pa*pa + pt*pa*pg + pt*pg*pa
+
 	def merge(self):	
-		# set dna for features and check integrity
 		_last = _curr = None
 		for _, _, _next in previous_and_next(sorted(self)):
-			# this just mkes sure the feature locations are in the same frame
+			# THIS JUST MKES SURE THE FEATURE LOCATIONS ARE IN THE SAME FRAME
 			#for i in _curr.base_locations():
 			#	_curr.dna += self.dna[ i-1 : i ]
 			if _last is None or (_last.type != 'CDS') or (_curr.type != 'CDS'):
 				pass
 			elif _curr.strand != _last.strand:
 				pass
-			elif _curr.frame('left') == _last.frame('right'):
-				# this merges adjacent frames
+			elif _last.frame('right') == _curr.frame('left'):
+				# THIS MERGES ADJACENT FRAMES
 				seq = self.seq(_last.right()-30 , _curr.left()+32)
 				if not has_stop(seq, _last.strand):
 					del self[_last]
@@ -86,7 +126,7 @@ class Locus(Locus, feature=Feature):
 			elif _next is None:
 				pass
 			elif _last.frame('right') == _next.frame('left'):
-				# this merges frames broken by an embedded gene
+				# THIS MERGES FRAMES BROKEN BY AN EMBEDDED GENE
 				seq = self.seq(_last.right()-30 , _next.left()+32)
 				if not has_stop(seq, _last.strand):
 					del self[_last]

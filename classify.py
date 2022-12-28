@@ -6,12 +6,13 @@ import argparse
 from argparse import RawTextHelpFormatter
 from statistics import mode
 
-import faulthandler
+import faulthandler; faulthandler.enable()
 
 #sys.path.pop(0)
 import genotate.make_train as mt
 import genotate.make_model as mm
-from genotate.write_genbank import Locus
+
+from genotate.file import File
 from genotate.make_train import get_windows
 #from genotate.features import Features
 #from genotate.windows import get_windows
@@ -128,7 +129,7 @@ if __name__ == '__main__':
 		'''
 		with tf.device('/device:CPU:0'):
 			p = model.predict(tdata)
-		
+
 		if args.plot_frames:
 			import genotate.file_handling as fh
 			fh.plot_frames(p)
@@ -150,36 +151,37 @@ if __name__ == '__main__':
 								]).T
 		#forward[:,:,1] = forward[:,:,1] + reverse[:,:,1]
 		#reverse[:,:,1] = forward[:,:,1] + reverse[:,:,1]
-		
+	
 		strand_switches = predict_switches(strand_wise, 33, 33)
 
 		# predict frames of strand
 		for (index,offset),strand in strand_switches.items():
 			index , offset , strand = max(index - 30, 0) , min(offset + 30, len(strand_wise)-1) , strand-1
 			if strand > 0:
-				locus.add_feature('mRNA', +1, [[3*index+1, 3*offset+1]] )
+				#locus.add_feature('mRNA', +1, [[str(3*index+1), str(3*offset+1)]] )
 				for frame in [0,1,2]:
 					local = forward[frame, index : offset//3*3, :]
 					switches = predict_switches(local, 33, 10)
 					for (left,right),label in switches.items(): 
 						if label == 1:
-							locus.add_feature('CDS', +1, [[3*(index+left)+frame+1, 3*(index+right)+frame-2]] )
+							locus.add_feature('CDS', +1, [[str(3*(index+left)+frame+1), str(3*(index+right)+frame)]] )
 						#elif label == 2:
 						#	locus.add_feature('misc_feature', +1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
 			elif strand < 0:
-				locus.add_feature('mRNA', -1, [[3*index+1, 3*offset+1]] )
+				#locus.add_feature('mRNA', -1, [[str(3*index+1), str(3*offset+1)]] )
 				for frame in [0,1,2]:
 					local = reverse[frame, index : offset, :]
 					switches = predict_switches(local, 33, 10)
 					for (left,right),label in switches.items(): 
 						if label == 1:
-							locus.add_feature('CDS', -1, [[3*(index+left)+frame+1, 3*(index+right)+frame-2]] )
+							locus.add_feature('CDS', -1, [[str(3*(index+left)+frame+1), str(3*(index+right)+frame)]] )
 						#elif label == 2:
 						#	locus.add_feature('misc_feature', -1, [[3*(index+left)+frame+1, 3*(index+right)+frame]] )
 
 		locus.merge()
 		#locus.rbs()
 		#locus.mfe()
+		#locus.rare_codons()
 		locus.write(args.outfile)
 		exit()
 	
