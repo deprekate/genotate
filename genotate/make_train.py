@@ -27,7 +27,7 @@ signal(SIGPIPE,SIG_DFL)
 #import LinearFold as lf
 
 import numpy as np
-from read_genbank import GenbankFile
+from genbank.file import File
 
 
 def is_valid_file(x):
@@ -132,25 +132,24 @@ def get_stops(infile):
 
 
 def parse_genbank(infile):
-	genbank = GenbankFile(infile)
-
+	genbank = File(infile)
 	# label the positions
-	for locus in genbank.values():
+	for locus in genbank:
 		positions = dict()
 		for feature in locus.features(include=['CDS']):
 			for i,*_ in feature.codon_locations():
 				# do the other 5 frames
 				for sign,offset in [(+1,1), (+1,2), (-1,1), (-1,2), (-1,0)]:
-					pos = sign * (i + offset) * feature.direction
+					pos = sign * (i + offset) * feature.strand
 					if pos not in positions:
 						positions[pos] = 0
 				# do the current frame
 				sign,offset = (+1,0)
-				pos = sign * (i + offset) * feature.direction
+				pos = sign * (i + offset) * feature.strand
 				positions[pos] = 1
 
 		# label the windows
-		windows = get_windows(locus.dna)
+		windows = get_windows(locus.seq())
 		for i, window in enumerate(windows, start=1):
 			pos = -((i+1)//2) if (i+1)%2 else ((i+1)//2)
 			yield [positions.get(pos, 2)] + [rround(w, 5) for w in window]
@@ -192,7 +191,6 @@ def single_window(dna, n, strand):
 		window = window.rjust(147, 'n')
 	elif len(window) < 147:
 		window = window.ljust(147, 'n')
-
 		
 	#row.extend([window])	
 	if strand > 0:
@@ -270,12 +268,7 @@ if __name__ == '__main__':
 				args.outfile.write('\t'.join(map(str,row)))
 				args.outfile.write('\n')
 	else:
-		if pathlib.Path(args.infile.replace('.gz','')).suffix in ['.gb', '.gbk']:
-			rows = parse_genbank(args.infile)
-		else:
-			s = list(read_fasta(args.infile).values())[0]
-			rows = get_windows(s)
-		
+		rows = parse_genbank(args.infile)
 		for row in rows:
 			#if len(row[-1]) < 147:
 			#	continue

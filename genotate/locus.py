@@ -16,8 +16,6 @@ from genbank.locus import Locus
 from genotate.feature import Feature
 
 
-import genotate.codons as cd
-
 def previous_and_next(some_iterable):
 	prevs, items, nexts = tee(some_iterable, 3)
 	prevs = chain([None], prevs)
@@ -25,25 +23,25 @@ def previous_and_next(some_iterable):
 	return zip(prevs, items, nexts)
 
 def count(dq, item):
-    return sum(elem == item for elem in dq)
+	return sum(elem == item for elem in dq)
 def nint(x):
 	return int(x.replace('<','').replace('>',''))
 
 def find_median(sorted_list):
-    indices = []
-    list_size = len(sorted_list)
-    median = 0
-    if list_size % 2 == 0:
-        indices.append(int(list_size / 2) - 1)  # -1 because index starts from 0
-        indices.append(int(list_size / 2))
-        median = (sorted_list[indices[0]] + sorted_list[indices[1]]) / 2
-        pass
-    else:
-        indices.append(int(list_size / 2))
-        median = sorted_list[indices[0]]
-        pass
-    return median, indices
-    pass
+	indices = []
+	list_size = len(sorted_list)
+	median = 0
+	if list_size % 2 == 0:
+		indices.append(int(list_size / 2) - 1)  # -1 because index starts from 0
+		indices.append(int(list_size / 2))
+		median = (sorted_list[indices[0]] + sorted_list[indices[1]]) / 2
+		pass
+	else:
+		indices.append(int(list_size / 2))
+		median = sorted_list[indices[0]]
+		pass
+	return median, indices
+	pass
 
 def has_outlier(unsorted_list):
 	if min(unsorted_list) < (np.mean(unsorted_list) - 2*np.std(unsorted_list)):
@@ -69,10 +67,10 @@ def has_stop(dna, strand):
 	return False
 
 def previous_and_next(some_iterable):
-    prevs, items, nexts = tee(some_iterable, 3)
-    prevs = chain([None], prevs)
-    nexts = chain(islice(nexts, 1, None), [None])
-    return zip(prevs, items, nexts)
+	prevs, items, nexts = tee(some_iterable, 3)
+	prevs = chain([None], prevs)
+	nexts = chain(islice(nexts, 1, None), [None])
+	return zip(prevs, items, nexts)
 
 class Locus(Locus, feature=Feature):
 
@@ -116,10 +114,7 @@ class Locus(Locus, feature=Feature):
 					del self[_last]
 					del self[_curr]
 					_last.tags['note'] = ['"merged:' + str(_last.pairs) + str(_curr.pairs) + '"' ]
-					#_last.pairs = ( (_last.left() , _curr.right()), )
 					_last.pairs = ( (_last.pairs[0][0] , _curr.pairs[-1][-1]), )
-					#_last.tags['seq'] = [seq]
-					#_last.tags['other'] = [_last.pairs]
 					self[_last] = True
 					_curr = _next
 					continue
@@ -131,12 +126,8 @@ class Locus(Locus, feature=Feature):
 				if not has_stop(seq, _last.strand):
 					del self[_last]
 					del self[_next]
-					_last.tags['note'] = '"merged: ' + str(_last.pairs) + ' and ' + str(_curr.pairs) + '"'
-					_last.pairs = ((_last.left() , _next.right()),)
-					#_last.tags['seq'] = [seq]
-					#_last.tags['pstop'] = (1-self.pstop()) ** (len(seq)/3)
-					#_last.tags['pstopl'] = (1-self.pstop(rev_comp(seq))) ** (len(seq)/3)
-					#_last.tags['merged'] = 'true'
+					_last.tags['note'] = ['"merged:' + str(_last.pairs) + str(_next.pairs) + '"' ]
+					_last.pairs = ((_last.pairs[0][0] , _next.pairs[-1][-1]), )
 					_curr.tags['embedded'] = ['true']
 					self[_last] = True
 					_last,_curr = _curr,_last
@@ -158,18 +149,18 @@ class Locus(Locus, feature=Feature):
 			_last = _curr
 			_curr = _next
 
-    def check_sequencing_error(self):
-        for _last, _curr, _ in previous_and_next(sorted(self)):
-            if _last is None or (_last.type != 'CDS') or (_curr.type != 'CDS'):
-                pass
-            elif _curr.strand != _last.strand:
-                pass
-            elif _curr.strand > 0:
-                print(_last.right(), _curr.left(), _curr.start_distance())
-            elif _curr.strand < 0:
-                pass
+	def check_sequencing_error(self):
+		for _last, _curr, _ in previous_and_next(sorted(self)):
+			if _last is None or (_last.type != 'CDS') or (_curr.type != 'CDS'):
+				pass
+			elif _curr.strand != _last.strand:
+				pass
+			elif _curr.strand > 0:
+				print(_last.right(), _curr.left(), _curr.start_distance())
+			elif _curr.strand < 0:
+				pass
 
-    def adjust_ends(self, starts, stops):
-        pass
-        for feature in self:
-            feature.adjust_stop()
+	def adjust_ends(self, starts, stops):
+		pass
+		for feature in self:
+			feature.adjust_stop()

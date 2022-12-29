@@ -43,25 +43,25 @@ class Feature(Feature):
 					fuzz.ratio(seq1, seq2.replace('*', 'W'))
 					) / 100
 
-    def set_left(self, left):
-        if left:
-            pairs = [list(tup) for tup in self.pairs]
-            pairs[0][0] = str(left)
-            self.pairs = tuple([tuple(lis) for lis in pairs])
+	def set_left(self, left):
+		if left:
+			pairs = [list(tup) for tup in self.pairs]
+			pairs[0][0] = str(left)
+			self.pairs = tuple([tuple(lis) for lis in pairs])
 
-    def set_right(self, right):
-        if right:
-            pairs = [list(tup) for tup in self.pairs]
-            pairs[-1][-1] = str(right)
-            self.pairs = tuple([tuple(lis) for lis in pairs])
+	def set_right(self, right):
+		if right:
+			pairs = [list(tup) for tup in self.pairs]
+			pairs[-1][-1] = str(right)
+			self.pairs = tuple([tuple(lis) for lis in pairs])
 
 
-    def adjust_stop(self):
-        if self.stop_codon() not in ['taa','tag','tga']:
-            if self.strand > 0:
-                self.set_right(self.nearest_stop())
-            else:
-                self.set_right(self.nearest_stop())
+	def adjust_stop(self):
+		if self.stop_codon() not in ['taa','tag','tga']:
+			if self.strand > 0:
+				self.set_right(self.nearest_stop())
+			else:
+				self.set_right(self.nearest_stop())
 
 
 

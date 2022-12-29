@@ -8,16 +8,14 @@ from statistics import mode
 
 import faulthandler
 
-#sys.path.pop(0)
+sys.path.pop(0)
 from genotate.file import File
 import genotate.make_train as mt
 import genotate.make_model as mm
-#from genotate.write_genbank import Locus
 from genotate.make_train import get_windows
-#from genotate.features import Features
+from genotate.functions import *
 #from genotate.windows import get_windows
 #from genotate.mt import get_windows
-
 
 	
 # Helper libraries
@@ -124,13 +122,11 @@ if __name__ == '__main__':
 			exit()
 		exit()
 		'''
-		with tf.device('/device:CPU:0'):
+		with tf.device('/device:GPU:0'):
 			p = model.predict(tdata)
 		
-		#if args.plot_frames:
-		#	import genotate.file_handling as fh
-		#	fh.plot_frames(p)
-		#	exit()
+		if args.plot_frames:
+			plot_frames(p)
 		#p = tf.nn.softmax(p).numpy()
 		#p = smoo(p)
 		#p = best(p)
@@ -164,13 +160,13 @@ if __name__ == '__main__':
 						pairs = [ list(map(str,[3*(index+left)+frame+1, 3*(index+right)+frame])) ]
 						feature = locus.add_feature('CDS', strand, pairs) 
 
+		# merge regions
 		locus.merge()
-		#locus.rbs()
+
 		# sort them so they are in numerical order instead of by frame
 		# this may be a bad way to do this
 		for key in sorted(locus):
 			locus[key] = locus.pop(key)
 		
 		locus.write(args.outfile)
-		exit()
 	
