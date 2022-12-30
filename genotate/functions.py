@@ -13,8 +13,6 @@ def rev_comp(seq):
 		    'b':'v','v':'b','d':'h','h':'d'}
 	return "".join([seq_dict[base] for base in reversed(seq)])
 
-
-
 def write_codons(p):
 	Y = np.argmax(p,axis=-1)
 	#Y = smooth(Y)

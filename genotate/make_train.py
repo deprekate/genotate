@@ -41,6 +41,26 @@ def same_frame(a,b):
 def nint(x):
 	return int(x.replace('<','').replace('>',''))
 
+def fix_pairs(tup):
+	if len(tup) == 1:
+		return tup
+	pairs = [list(item) if item != ('1',) else ['1','1'] for item in tup]
+	if '<' in pairs[0][0]:
+			pairs[0][0] = nint(pairs[0][0]) // 3 * 3 + nint(pairs[0][1]) % 3 + 1
+	if '>' in pairs[0][1]:
+			pairs[0][1] = nint(pairs[0][1]) // 3 * 3 + nint(pairs[0][0]) % 3 + 2
+	if '<' in pairs[1][0]:
+			pairs[1][0] = nint(pairs[1][0]) // 3 * 3 + nint(pairs[1][1]) % 3 + 1
+	if '>' in pairs[1][1]:
+			pairs[1][1] = nint(pairs[1][1]) // 3 * 3 + nint(pairs[1][0]) % 3 + 2
+	pairs = [list(map(int,item)) for item in pairs]
+	# this is to fix features that have incorrect locations by using the frame of the other end
+	if pairs[0][0] % 3 != (pairs[0][1]-2) % 3:
+		pairs[0][1] = pairs[0][1] // 3 * 3 + ((pairs[0][0])-1) % 3
+	if pairs[1][0] % 3 != (pairs[1][1]-2) % 3:
+		pairs[1][0] = pairs[1][0] // 3 * 3 + ((pairs[1][1])-2) % 3
+	return tuple([tuple(map(str,pair)) for pair in pairs])
+
 def skew(seq, nucs):
 	self = lambda : none
 	self.sequence = seq
@@ -224,8 +244,8 @@ def get_windows(dna):
 		for f in [0,1,2]:
 			#yield single_window(dna, n+f, +1, translate)
 			#yield single_window(dna, n+f, -1, translate)
-			yield [n,str(gc), str( at_skew[n//100]), str( gc_skew[n//100]) ] + single_window(dna, n+f, +1)
-			yield [n,str(gc), str(-at_skew[n//100]), str(-gc_skew[n//100]) ] + single_window(dna, n+f, -1)
+			yield [str(gc), str( at_skew[n//100]), str( gc_skew[n//100]) ] + single_window(dna, n+f, +1)
+			yield [str(gc), str(-at_skew[n//100]), str(-gc_skew[n//100]) ] + single_window(dna, n+f, -1)
 
 def rround(item, n):
 	try:
