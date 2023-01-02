@@ -41,18 +41,37 @@ def same_frame(a,b):
 def nint(x):
 	return int(x.replace('<','').replace('>',''))
 
+def fix_pairs(tup):
+	if len(tup) == 1:
+		return tup
+	pairs = [list(item) if item != ('1',) else ['1','1'] for item in tup]
+	if '<' in pairs[0][0]:
+			pairs[0][0] = nint(pairs[0][0]) // 3 * 3 + nint(pairs[0][1]) % 3 + 1
+	if '>' in pairs[0][1]:
+			pairs[0][1] = nint(pairs[0][1]) // 3 * 3 + nint(pairs[0][0]) % 3 + 2
+	if '<' in pairs[1][0]:
+			pairs[1][0] = nint(pairs[1][0]) // 3 * 3 + nint(pairs[1][1]) % 3 + 1
+	if '>' in pairs[1][1]:
+			pairs[1][1] = nint(pairs[1][1]) // 3 * 3 + nint(pairs[1][0]) % 3 + 2
+	pairs = [list(map(int,item)) for item in pairs]
+	# this is to fix features that have incorrect locations by using the frame of the other end
+	if pairs[0][0] % 3 != (pairs[0][1]-2) % 3:
+		pairs[0][1] = pairs[0][1] // 3 * 3 + ((pairs[0][0])-1) % 3
+	if pairs[1][0] % 3 != (pairs[1][1]-2) % 3:
+		pairs[1][0] = pairs[1][0] // 3 * 3 + ((pairs[1][1])-2) % 3
+	return tuple([tuple(map(str,pair)) for pair in pairs])
+
 def skew(seq, nucs):
 	self = lambda : none
 	self.sequence = seq
 	self.windowsize = self.stepsize = 100 #int(len(self.sequence) / 1000)
 	(self.nuc_1,self.nuc_2) = nucs
 	
-	
-	x = []
-	y1 = []
-	y2 = []
-	y2_scaled = []
-	cumulative_unscaled = 0
+	#x = []
+	#y1 = []
+	#y2 = []
+	#y2_scaled = []
+	cumulative = 0
 	cm_list = []
 	i = int(self.windowsize / 2)
 	for each in range(len(self.sequence) // self.stepsize):
@@ -60,23 +79,25 @@ def skew(seq, nucs):
 			a = self.sequence[i - int(self.windowsize / 2):i + int(self.windowsize / 2)].count(self.nuc_1)
 			b = self.sequence[i - int(self.windowsize / 2):i + int(self.windowsize / 2)].count(self.nuc_2)
 			s = (a - b) / (a + b)
-			y1.append(s)
-			cumulative_unscaled = cumulative_unscaled + s
-			y2.append(cumulative_unscaled)
-			x.append(i + 1)
-			cm_list.append(cumulative_unscaled)
+			#print(i,nucs,s, cumulative + s)
+			#y1.append(s)
+			cumulative = cumulative + s
+			#y2.append(cumulative_unscaled)
+			#x.append(i + 1)
+			cm_list.append(cumulative)
 			i = i + self.stepsize
-	cm = max(cm_list)
-	m = max(y1)
-	scale = m / cm
-	max_position = y2.index(max(y2)) * self.stepsize
-	min_position = y2.index(min(y2)) * self.stepsize
-	for j in cm_list:
-		y2_scaled.append(j * scale)
+	#cm = max(cm_list)
+	#m = max(y1)
+	#scale = m / cm
+	#max_position = y2.index(max(y2)) * self.stepsize
+	#min_position = y2.index(min(y2)) * self.stepsize
+	#for j in cm_list:
+	#	y2_scaled.append(j * scale)
 	slopes = []
-	for i in range(len(y2_scaled)):
-		win = y2_scaled[max(i-50,0):i+50]
+	for i in range(len(cm_list)):
+		win = cm_list[max(i-5,0):i+5]
 		m,b = np.polyfit(list(range(len(win))),win, 1)
+		#print(m,b, win)
 		slopes.append(m)
 	slopes.append(m)
 	return slopes
@@ -223,8 +244,8 @@ def get_windows(dna):
 		for f in [0,1,2]:
 			#yield single_window(dna, n+f, +1, translate)
 			#yield single_window(dna, n+f, -1, translate)
-			yield [str(gc), str( at_skew[n//100]), str( gc_skew[n//100])] + single_window(dna, n+f, +1)
-			yield [str(gc), str(-at_skew[n//100]), str(-gc_skew[n//100])] + single_window(dna, n+f, -1)
+			yield [str(gc), str( at_skew[n//100]), str( gc_skew[n//100]) ] + single_window(dna, n+f, +1)
+			yield [str(gc), str(-at_skew[n//100]), str(-gc_skew[n//100]) ] + single_window(dna, n+f, -1)
 
 def rround(item, n):
 	try:

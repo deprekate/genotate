@@ -66,7 +66,7 @@ def is_valid_file(x):
 
 def pack(features):
 	#return tf.stack(list(features.values()), axis=-1)
-	a,b = tf.split(features, [3,1], axis=-1)
+	a,b = tf.split(features, [2,1], axis=-1)
 	return ((b,a),)
 
 
@@ -108,7 +108,7 @@ if __name__ == '__main__':
 								output_signature=(
 										tf.TensorSpec(
 											#shape=model.input.type_spec.shape[1:],
-											shape=(4,),
+											shape=(3,),
 											#dtype=tf.float32
 											dtype=tf.string
 											)
