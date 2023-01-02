@@ -133,7 +133,8 @@ def create_model_blend(args):
 
 	opt = tf.keras.optimizers.Adam(learning_rate=0.001)
 	custom_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
-	merged_model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
+	merged_model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy'])
+	#merged_model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
 	return merged_model
 
 
@@ -163,5 +164,6 @@ def create_model_api(args):
 
 	opt = tf.keras.optimizers.Adam(learning_rate=0.001)
 	custom_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
-	model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
+	model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy'])
+	#model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
 	return model

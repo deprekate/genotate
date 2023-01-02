@@ -152,7 +152,7 @@ def parse_genbank(infile):
 		windows = get_windows(locus.seq())
 		for i, window in enumerate(windows, start=1):
 			pos = -((i+1)//2) if (i+1)%2 else ((i+1)//2)
-			yield [positions.get(pos, 2)] + [rround(w, 5) for w in window]
+			yield [str(positions.get(pos, 2))] + [rround(w, 5) for w in window]
 			'''
 			if positions.get(pos-57, 2) == positions.get(pos, 2) == positions.get(pos+57, 2):
 				yield [positions.get(pos, 2)] + [rround(w, 5) for w in window]
