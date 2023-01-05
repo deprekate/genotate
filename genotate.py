@@ -87,8 +87,13 @@ if __name__ == '__main__':
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
-	outfile = args.outfile
-
+	from genotate.windows import get_windows
+	genbank = File(args.infile)
+	for locus in genbank:
+		#for window in locus.get_labeled_windows():
+		for window in get_windows(locus.seq()):
+			print(window)
+	exit()
 	#ckpt_reader = tf.train.load_checkpoint(args.model)
 	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
 	#model = mm.create_model_deep(n)
@@ -100,8 +105,12 @@ if __name__ == '__main__':
 	#print(model.summary())
 	#faulthandler.enable()
 	
-	genbank = File(args.infile)
+
+
 	for locus in genbank:
+		for window in locus.get_labeled_windows():
+			print(window)
+		exit()
 		generator = lambda : get_windows(locus.seq())
 		dataset = tf.data.Dataset.from_generator(
 								generator,

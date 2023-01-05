@@ -107,25 +107,25 @@ def create_model_blend(args):
 	model_ = tf.keras.layers.experimental.preprocessing.TextVectorization(
 										split = lambda text : tf.strings.unicode_split(text, input_encoding='UTF-8', errors="ignore"),
 										max_tokens=6, 
-										output_sequence_length=147, 
+										output_sequence_length=99, 
 										vocabulary=['a','c','g','t'] 
 										)(input_)
 	model_ = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(model_)
-	model_ = tf.keras.layers.Conv1D(filters=147-(2*args.trim), kernel_size=9, padding='same', activation='relu' )(model_)
-	model_ = tf.keras.layers.Conv1D(filters=147-(2*args.trim), kernel_size=9, padding='same', activation='relu' )(model_)
-	model_ = tf.keras.layers.Conv1D(filters=147-(2*args.trim), kernel_size=9, padding='same', activation='relu' )(model_)
+	model_ = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(model_)
+	model_ = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(model_)
+	model_ = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(model_)
 	model_ = tf.keras.layers.Flatten()(model_)
 
-	other_ = tf.keras.layers.Input(shape=(2,), dtype=tf.string)
-	extra_ = tf.keras.layers.Lambda(lambda x: tf.strings.to_number(x), name='strtonum')(other_)
+	other_ = tf.keras.layers.Input(shape=(3,), dtype=tf.float32)
+	#extra_ = tf.keras.layers.Lambda(lambda x: tf.strings.to_number(x), name='strtonum')(other_)
 
-	model_ = tf.keras.layers.concatenate([model_, extra_], axis=-1)
+	model_ = tf.keras.layers.concatenate([model_, other_], axis=-1)
 
-	model_ = tf.keras.layers.Dense(147-(2*args.trim), activation='relu')(model_)
+	model_ = tf.keras.layers.Dense(99, activation='relu')(model_)
 	model_ = tf.keras.layers.Dropout(rate=0.05)(model_)
-	model_ = tf.keras.layers.Dense(147-(2*args.trim), activation='relu')(model_)
+	model_ = tf.keras.layers.Dense(99, activation='relu')(model_)
 	model_ = tf.keras.layers.Dropout(rate=0.05)(model_)
-	model_ = tf.keras.layers.Dense(147-(2*args.trim), activation='relu')(model_)
+	model_ = tf.keras.layers.Dense(99, activation='relu')(model_)
 	model_ = tf.keras.layers.Dropout(rate=0.05)(model_)
 	model_ = tf.keras.layers.Dense(3, activation='softmax')(model_)
 
@@ -136,6 +136,38 @@ def create_model_blend(args):
 	merged_model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy'])
 	#merged_model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
 	return merged_model
+
+def blend(args):
+	input_ = tf.keras.layers.Input(shape=(99,), dtype=tf.int32)
+	other_ = tf.keras.layers.Input(shape=(3,), dtype=tf.float32)
+
+	w = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(input_)
+	w = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(w)
+	w = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(w)
+	w = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(w)
+	w = tf.keras.layers.Flatten()(w)
+	w = tf.keras.models.Model(inputs=input_, outputs=w)
+
+	d = tf.keras.layers.Dense(3, activation='relu')(other_)
+	d = tf.keras.models.Model(inputs=other_, outputs=d)
+	
+	combined = tf.keras.layers.concatenate([w.output, d.output]) #, axis=-1)
+
+	z = tf.keras.layers.Dense(99, activation='relu')(combined)
+	z = tf.keras.layers.Dropout(rate=0.05)(z)
+	z = tf.keras.layers.Dense(99, activation='relu')(z)
+	z = tf.keras.layers.Dropout(rate=0.05)(z)
+	z = tf.keras.layers.Dense(99, activation='relu')(z)
+	z = tf.keras.layers.Dropout(rate=0.05)(z)
+	z = tf.keras.layers.Dense(3, activation='softmax')(z)
+	
+	model = tf.keras.models.Model([w.input, d.input], outputs=z)
+
+	opt = tf.keras.optimizers.Adam(learning_rate=0.001)
+	custom_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
+	model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy'])
+	return model
+
 
 
 def create_model_api(args):
@@ -164,6 +196,30 @@ def create_model_api(args):
 
 	opt = tf.keras.optimizers.Adam(learning_rate=0.001)
 	custom_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
+	model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy'])
+	#model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
+	return model
+
+def api(args):
+	#
+	input_ = tf.keras.layers.Input(shape=(99,), dtype=tf.int32)
+	model_ = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(input_)
+	model_ = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(model_)
+	model_ = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(model_)
+	model_ = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(model_)
+	model_ = tf.keras.layers.Flatten()(model_)
+	model_ = tf.keras.layers.Dense(99, activation='relu')(model_)
+	model_ = tf.keras.layers.Dropout(rate=0.05)(model_)
+	model_ = tf.keras.layers.Dense(99, activation='relu')(model_)
+	model_ = tf.keras.layers.Dropout(rate=0.05)(model_)
+	model_ = tf.keras.layers.Dense(99, activation='relu')(model_)
+	model_ = tf.keras.layers.Dropout(rate=0.05)(model_)
+	model_ = tf.keras.layers.Dense(3, activation='softmax')(model_)
+
+	model = tf.keras.models.Model(input_, outputs=model_)
+
+	opt = tf.keras.optimizers.Adam(learning_rate=0.001)
+	custom_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
 	model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy'])
 	#model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
 	return model

@@ -52,7 +52,7 @@ def main():
 		],
 		python_requires='>3.5.2',
 		install_requires=['genbank', 'numpy','tensorflow>=2.6.2','ruptures'],
-		#ext_modules = [extension()],
+		ext_modules = [extension()],
 		packages=find_packages()
 	)
 

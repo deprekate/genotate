@@ -15,6 +15,7 @@ from itertools import cycle
 from genbank.locus import Locus
 from genotate.feature import Feature
 
+import numpy as np
 
 def previous_and_next(some_iterable):
 	prevs, items, nexts = tee(some_iterable, 3)
@@ -164,3 +165,82 @@ class Locus(Locus, feature=Feature):
 		pass
 		for feature in self:
 			feature.adjust_stop()
+
+	def skew(self, nucs):
+		windowsize = stepsize = 100 #int(len(self.sequence) / 1000)
+		(nuc_1,nuc_2) = nucs
+		
+		cumulative = 0
+		cm_list = []
+		i = windowsize // 2
+		for _ in range(len(self.seq()) // stepsize):
+			if i < self.length():
+				a = self.seq(i - windowsize//2 , i + windowsize//2 ).count(nuc_1)
+				b = self.seq(i - windowsize//2 , i + windowsize//2 ).count(nuc_2)
+				s = (a - b) / (a + b) if (a + b) else 0
+				cumulative = cumulative + s
+				cm_list.append(cumulative)
+				i = i + stepsize
+		slopes = []
+		for i in range(len(cm_list)):
+			win = cm_list[max(i-5,0):i+5]
+			m,b = np.polyfit(list(range(len(win))),win, 1)
+			slopes.append(m)
+		slopes.append(m)
+		return slopes
+
+	def get_windows(self):
+		'''
+		This method takes as input a string of the nucleotides, and returns
+		the amino-acid frequencies of a window centered at each potential codon
+		position.  The positions are forward and reverse interlaced and so the
+		rows follow the pattern:
+			+1 -1 +2 -2 +3 -3 +4 -4 +5 -5 +6 -6 +7 -7 etc
+	
+		'''
+		# this is to fix python variable passing issues
+		#if type(dna) is not str:
+		#	dna = dna.decode()
+	
+		gc = self.gc_content() 
+		dna = self.gc_content()
+	
+		at_skew = self.skew('at')
+		gc_skew = self.skew('gc')
+		# get the aminoacid frequency window
+		#args = lambda: None
+		forward = [0]*48 + [0]*self.length() + [0]*50
+		reverse = [0]*48 + [0]*self.length() + [0]*50
+		for i,base in enumerate(self.seq()):
+			if base in 'acgt':
+				forward[i+48] = ((ord(base) >> 1) & 3) + 1
+				reverse[i+48] = ((forward[i+48] - 3) % 4) + 1
+	
+		for n in range(0, self.length()-2, 3):
+			for f in [0,1,2]:
+				yield [ gc,  at_skew[n//100],  gc_skew[n//100] ] , forward[n+f : n+f+99 ]
+				yield [ gc, -at_skew[n//100], -gc_skew[n//100] ] , reverse[n+f : n+f+99 ][::-1]
+				#
+				#yield [str(gc), str( at_skew[n//100]), str( gc_skew[n//100]) ] + single_window(dna, n+f, +1)
+				#yield [str(gc), str(-at_skew[n//100]), str(-gc_skew[n//100]) ] + single_window(dna, n+f, -1)
+
+	def get_labeled_windows(self):
+		# label the positions
+		positions = dict()
+		for feature in self.features(include=['CDS']):
+			for i,*_ in feature.codon_locations():
+				# do the other 5 frames
+				for sign,offset in [(+1,1), (+1,2), (-1,1), (-1,2), (-1,0)]:
+					pos = sign * (i + offset) * feature.strand
+					if pos not in positions:
+						positions[pos] = 0
+				# do the current frame
+				sign,offset = (+1,0)
+				pos = sign * (i + offset) * feature.strand
+				positions[pos] = 1
+
+		# label the windows
+		windows = self.get_windows()
+		for i, (data, window) in enumerate(windows, start=1):
+			pos = -((i+1)//2) if (i+1)%2 else ((i+1)//2)
+			yield [positions.get(pos, 2)] , data , window #[rround(w, 5) for w in window]
