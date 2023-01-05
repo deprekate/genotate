@@ -8,7 +8,7 @@ from os.path import isfile, join
 import datetime
 
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-#os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
+os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 import tensorflow as tf
 #tf.keras.backend.set_floatx('float16')
 import numpy as np
@@ -77,16 +77,16 @@ if __name__ == '__main__':
 							),
 							num_parallel_calls=tf.data.AUTOTUNE,
 							#cycle_length=70,
-							block_length=66
+							block_length=10
 							)
 		dataset = dataset.unbatch()
 		dataset = dataset.map(pack)
 		#dataset = dataset.shuffle(buffer_size=1000)
-		dataset = dataset.batch(8000)
+		dataset = dataset.batch(4000)
 		dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
 		log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-		tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch = '5,25')
+		tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch = '1000,1010')
 	
 		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath="multi",save_weights_only=True,verbose=1)
 
@@ -100,5 +100,5 @@ if __name__ == '__main__':
 			dataset,
 			epochs          = 20,
 			verbose         = 1,
-			callbacks=[ cp_callback ] #tensorboard_callback]
+			callbacks=[ cp_callback ,tensorboard_callback]
 		)

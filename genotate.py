@@ -11,7 +11,7 @@ import faulthandler
 sys.path.pop(0)
 from genotate.file import File
 import genotate.make_train as mt
-import genotate.make_model as mm
+from genotate.make_model import create_model_blend, blend, api
 from genotate.make_train import get_windows
 from genotate.functions import *
 #from genotate.windows import get_windows
@@ -98,14 +98,13 @@ if __name__ == '__main__':
 	#ckpt_reader = tf.train.load_checkpoint(args.model)
 	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
 	#model = mm.create_model_deep(n)
-	model = mm.blend(args)
+	model = blend(args)
 	#name = args.infile.split('/')[-1]
 	#me = name[10] if len(name) > 10 else None
 	#model.load_weights( "out/win_sub_w117_kern3/win_sub_trim=15,reg=False,fold=" + str(me) + ".ckpt" ).expect_partial()
 	model.load_weights(args.model).expect_partial()
 	#print(model.summary())
 	#faulthandler.enable()
-	
 
 	genbank = File(args.infile)
 	for locus in genbank:
