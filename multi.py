@@ -38,22 +38,20 @@ def pack(features): #labels,datas,windows): #features):
 	return (windows, datas) , labels
 
 def skew(seq, nucs):
-	self = lambda : none
-	self.sequence = seq
-	self.windowsize = self.stepsize = 100 #int(len(self.sequence) / 1000)
-	(self.nuc_1,self.nuc_2) = nucs
+	windowsize = stepsize = 99 #int(len(self.sequence) / 1000)
+	(nuc_1,nuc_2) = nucs
 	
 	cumulative = 0
 	cm_list = []
-	i = int(self.windowsize / 2)
-	for each in range(len(self.sequence) // self.stepsize):
-		if i < len(self.sequence):
-			a = self.sequence[i - int(self.windowsize / 2):i + int(self.windowsize / 2)].count(self.nuc_1)
-			b = self.sequence[i - int(self.windowsize / 2):i + int(self.windowsize / 2)].count(self.nuc_2)
+	i = int(windowsize / 2)
+	for each in range(len(seq) // stepsize):
+		if i < len(seq):
+			a = seq[i - windowsize//2:i + windowsize // 2].count(nuc_1)
+			b = seq[i - windowsize//2:i + windowsize // 2].count(nuc_2)
 			s = (a - b) / (a + b) if (a + b) else 0
 			cumulative = cumulative + s
 			cm_list.append(cumulative)
-			i = i + self.stepsize
+			i = i + stepsize
 	slopes = []
 	for i in range(len(cm_list)):
 		win = cm_list[max(i-5,0):i+5]
@@ -86,41 +84,40 @@ def parse_genbank(infile):
 				pos = sign * (i + offset) * feature.strand
 				positions[pos] = 1
 		dna = locus.seq()
-		gc = locus.gc_content() 
-		at_skew = skew(dna, 'at')
-		gc_skew = skew(dna, 'gc')
-		#forward = 'n'*48 +          dna  + 'n'*50
-		#reverse = 'n'*48 + rev_comp(dna) + 'n'*50
-		forward = [0]*48 + [0]*len(dna) + [0]*50
-		reverse = [0]*48 + [0]*len(dna) + [0]*50
+		at_skew = np.array(skew(dna, 'at'))
+		gc_skew = np.array(skew(dna, 'gc'))
+		forward = np.zeros(48+len(dna)+55)
+		reverse = np.zeros(48+len(dna)+55)
 		for i,base in enumerate(dna):
-			if base in 'acgt':
-				forward[i+48] = ((ord(base) >> 1) & 3) + 1
-				reverse[i+48] = ((forward[i+48] - 3) % 4) + 1
-		#a = np.zeros([2*len(dna)-2, 103])
+			#if base in 'acgt':
+			forward[i+49] = ((ord(base) >> 1) & 3) + 1
+			reverse[i+49] = ((forward[i+48] - 3) % 4) + 1
 		a = np.zeros([6, 103])
+		a[:,1] = locus.gc_content() 
 		for n in range(0, len(dna)-2, 3):
 			for f in [0,1,2]:
 				#yield positions.get( n+f, 2) , [ gc,  at_skew[n//100],  gc_skew[n//100] ] , forward[n+f : n+f+99 ]
 				#yield positions.get(-n+f, 2) , [ gc, -at_skew[n//100], -gc_skew[n//100] ] , reverse[n+f : n+f+99 ][::-1]
-				a[f  ,0] = positions.get( n+f, 2)
-				a[f+1,0] = positions.get(-n+f, 2)
-				a[f  ,1] = gc
-				a[f+1,1] = gc
-				a[f  ,2] =  at_skew[n//100]
-				a[f+1,2] = -at_skew[n//100]
-				a[f  ,3] =  gc_skew[n//100]
-				a[f+1,3] =  gc_skew[n//100]
-				a[f  ,4:103] = forward[n+f : n+f+99 ]
-				a[f+1,4:103] = reverse[n+f : n+f+99 ][::-1]
+				pos = n//100
+				a[2*f  ,0] = positions.get( n+f, 2)
+				a[2*f+1,0] = positions.get(-n+f, 2)
+				a[2*f  ,2] =  at_skew[pos]
+				a[2*f+1,2] = -at_skew[pos]
+				a[2*f  ,3] =  gc_skew[pos]
+				a[2*f+1,3] = -gc_skew[pos]
+				a[2*f  ,4:103] = forward[n+f : n+f+99 ]
+				a[2*f+1,4:103] = reverse[n+f : n+f+99 ][::-1]
 			yield a
 
-def make_dataset(filename):
-	ds = tf.data.Dataset.from_generator(
-		lambda: parse_genbank(filename), output_types=tf.float32
-	)
-	it = ds.__iter__()
-	return it
+def to_dna(s):
+	to_base = {0:'n',1:'a',2:'c',3:'t',4:'g'}
+	dna = ''
+	for num in s:
+		dna += to_base[num]	
+	return dna
+#for window in parse_genbank(sys.argv[1].encode()):
+#	for f in range(6):
+#		print(window[f,0], to_dna(window[f,4:].tolist()))
 
 if __name__ == '__main__':
 	usage = '%s [-opt1, [-opt2, ...]] directory' % __file__
@@ -135,13 +132,6 @@ if __name__ == '__main__':
 	filenames = [os.path.join(args.directory,f) for f in listdir(args.directory) if isfile(join(args.directory, f))]
 
 	with tf.device('/device:GPU:0'):
-		#datasets = [make_dataset(i) for i in filenames]
-		#dataset = tf.data.Dataset.from_tensor_slices(datasets)
-		#dataset = dataset.interleave(lambda x: x, cycle_length=tf.data.AUTOTUNE)
-		#for feature in dataset.take(1):
-		#	print( feature )
-		#exit()
-
 		dataset = tf.data.Dataset.from_tensor_slices(filenames)
 		dataset = dataset.interleave(
 							lambda x: tf.data.Dataset.from_generator(
@@ -149,28 +139,22 @@ if __name__ == '__main__':
 								args=(x,),
 								output_signature=(
 									tf.TensorSpec(shape=(6,103),dtype=tf.float32)
-									#(
-									#tf.TensorSpec(shape=(5,),dtype=tf.string)
-									#tf.TensorSpec(shape=(),dtype=tf.int32),
-									#tf.TensorSpec(shape=(3,),dtype=tf.float32),
-									#tf.TensorSpec(shape=(99,),dtype=tf.int32)
-									#tf.TensorSpec(shape=(),dtype=tf.string)
-									#)
 								)
 							),
 							num_parallel_calls=tf.data.AUTOTUNE,
 							#cycle_length=70,
-							block_length=100
+							block_length=66
 							)
-		#print(dataset)
 		dataset = dataset.unbatch()
 		dataset = dataset.map(pack)
 		#dataset = dataset.shuffle(buffer_size=1000)
-		dataset = dataset.batch(4000)
+		dataset = dataset.batch(8000)
 		dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
 		log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 		tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch = '5,25')
+	
+		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath="multi",save_weights_only=True,verbose=1)
 
 		#for feature in dataset.take(1):
 		#	print( feature )
@@ -180,7 +164,7 @@ if __name__ == '__main__':
 		#model = create_model_blend(args)
 		model.fit(
 			dataset,
-			epochs          = 3,
+			epochs          = 20,
 			verbose         = 1,
-			callbacks=[tensorboard_callback]
+			callbacks=[ cp_callback ] #tensorboard_callback]
 		)

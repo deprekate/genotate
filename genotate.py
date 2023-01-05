@@ -64,11 +64,83 @@ def is_valid_file(x):
 	return x
 
 
-def pack(features):
+def ppack(features):
 	#return tf.stack(list(features.values()), axis=-1)
 	a,b = tf.split(features, [2,1], axis=-1)
 	return ((b,a),)
 
+def pack(features): #labels,datas,windows): #features):
+	labels,datas,windows = tf.split(features, [1,3,99], axis=-1)
+	labels = tf.cast(labels, dtype=tf.int32)
+	labels = tf.one_hot(labels, depth=3, axis=-1) #, dtype=tf.int32)
+	#labels = tf.reshape(labels, [-1])
+	labels = tf.squeeze(labels)
+	#print(labels) ; print(datas) ; print(windows)
+	return (windows, datas) , labels
+
+def skew(seq, nucs):
+	windowsize = stepsize = 99 #int(len(self.sequence) / 1000)
+	(nuc_1,nuc_2) = nucs
+	
+	cumulative = 0
+	cm_list = []
+	i = int(windowsize / 2)
+	for each in range(len(seq) // stepsize):
+		if i < len(seq):
+			a = seq[i - windowsize//2:i + windowsize // 2].count(nuc_1)
+			b = seq[i - windowsize//2:i + windowsize // 2].count(nuc_2)
+			s = (a - b) / (a + b) if (a + b) else 0
+			cumulative = cumulative + s
+			cm_list.append(cumulative)
+			i = i + stepsize
+	slopes = []
+	for i in range(len(cm_list)):
+		win = cm_list[max(i-5,0):i+5]
+		m,b = np.polyfit(list(range(len(win))),win, 1)
+		slopes.append(m)
+	slopes.append(m)
+	return slopes
+
+
+def parse_locus(locus):
+	# label the positions
+	positions = dict()
+	for feature in locus.features(include=['CDS']):
+		for i,*_ in feature.codon_locations():
+			# do the other 5 frames
+			for sign,offset in [(+1,1), (+1,2), (-1,1), (-1,2), (-1,0)]:
+				pos = sign * (i + offset) * feature.strand
+				if pos not in positions:
+					positions[pos] = 0
+			# do the current frame
+			sign,offset = (+1,0)
+			pos = sign * (i + offset) * feature.strand
+			positions[pos] = 1
+	dna = locus.seq()
+	at_skew = np.array(skew(dna, 'at'))
+	gc_skew = np.array(skew(dna, 'gc'))
+	forward = np.zeros(48+len(dna)+55)
+	reverse = np.zeros(48+len(dna)+55)
+	for i,base in enumerate(dna):
+		#if base in 'acgt':
+		forward[i+49] = ((ord(base) >> 1) & 3) + 1
+		reverse[i+49] = ((forward[i+48] - 3) % 4) + 1
+	a = np.zeros([6, 103])
+	a[:,1] = locus.gc_content() 
+	for n in range(0, len(dna)-2, 3):
+		for f in [0,1,2]:
+			#yield positions.get( n+f, 2) , [ gc,  at_skew[n//100],  gc_skew[n//100] ] , forward[n+f : n+f+99 ]
+			#yield positions.get(-n+f, 2) , [ gc, -at_skew[n//100], -gc_skew[n//100] ] , reverse[n+f : n+f+99 ][::-1]
+			pos = n//100
+			a[2*f  ,0] = positions.get( n+f, 2)
+			a[2*f+1,0] = positions.get(-n+f, 2)
+			a[2*f  ,2] =  at_skew[pos]
+			a[2*f+1,2] = -at_skew[pos]
+			a[2*f  ,3] =  gc_skew[pos]
+			a[2*f+1,3] = -gc_skew[pos]
+			a[2*f  ,4:103] = forward[n+f : n+f+99 ]
+			a[2*f+1,4:103] = reverse[n+f : n+f+99 ][::-1]
+		yield a
 
 
 if __name__ == '__main__':
@@ -87,52 +159,34 @@ if __name__ == '__main__':
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
-	from genotate.windows import get_windows
-	genbank = File(args.infile)
-	for locus in genbank:
-		#for window in locus.get_labeled_windows():
-		for window in get_windows(locus.seq()):
-			print(window)
-	exit()
 	#ckpt_reader = tf.train.load_checkpoint(args.model)
 	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
 	#model = mm.create_model_deep(n)
-	model = mm.create_model_blend(args)
-	name = args.infile.split('/')[-1]
-	me = name[10] if len(name) > 10 else None
+	model = mm.blend(args)
+	#name = args.infile.split('/')[-1]
+	#me = name[10] if len(name) > 10 else None
 	#model.load_weights( "out/win_sub_w117_kern3/win_sub_trim=15,reg=False,fold=" + str(me) + ".ckpt" ).expect_partial()
 	model.load_weights(args.model).expect_partial()
 	#print(model.summary())
 	#faulthandler.enable()
 	
 
-
+	genbank = File(args.infile)
 	for locus in genbank:
-		for window in locus.get_labeled_windows():
-			print(window)
-		exit()
-		generator = lambda : get_windows(locus.seq())
+		generator = lambda : parse_locus(locus)
 		dataset = tf.data.Dataset.from_generator(
 								generator,
-								output_signature=(
-										tf.TensorSpec(
-											#shape=model.input.type_spec.shape[1:],
-											shape=(3,),
-											#dtype=tf.float32
-											dtype=tf.string
-											)
-										)
-								).batch(10)
-		tdata = dataset.map(pack)
+								output_signature=(tf.TensorSpec(shape=(6,103),dtype=tf.float32))
+								)
+		dataset = dataset.unbatch()
+		dataset = dataset.map(pack)
+		dataset = dataset.batch(1)
 		#for feature in dataset.take(1):
-		'''
-		for feature in tdata:
-			print( feature )
-			exit()
-		exit()
-		'''
+		#	print( feature )
+		#	exit()
+		#exit()
 		with tf.device('/device:GPU:0'):
-			p = model.predict(tdata)
+			p = model.predict(dataset)
 		
 		if args.plot_frames:
 			plot_frames(p)
@@ -166,7 +220,7 @@ if __name__ == '__main__':
 				switches = predict_switches(local, 33, 10)
 				for (left,right),label in switches.items(): 
 					if label == 1:
-						pairs = [ list(map(str,[3*(index+left)+frame+1, 3*(index+right)+frame])) ]
+						pairs = [ list(map(str,[3*(index+left)+frame, 3*(index+right)+frame])) ]
 						feature = locus.add_feature('CDS', strand, pairs) 
 
 		# merge regions

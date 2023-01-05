@@ -138,10 +138,11 @@ def create_model_blend(args):
 	return merged_model
 
 def blend(args):
-	input_ = tf.keras.layers.Input(shape=(99,), dtype=tf.int32)
+	input_ = tf.keras.layers.Input(shape=(99,), dtype=tf.float32)
 	other_ = tf.keras.layers.Input(shape=(3,), dtype=tf.float32)
 
-	w = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(input_)
+	w = tf.cast(input_, dtype=tf.int32)
+	w = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(w)
 	w = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(w)
 	w = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(w)
 	w = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(w)
