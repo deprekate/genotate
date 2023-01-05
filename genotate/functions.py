@@ -84,7 +84,7 @@ def plot_frames(p):
 	exit()
 
 def skew(seq, nucs):
-	windowsize = stepsize = 99 #int(len(self.sequence) / 1000)
+	windowsize = stepsize = 30 #int(len(self.sequence) / 1000)
 	(nuc_1,nuc_2) = nucs
 	
 	cumulative = 0
