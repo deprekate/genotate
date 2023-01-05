@@ -2,6 +2,8 @@ import os
 import sys
 from decimal import Decimal
 
+import numpy as np
+
 
 def ave(a):
 	return round(sum(a)/len(a), 2)
@@ -80,3 +82,77 @@ def plot_frames(p):
 		print(i // 2 + 3, end='\t')
 		print('\t'.join(map(str,v)))
 	exit()
+
+def skew(seq, nucs):
+	windowsize = stepsize = 99 #int(len(self.sequence) / 1000)
+	(nuc_1,nuc_2) = nucs
+	
+	cumulative = 0
+	cm_list = []
+	i = int(windowsize / 2)
+	for each in range(len(seq) // stepsize):
+		if i < len(seq):
+			a = seq[i - windowsize//2:i + windowsize // 2].count(nuc_1)
+			b = seq[i - windowsize//2:i + windowsize // 2].count(nuc_2)
+			s = (a - b) / (a + b) if (a + b) else 0
+			cumulative = cumulative + s
+			cm_list.append(cumulative)
+			i = i + stepsize
+	slopes = []
+	for i in range(len(cm_list)):
+		win = cm_list[max(i-5,0):i+5]
+		m,b = np.polyfit(list(range(len(win))),win, 1)
+		slopes.append(m)
+	slopes.append(m)
+	return slopes
+
+def parse_locus(locus):
+	# label the positions
+	positions = dict()
+	for feature in locus.features(include=['CDS']):
+		for i,*_ in feature.codon_locations():
+			# do the other 5 frames
+			for sign,offset in [(+1,1), (+1,2), (-1,1), (-1,2), (-1,0)]:
+				pos = sign * (i + offset) * feature.strand
+				if pos not in positions:
+					positions[pos] = 0
+			# do the current frame
+			sign,offset = (+1,0)
+			pos = sign * (i + offset) * feature.strand
+			positions[pos] = 1
+	#for k,v in positions.items():
+	#	print(k,v)
+	#exit()
+	dna = locus.seq()
+	at_skew = np.array(skew(dna, 'at'))
+	gc_skew = np.array(skew(dna, 'gc'))
+	forward = np.zeros(48+len(dna)+50)
+	reverse = np.zeros(48+len(dna)+50)
+	for i,base in enumerate(dna):
+		#if base in 'acgt':
+		forward[i+48] = ((ord(base) >> 1) & 3) + 1
+		reverse[i+48] = ((forward[i+48] - 3) % 4) + 1
+	a = np.zeros([6, 103])
+	a[:,1] = locus.gc_content() 
+	for n in range(0, len(dna)-2, 3):
+		for f in [0,1,2]:
+			i = n+f
+			#yield positions.get( n+f, 2) , [ gc,  at_skew[n//100],  gc_skew[n//100] ] , forward[n+f : n+f+99 ]
+			#yield positions.get(-n+f, 2) , [ gc, -at_skew[n//100], -gc_skew[n//100] ] , reverse[n+f : n+f+99 ][::-1]
+			pos = n//100
+			a[2*f  ,0] = positions.get( i, 2)
+			a[2*f+1,0] = positions.get(-i, 2)
+			a[2*f  ,2] =  at_skew[pos]
+			a[2*f+1,2] = -at_skew[pos]
+			a[2*f  ,3] =  gc_skew[pos]
+			a[2*f+1,3] = -gc_skew[pos]
+			a[2*f  ,4:103] = forward[i : i+99 ]
+			a[2*f+1,4:103] = reverse[i : i+99 ][::-1]
+		yield a
+
+def to_dna(s):
+	to_base = {0:'n',1:'a',2:'c',3:'t',4:'g'}
+	dna = ''
+	for num in s:
+		dna += to_base[num]	
+	return dna
