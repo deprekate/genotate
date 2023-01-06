@@ -134,39 +134,39 @@ def parse_locus(locus):
 		reverse[i+48] = ((forward[i+48] - 3) % 4) + 1
 	a = np.zeros([6, 103])
 	a[:,1] = locus.gc_content() 
-	for n in range(0, len(dna)-2, 3):
-		for f in [0,1,2]:
-			i = n+f
-			#yield positions.get( n+f, 2) , [ gc,  at_skew[n//100],  gc_skew[n//100] ] , forward[n+f : n+f+99 ]
-			#yield positions.get(-n+f, 2) , [ gc, -at_skew[n//100], -gc_skew[n//100] ] , reverse[n+f : n+f+99 ][::-1]
-			pos = n//100
-			i = n+0
-			a[0,0] = positions.get( i, 2)
-			a[1,0] = positions.get(-i, 2)
-			a[0,2] =  at_skew[pos]
-			a[1,2] = -at_skew[pos]
-			a[0,3] =  gc_skew[pos]
-			a[1,3] = -gc_skew[pos]
-			a[0,4:103] = forward[i : i+99 ]
-			a[1,4:103] = reverse[i : i+99 ][::-1]
-			i = n+1
-			a[2,0] = positions.get( i, 2)
-			a[3,0] = positions.get(-i, 2)
-			a[2,2] =  at_skew[pos]
-			a[3,2] = -at_skew[pos]
-			a[1,3] =  gc_skew[pos]
-			a[3,3] = -gc_skew[pos]
-			a[1,4:103] = forward[i : i+99 ]
-			a[3,4:103] = reverse[i : i+99 ][::-1]
-			i = n+2
-			a[4,0] = positions.get( i, 2)
-			a[5,0] = positions.get(-i, 2)
-			a[4,2] =  at_skew[pos]
-			a[5,2] = -at_skew[pos]
-			a[4,3] =  gc_skew[pos]
-			a[5,3] = -gc_skew[pos]
-			a[4,4:103] = forward[i : i+99 ]
-			a[5,4:103] = reverse[i : i+99 ][::-1]
+	for n in range(0, len(dna)-2, 9):
+		#for f in [0,1,2]:
+		#i = n+f
+		#yield positions.get( n+f, 2) , [ gc,  at_skew[n//100],  gc_skew[n//100] ] , forward[n+f : n+f+99 ]
+		#yield positions.get(-n+f, 2) , [ gc, -at_skew[n//100], -gc_skew[n//100] ] , reverse[n+f : n+f+99 ][::-1]
+		pos = n//100
+		i = n+0
+		a[0,0] = positions.get( i, 2)
+		a[1,0] = positions.get(-i, 2)
+		a[0,2] =  at_skew[pos]
+		a[1,2] = -at_skew[pos]
+		a[0,3] =  gc_skew[pos]
+		a[1,3] = -gc_skew[pos]
+		a[0,4:103] = forward[i : i+99 ]
+		a[1,4:103] = reverse[i : i+99 ][::-1]
+		i = n+1
+		a[2,0] = positions.get( i, 2)
+		a[3,0] = positions.get(-i, 2)
+		a[2,2] =  at_skew[pos]
+		a[3,2] = -at_skew[pos]
+		a[2,3] =  gc_skew[pos]
+		a[3,3] = -gc_skew[pos]
+		a[2,4:103] = forward[i : i+99 ]
+		a[3,4:103] = reverse[i : i+99 ][::-1]
+		i = n+2
+		a[4,0] = positions.get( i, 2)
+		a[5,0] = positions.get(-i, 2)
+		a[4,2] =  at_skew[pos]
+		a[5,2] = -at_skew[pos]
+		a[4,3] =  gc_skew[pos]
+		a[5,3] = -gc_skew[pos]
+		a[4,4:103] = forward[i : i+99 ]
+		a[5,4:103] = reverse[i : i+99 ][::-1]
 		yield a
 
 def to_dna(s):
