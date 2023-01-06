@@ -134,7 +134,7 @@ def parse_locus(locus):
 		reverse[i+48] = ((forward[i+48] - 3) % 4) + 1
 	a = np.zeros([6, 103])
 	a[:,1] = locus.gc_content() 
-	for n in range(0, len(dna)-2, 9):
+	for n in range(0, len(dna)-2, 3):
 		#for f in [0,1,2]:
 		#i = n+f
 		#yield positions.get( n+f, 2) , [ gc,  at_skew[n//100],  gc_skew[n//100] ] , forward[n+f : n+f+99 ]

@@ -157,6 +157,9 @@ if __name__ == '__main__':
 					if label == 1:
 						pairs = [ list(map(str,[3*(index+left)+frame+1, 3*(index+right)+frame])) ]
 						feature = locus.add_feature('CDS', strand, pairs) 
+						start = [feature.left(), feature.right()][::feature.strand][0]
+						n = locus.nearest(start,feature.strand,['atg','gtg','ttg'])
+						feature.tags['NSTOP'] = [abs(n-start)]
 
 		# merge regions
 		locus.merge()
