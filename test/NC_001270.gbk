@@ -1,0 +1,331 @@
+LOCUS       NC_001270               6825 bp ss-DNA     circular PHG 13-AUG-2018
+DEFINITION  Spiroplasma phage SVTS2, complete genome.
+ACCESSION   NC_001270
+VERSION     NC_001270.2
+DBLINK      BioProject: PRJNA485481
+KEYWORDS    RefSeq.
+SOURCE      Spiroplasma phage SVTS2
+  ORGANISM  Spiroplasma phage SVTS2
+            Viruses; Monodnaviria; Loebvirae; Hofneiviricota; Faserviricetes;
+            Tubulavirales; Plectroviridae; Suturavirus.
+REFERENCE   1  (bases 1 to 6825)
+  AUTHORS   Sha,Y., Melcher,U., Davis,R.E. and Fletcher,J.
+  TITLE     Common elements of spiroplasma plectroviruses revealed by
+            nucleotide sequence of SVTS2
+  JOURNAL   Virus Genes 20 (1), 47-56 (2000)
+   PUBMED   10766306
+REFERENCE   2  (bases 1 to 6825)
+  CONSRTM   NCBI Genome Project
+  TITLE     Direct Submission
+  JOURNAL   Submitted (01-AUG-2000) National Center for Biotechnology
+            Information, NIH, Bethesda, MD 20894, USA
+REFERENCE   3  (bases 1 to 6825)
+  AUTHORS   Melcher,U.K., Sha,Y., Davis,R.E. and Fletcher,J.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (05-MAR-1999) Biochemistry and Molecular Biology,
+            Oklahoma State University, 246 NRC, Stillwater, OK 74074, USA
+COMMENT     VALIDATED REFSEQ: This record has undergone validation or
+            preliminary review. The reference sequence was derived from
+            AF133242.
+            On Mar 19, 2004 this sequence version replaced NC_001270.1.
+            COMPLETENESS: full length.
+FEATURES             Location/Qualifiers
+     source          1..6825
+                     /organism="Spiroplasma phage SVTS2"
+                     /mol_type="genomic DNA"
+                     /host="Spiroplasma"
+                     /db_xref="taxon:93224"
+                     /clone="pESV-1"
+     gene            join(6032..6825,1..217)
+                     /locus_tag="SVTS2p01"
+                     /db_xref="GeneID:1262351"
+     CDS             join(6032..6825,1..217)
+                     /locus_tag="SVTS2p01"
+                     /codon_start=1
+                     /transl_table=4
+                     /product="hypothetical protein"
+                     /protein_id="NP_052051.1"
+                     /db_xref="GeneID:1262351"
+                     /translation="MFKIYFNLFRRQKNIKFSYWFVNWFIANILFYLFIVCFNLQFIY
+                     FSSTSVTDIILFIFLVIFDIIFFWSFFSNLFQTRKLIKIIKSSPISIINGALGTGKTL
+                     LMTYLSQIAKFDNVYSNYFINDEKIGVLGLNHLDFKNKNYKIPPNDSLILFDEIFLYM
+                     NGAKPEENNKKFSGLIPYFLLCRQFDNNIVFAGQRINQNWVEYREIANMIIVPMQCIK
+                     PSIFFPYFKMKIGFFDDLDDYLVWKTETVKRTANGKRVRKKSNKDIGINFVKITIPLS
+                     IAMQYDSKYLKFVRDLKNDKVPSYIKQNWPSIVKKDITINELREMGMEHLLKNLGELE
+                     ND"
+     gene            210..503
+                     /locus_tag="SVTS2p02"
+                     /db_xref="GeneID:1262355"
+     CDS             210..503
+                     /locus_tag="SVTS2p02"
+                     /codon_start=1
+                     /transl_table=4
+                     /product="hypothetical protein"
+                     /protein_id="NP_052052.1"
+                     /db_xref="GeneID:1262355"
+                     /translation="MINLLANDVWNGAINVVVDIFMKIMDWMWALKLPGTNIPLFVIW
+                     VIGGVINVILLLVNSSRGLSSVSRSSLQASKQISKGVKNISNDSKSDNKESNK"
+     gene            503..739
+                     /locus_tag="SVTS2p03"
+                     /db_xref="GeneID:1262358"
+     CDS             503..739
+                     /locus_tag="SVTS2p03"
+                     /codon_start=1
+                     /transl_table=4
+                     /product="hypothetical protein"
+                     /protein_id="NP_052053.1"
+                     /db_xref="GeneID:1262358"
+                     /translation="MIKLIFFFVIGLTVGFGFIANIVMATDLGFSTVKHYLESANDFY
+                     KLVAHLFIIATHPIFQLYIAFGIIIMGIRLIFIA"
+     gene            752..1936
+                     /locus_tag="SVTS2p04"
+                     /db_xref="GeneID:1262350"
+     CDS             752..1936
+                     /locus_tag="SVTS2p04"
+                     /codon_start=1
+                     /transl_table=4
+                     /product="hypothetical protein"
+                     /protein_id="NP_052054.1"
+                     /db_xref="GeneID:1262350"
+                     /translation="MRKRLLDVFIVFYLIFGWIFLFCGTVTTNNFSNTYKLYLKNNDT
+                     FKELTYDKANEYDFQSTLMLRQDYFMQGLDPSNYAFSFGIKLGGWDGLSADKNDNNYW
+                     FKLFTTNYRSYEITWNSQDISKGWQGKLILDDDSTGRFLKIIVYKNKIKYDFIFNIDI
+                     FEYLFFPIVSNQSYRHFDLDYLIFNSNYKNLINMDIIKNSNSQYFINDVKQDTFSLES
+                     FFQILDYFYSNILRVIFDISNFKEFIYFNSSNENTGFAFFVKNGFLLYPKSMLFNILR
+                     FPDLSATYLNPIVNLYNAYNINVNQNYYSFFSNWQYQTDILPSNNDKYTQSIKLLDMT
+                     DKSKYQGFNLITFNAINIGKDSLFQLMVLILAFIMLLIEIMKLIMVIFDEYHIKVVVD
+                     II"
+     stem_loop       2190..2265
+     gene            2460..3389
+                     /locus_tag="SVTS2p05"
+                     /db_xref="GeneID:1262353"
+     CDS             2460..3389
+                     /locus_tag="SVTS2p05"
+                     /codon_start=1
+                     /transl_table=4
+                     /product="putative rep protein"
+                     /protein_id="NP_052055.2"
+                     /db_xref="GeneID:1262353"
+                     /translation="MNNVFIQDNLTNKRHNVFMNALNYVKKEYYLKKVFYGNYVKNIV
+                     LPLELVNNNPRNKMGVKNTGKNDKKLWNSRIRSQGNCIRKAYENFWNCKNLSFLTLTY
+                     AVNEKDVKKCKNDLKLFFNNINRWWNNPIRSKNHKGILKYMYTYEYQKRGAVHFHIIL
+                     NQKIPNSVVQQYWKHGINKNIKVRAGSNEDVVKYLAKYIVKTANNDKSQNHYDLNIKA
+                     YQFSKNCKNPKVKVGVIELSEQDLIYSVKDNLNYFSFCDKNGYKIGFSCDSYYGLDKF
+                     REFKKYVSADRKIFRNLVKNTNFTVNKNTNLRC"
+     gene            3470..3670
+                     /locus_tag="SVTS2p07"
+                     /db_xref="GeneID:1262360"
+     CDS             3470..3670
+                     /locus_tag="SVTS2p07"
+                     /codon_start=1
+                     /transl_table=4
+                     /product="hypothetical protein"
+                     /protein_id="NP_052057.1"
+                     /db_xref="GeneID:1262360"
+                     /translation="MADRDVKCKECGKIWTFTTKNTTYNSFRGLAKDTMISYGHYYFC
+                     PDNNCLGMYKHRRQDNCCIHKK"
+     gene            4030..4377
+                     /locus_tag="SVTS2p08"
+                     /db_xref="GeneID:1262354"
+     CDS             4030..4377
+                     /locus_tag="SVTS2p08"
+                     /codon_start=1
+                     /transl_table=4
+                     /product="hypothetical protein"
+                     /protein_id="NP_052058.1"
+                     /db_xref="GeneID:1262354"
+                     /translation="MNGFLVQLIDIATGKIIKDDKGNESKWDSYTFTPVIKLENGTVK
+                     GTKDLSKSKWFKITDENYLELKPYLIDGNLFYVSLKWDGKINIVEPYTENYNEQEFIN
+                     KYSNNSSITESNS"
+     gene            4656..4883
+                     /locus_tag="SVTS2p09"
+                     /db_xref="GeneID:1262357"
+     CDS             4656..4883
+                     /locus_tag="SVTS2p09"
+                     /codon_start=1
+                     /transl_table=4
+                     /product="hypothetical protein"
+                     /protein_id="NP_052059.1"
+                     /db_xref="GeneID:1262357"
+                     /translation="MKKQTKLYKQRLKYLVNVIHQCLPTKIPLFMLRKVIKLYLNHNV
+                     IDIGVMEGQHFKLLVEQVKNYMLKIESENQK"
+     gene            4883..5149
+                     /locus_tag="SVTS2p10"
+                     /db_xref="GeneID:1262356"
+     CDS             4883..5149
+                     /locus_tag="SVTS2p10"
+                     /codon_start=1
+                     /transl_table=4
+                     /product="hypothetical protein"
+                     /protein_id="NP_052060.1"
+                     /db_xref="GeneID:1262356"
+                     /translation="MDIVAMILLVSIIILLYIYVISSMFFDKRKIKKDKLQNEKLELE
+                     NEKLKLEIKDLKIRRVIINDCFCNNYFNTINVYVINIFNSKYSI"
+     gene            5070..5252
+                     /locus_tag="SVTS2p11"
+                     /db_xref="GeneID:1262362"
+     CDS             5070..5252
+                     /locus_tag="SVTS2p11"
+                     /codon_start=1
+                     /transl_table=4
+                     /product="hypothetical protein"
+                     /protein_id="NP_052061.1"
+                     /db_xref="GeneID:1262362"
+                     /translation="MTVFATIILILSMFMLLIFLTVSTVFKIKNKYLICPHCSKKVEF
+                     KEWGKRKIKKADKSVE"
+     gene            5384..5599
+                     /locus_tag="SVTS2p12"
+                     /db_xref="GeneID:1262361"
+     CDS             5384..5599
+                     /locus_tag="SVTS2p12"
+                     /codon_start=1
+                     /transl_table=4
+                     /product="hypothetical protein"
+                     /protein_id="NP_052062.1"
+                     /db_xref="GeneID:1262361"
+                     /translation="MNANFLAEGTSPDASVIKQIADFAGVLADWAIAFTNWFIGFLGS
+                     HMLLIIPLVLMFVVLGIETIRKLIHGY"
+     stem_loop       5402..5480
+                     /locus_tag="SVTS2p12"
+                     /function="unknown"
+     gene            5662..5820
+                     /locus_tag="SVTS2p13"
+                     /db_xref="GeneID:1262363"
+     CDS             5662..5820
+                     /locus_tag="SVTS2p13"
+                     /codon_start=1
+                     /transl_table=4
+                     /product="hypothetical protein"
+                     /protein_id="NP_052063.1"
+                     /db_xref="GeneID:1262363"
+                     /translation="MQSVWDLYYEFMTIIFGVNHPIILDIVIFVVFLILVFGLLFLIL
+                     SCIFRWIK"
+     gene            5820..6029
+                     /locus_tag="SVTS2p14"
+                     /db_xref="GeneID:1262359"
+     CDS             5820..6029
+                     /locus_tag="SVTS2p14"
+                     /codon_start=1
+                     /transl_table=4
+                     /product="hypothetical protein"
+                     /protein_id="NP_052064.1"
+                     /db_xref="GeneID:1262359"
+                     /translation="MDWNIFLQRVYRGLLQIFYFIPKTEIDNFVGSSIDNITYSVIMI
+                     GIWLVVFFLIWLSIFILYKTIRLVV"
+ORIGIN      
+        1 tattaatttt gttaagataa caattccttt gtctattgct atgcaatatg atagtaaata
+       61 tttaaaattt gtgcgtgatt taaaaaatga taaagtacca agttatatta aacaaaattg
+      121 acctagtatt gttaaaaaag atattacaat taatgaatta cgagaaatgg gtatggaaca
+      181 tttattaaag aatttggggg aattagaaaa tgattaattt acttgctaat gatgtatgaa
+      241 atggtgccat taatgttgta gtcgatattt ttatgaaaat tatggattga atgtgagcat
+      301 taaaattgcc tggtacaaat attcctttat ttgtaatttg agtaattggt ggtgttataa
+      361 atgttatttt gttattagtt aatagttctc gtggtttaag ttcagtttct cgttcatctt
+      421 tacaagcaag taagcaaata tctaaggggg ttaaaaatat aagtaatgat tctaaaagtg
+      481 ataataagga gagtaataaa taatgattaa gttaatattt ttctttgtta ttggtttaac
+      541 tgttggtttt ggttttattg ctaatattgt tatggcaaca gatttaggtt tttcaactgt
+      601 taaacattat ttagaatctg ctaacgattt ttataaattg gtagcacatt tatttattat
+      661 tgcgacacat cctatttttc agttatatat tgcgtttgga attatcatta tgggaattag
+      721 acttattttt attgcatagg aggttaaaac aatgcgaaaa cgattattag atgtatttat
+      781 tgttttttat ttaatatttg gttgaatatt tcttttttgt ggtactgtaa caactaataa
+      841 ttttagcaat acctataaat tgtatttaaa aaataatgat acttttaaag aattaactta
+      901 tgacaaagca aatgaatatg atttccagtc tactttaatg ctacgacaag actattttat
+      961 gcaaggttta gatcctagta attatgcatt tagttttggt attaaattgg gtggttgaga
+     1021 tggtttaagt gctgataaaa atgataataa ttattgattt aaacttttta caacaaatta
+     1081 taggagttat gaaattactt gaaattcaca agatatttca aagggatgac aaggaaaatt
+     1141 aattttagat gatgatagta ctggtagatt tttaaaaatt attgtttata aaaataaaat
+     1201 aaaatatgat tttattttta atatagatat atttgaatat ttattttttc ctattgtttc
+     1261 caatcaaagt tatagacatt ttgatttgga ttatttaatt tttaattcta attataaaaa
+     1321 tttaattaat atggatatta ttaaaaattc taattctcaa tattttatta atgatgttaa
+     1381 gcaagatact ttttctttgg aaagtttttt tcaaatttta gattattttt attctaatat
+     1441 tttaagagtt atatttgata tttctaattt taaagaattt atttatttta attcttctaa
+     1501 cgagaatact ggttttgctt tttttgtaaa aaatggtttt ttattatatc caaaatcaat
+     1561 gctttttaat attttaagat tccctgattt atcagcaact tatttaaacc caatagttaa
+     1621 tttatataat gcttataata taaatgttaa tcaaaattat tattcttttt tttcaaattg
+     1681 acaatatcaa actgatattt tgccttctaa taatgataag tatactcaat caataaaatt
+     1741 attagatatg acagataaat caaaatatca aggttttaat ttgattactt ttaatgctat
+     1801 taatattggt aaagatagtc tatttcagtt aatggtttta attttagcct ttataatgct
+     1861 actgattgaa ataatgaaat taataatggt aatatttgac gaataccata taaaagttgt
+     1921 agttgatata atttagcgtg tcatatacaa aatgcggcga tttgattggt aaataatttg
+     1981 cctggtatga aagatgtata taattttatt aatgggatag taacatgtat ttagcaatgt
+     2041 gtctgagttg tttaataata ttggtaattt atttgccttt gatattaaca tttaagatta
+     2101 tgttaagttc tattttagtg ttagcgatgg ttaatggact tttacgctat ttttagtagt
+     2161 aaaaataatg ttgttaagaa aaaaagtaag ggggtgcgat ggtttatcac gcacccactt
+     2221 acttaaaggg gtaaaagtcg cggagcgact taggggcaac gcccctttac ttgattaact
+     2281 aacacaactg cacatcatta aaataaatat tgcaaaattt aaaataatat attacaatca
+     2341 aattaacttt caaatataaa cacttaatta tattgaaagt ttcaaactat ttatagtttc
+     2401 cttggacgga acttttaaat gtaatttagt gtttttttat ttggaaggag tttataaaaa
+     2461 tgaataatgt ttttattcaa gataatttaa caaataaacg tcataatgta tttatgaatg
+     2521 ctttaaatta tgttaaaaaa gaatattatt taaaaaaagt gttttatggt aattatgtta
+     2581 aaaatattgt tttaccacta gaattagtta ataataatcc tcgtaataaa atgggagtta
+     2641 aaaatactgg aaaaaatgat aaaaaattgt ggaatagtcg tattcgctcg caaggaaatt
+     2701 gtattcggaa agcatatgaa aatttttgaa attgtaaaaa tttaagtttt ttgactttaa
+     2761 cttatgccgt taatgagaaa gatgttaaaa aatgtaaaaa tgatttaaag ttatttttta
+     2821 ataatataaa tcgttgatga aacaatccta ttcgttctaa aaatcataaa ggaattttaa
+     2881 aatatatgta tacttatgag tatcaaaaac gcggagcagt tcactttcat atcatattaa
+     2941 accaaaaaat acctaacagt gttgtacaac aatactgaaa acacggtatt aataaaaata
+     3001 ttaaagttcg tgcaggttct aatgaagatg ttgttaaata tcttgctaaa tatattgtta
+     3061 aaactgctaa taatgataag tcccaaaatc attatgattt aaacattaaa gcgtatcaat
+     3121 ttagtaaaaa ttgtaaaaat ccaaaggtta aagtcggtgt tattgaatta tctgaacaag
+     3181 atttaattta ttcagttaaa gataacttaa attatttttc tttttgtgat aaaaatggtt
+     3241 ataaaattgg ttttagttgt gatagttatt atggtttaga taaatttaga gaatttaaaa
+     3301 aatatgtttc tgctgataga aaaatattta gaaatttagt taaaaatact aattttactg
+     3361 ttaataaaaa taccaattta aggtgttaaa aatagtttat tcgttcaatt tcgaaattga
+     3421 atgtacaaac ttgttaattc aaatacgtat ttgaagggag attaatttta tggcagatag
+     3481 agatgttaaa tgtaaagaat gtggcaaaat ttgaactttt actactaaaa atacaactta
+     3541 taatagtttt aggggtttag caaaagatac tatgatatct tatggtcatt attatttttg
+     3601 ccctgataat aattgtttag gtatgtataa acatcgaaga caggataatt gttgtattca
+     3661 taaaaaataa aaaaatgagt taaaaactca ttaaaaaatg tggcaattgc cttggacaac
+     3721 aattaccaca aattaattaa aacaaaaaaa caagtttaga tttatatttt atttgacaat
+     3781 ttcaattttt gttgtattat tgaattaact taaacattta attatgtttg agtttcaaat
+     3841 cttaaaaggt ttccttggac ggaacttaaa tataattaaa tgttttttta tgcttattta
+     3901 taaactttat ttaaacaaaa aacactaatt ttttattata atttttaatt aatcattttt
+     3961 tatatttaag tttcaaacct gaaatctttt aagaatctat atagattttt aaaagaaagg
+     4021 agaaatctta tgaatggatt tctagtacag ttgatagata ttgcaacggg taaaattatt
+     4081 aaagatgaca aaggtaatga aagtaaatga gatagttata catttacacc agttattaaa
+     4141 ttagaaaatg gtactgttaa aggtacaaaa gatttgtcaa aatcaaaatg atttaaaata
+     4201 actgatgaaa attatttaga attaaaacct tatttaattg atggtaattt attttatgtt
+     4261 tcgcttaaat gggatggaaa aattaatatt gttgaaccat atacagaaaa ttataacgag
+     4321 caagaattca ttaacaaata ttctaataat tcatcaataa cagaaagcaa tagttaatat
+     4381 gaaacaacaa ttatgtattg tttgtattaa tgatactgtt tgagaaaatg gatctcgtta
+     4441 ttgttgaaat tgtgttaatg aaaatgttat tttaattaat caatattatt ctaggttaga
+     4501 aaatgactaa gaaaaaaaca gattgttaag gttataaatg gcaaagaata aagataaatt
+     4561 gattattaaa ttagaaaaat taatgttaag gtcatatcca gtttcagcag atgaaattac
+     4621 taatgaacat tgagcaatag taaagaaaaa ttagaatgaa aaagcaaact aagttatata
+     4681 aacaacgatt aaaatatttg gttaatgtta tacatcaatg tttacctact aaaataccat
+     4741 tatttatgtt aagaaaagta attaagttat atcttaatca taatgttatt gatattggtg
+     4801 ttatggaagg acaacatttt aagttattag tagaacaagt aaaaaattat atgttaaaaa
+     4861 tagaaagtga gaatcaaaaa taatggatat agttgctatg attttattag tttcaataat
+     4921 tattttattg tatatttatg ttatttcttc tatgtttttt gataaaagaa aaattaaaaa
+     4981 agataaatta caaaatgaaa aattagaact tgaaaatgag aaattaaagt tagaaattaa
+     5041 agatttaaaa ataaggagag tgataattaa tgactgtttt tgcaacaatt attttaatac
+     5101 tatcaatgtt tatgttatta atatttttaa cagtaagtac agtatttaag attaaaaata
+     5161 aatatttaat ttgtccgcat tgttctaaaa aagtagaatt taaagaatgg ggaaaacgaa
+     5221 aaattaaaaa agcagataaa tctgttgaat aagttaatat caataaaata ccttggcaag
+     5281 tataaaaatt gattttagtt tttagtgtta attactaaaa tcaaggttag agattgccaa
+     5341 ggttttatta ttaatagaaa gtattttaag tgaggtgttg ttaatgaatg caaatttttt
+     5401 agcagaaggt actagtcctg acgcaagtgt tattaagcaa atagcagatt ttgctggtgt
+     5461 tcttgctgat tgggcgattg cttttactaa ctgatttatc ggttttttag ggtcacatat
+     5521 gttattaatt attccgttag ttttaatgtt tgtggtttta ggaattgaaa caatcagaaa
+     5581 gttaattcac ggatattaat atttaataat aaactctaac cttgatttta gtagttaaca
+     5641 tttaggaaag gaataagaaa aatgcaaagt gtatgagatt tatattatga atttatgact
+     5701 attatttttg gagttaatca ccctattatt ttagatattg ttatatttgt tgtattttta
+     5761 atacttgttt ttggtttatt atttttaatt ttaagctgta tttttaggtg gataaaataa
+     5821 tggactgaaa tatttttttg caacgagtat atcgaggtct tttacaaatt ttttatttta
+     5881 ttccaaaaac tgaaattgat aattttgtcg gtagttctat tgataatatt acttattcag
+     5941 taattatgat aggtatttga ttagttgttt ttttcctaat ttggttatca atatttattt
+     6001 tatataaaac aattagattg gtggtgtaga catgtttaaa atttatttta atttatttag
+     6061 aagacaaaag aatattaaat tttcttattg atttgtaaat tgatttatag caaatatttt
+     6121 attttatctt tttattgttt gttttaattt acagtttata tattttagtt ctacatcagt
+     6181 tactgatatt atccttttta tttttttagt aatttttgat attatctttt tttggtcttt
+     6241 ttttagtaat ctttttcaaa cacgaaaatt gattaaaatt attaaaagta gtccaatatc
+     6301 aattattaat ggtgctttgg gtactggtaa aactttattg atgacttatt tatcgcaaat
+     6361 tgctaagttt gacaatgttt attctaatta ttttattaat gatgaaaaaa taggagtttt
+     6421 aggtttaaat catttagatt ttaaaaataa aaattataaa ataccgccaa atgatagttt
+     6481 aattttgttt gatgaaatat ttttgtatat gaatggtgct aaaccggaag aaaataataa
+     6541 aaagtttagc ggtttaattc catatttttt gttatgtcgt cagtttgata ataatattgt
+     6601 ttttgctgga caacgaatta atcaaaattg agtggaatat agagagattg ctaatatgat
+     6661 tattgttcct atgcagtgta ttaaacctag tatatttttt ccttatttta aaatgaaaat
+     6721 aggttttttt gatgacttag atgattattt agtatgaaaa acagaaacag ttaaacgaac
+     6781 agcaaacggt aaaagagttc gtaaaaagtc taataaagat attgg
+//
+
