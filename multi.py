@@ -51,6 +51,15 @@ def parse_genbank(infile):
 		for data in parse_locus(locus):
 			yield data
 
+class LossHistoryCallback(tf.keras.callbacks.Callback):
+	def on_epoch_end(self, batch, logs=None):
+		#logs['loss'] or logs['val_loss'] (the latter available only if you use validation data when model.fit()
+		# Use logs['loss'] or logs['val_loss'] for pyqt5 purposes
+		row = list()
+		for key, value in logs.items():
+			row.append(key)
+			row.append(value)
+		print('\t'.join(map(str,row)), flush=True)
 
 
 if __name__ == '__main__':
@@ -64,7 +73,7 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	filenames = [os.path.join(args.directory,f) for f in listdir(args.directory) if isfile(join(args.directory, f))]
-
+	print("Starting...")
 	with tf.device('/device:GPU:0'):
 		dataset = tf.data.Dataset.from_tensor_slices(filenames)
 		dataset = dataset.interleave(
@@ -98,7 +107,7 @@ if __name__ == '__main__':
 		#model = create_model_blend(args)
 		model.fit(
 			dataset,
-			epochs          = 20,
+			epochs          = 3,
 			verbose         = 1,
-			callbacks=[ cp_callback ,tensorboard_callback]
+			callbacks=[ cp_callback] #, LossHistoryCallback() ] #,tensorboard_callback]
 		)

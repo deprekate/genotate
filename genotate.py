@@ -108,6 +108,7 @@ if __name__ == '__main__':
 
 	genbank = File(args.infile)
 	for locus in genbank:
+		locus.clear()
 		generator = lambda : parse_locus(locus)
 		dataset = tf.data.Dataset.from_generator(
 								generator,

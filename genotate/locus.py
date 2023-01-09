@@ -67,11 +67,6 @@ def has_stop(dna, strand):
 			return True
 	return False
 
-def previous_and_next(some_iterable):
-	prevs, items, nexts = tee(some_iterable, 3)
-	prevs = chain([None], prevs)
-	nexts = chain(islice(nexts, 1, None), [None])
-	return zip(prevs, items, nexts)
 
 class Locus(Locus, feature=Feature):
 
@@ -100,11 +95,12 @@ class Locus(Locus, feature=Feature):
 
 	def merge(self):	
 		_last = _curr = None
-		for _, _, _next in previous_and_next(sorted(self)):
+		#for _, _, _next in previous_and_next(sorted(self)):
+		for _next in sorted(self):
 			# THIS JUST MKES SURE THE FEATURE LOCATIONS ARE IN THE SAME FRAME
 			#for i in _curr.base_locations():
 			#	_curr.dna += self.dna[ i-1 : i ]
-			if _last is None or (_last.type != 'CDS') or (_curr.type != 'CDS'):
+			if _last is None or _curr is None or (_last.type != 'CDS') or (_curr.type != 'CDS'):
 				pass
 			elif _curr.strand != _last.strand:
 				pass
