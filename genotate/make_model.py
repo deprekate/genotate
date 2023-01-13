@@ -1,7 +1,7 @@
 import os
 
 # TensorFlow and tf.keras
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 
 
@@ -143,22 +143,22 @@ def blend(args):
 
 	w = tf.cast(input_, dtype=tf.int32)
 	w = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(w)
-	w = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(w)
-	w = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(w)
-	w = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(w)
+	w = tf.keras.layers.Conv1D(filters=104, kernel_size=7, padding='same', activation='relu')(w)
+	w = tf.keras.layers.Conv1D(filters=104, kernel_size=7, padding='same', activation='relu')(w)
+	w = tf.keras.layers.Conv1D(filters=104, kernel_size=7, padding='same', activation='relu')(w)
 	w = tf.keras.layers.Flatten()(w)
 	w = tf.keras.models.Model(inputs=input_, outputs=w)
 
-	d = tf.keras.layers.Dense(3, activation='relu')(other_)
+	d = tf.keras.layers.Dense(8, activation='relu')(other_)
 	d = tf.keras.models.Model(inputs=other_, outputs=d)
 	
 	combined = tf.keras.layers.concatenate([w.output, d.output]) #, axis=-1)
 
-	z = tf.keras.layers.Dense(99, activation='relu')(combined)
+	z = tf.keras.layers.Dense(88, activation='relu')(combined)
 	z = tf.keras.layers.Dropout(rate=0.05)(z)
-	z = tf.keras.layers.Dense(99, activation='relu')(z)
+	z = tf.keras.layers.Dense(88, activation='relu')(z)
 	z = tf.keras.layers.Dropout(rate=0.05)(z)
-	z = tf.keras.layers.Dense(99, activation='relu')(z)
+	z = tf.keras.layers.Dense(88, activation='relu')(z)
 	z = tf.keras.layers.Dropout(rate=0.05)(z)
 	z = tf.keras.layers.Dense(3, activation='softmax')(z)
 	

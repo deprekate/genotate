@@ -10,8 +10,24 @@ import datetime
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 import tensorflow as tf
+from tensorflow.keras import mixed_precision
 #tf.keras.backend.set_floatx('float16')
 import numpy as np
+
+mixed_precision.set_global_policy('mixed_float16')
+
+'''
+try:
+  tpu = tf.distribute.cluster_resolver.TPUClusterResolver() # TPU detection
+except ValueError:
+  tpu = None
+if tpu:
+  policyConfig = 'mixed_bfloat16'
+else:
+  policyConfig = 'mixed_float16'
+policy = tf.keras.mixed_precision.Policy(policyConfig)
+tf.keras.mixed_precision.set_global_policy(policy)
+'''
 
 
 from genbank.file import File
@@ -28,6 +44,7 @@ def is_valid_file(x):
 		raise argparse.ArgumentTypeError("{0} does not exist".format(x))
 	return x
 
+# @tf.function
 def pack(features): #labels,datas,windows): #features):
 	labels,datas,windows = tf.split(features, [1,3,99], axis=-1)
 	labels = tf.cast(labels, dtype=tf.int32)
@@ -45,7 +62,7 @@ def rev_comp(seq):
 	return "".join([seq_dict[base] for base in reversed(seq)])
 
 
-def parse_genbank(infile):
+def iter_genbank(infile):
 	genbank = File(infile.decode())
 	for locus in genbank:
 		for data in parse_locus(locus):
@@ -61,6 +78,9 @@ class LossHistoryCallback(tf.keras.callbacks.Callback):
 			row.append(value)
 		print('\t'.join(map(str,row)), flush=True)
 
+#for row in iter_genbank(sys.argv[1].encode()):
+#	print(row)
+#exit()
 
 if __name__ == '__main__':
 	usage = '%s [-opt1, [-opt2, ...]] directory' % __file__
@@ -72,13 +92,14 @@ if __name__ == '__main__':
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
+
 	filenames = [os.path.join(args.directory,f) for f in listdir(args.directory) if isfile(join(args.directory, f))]
 	print("Starting...")
 	with tf.device('/device:GPU:0'):
 		dataset = tf.data.Dataset.from_tensor_slices(filenames)
 		dataset = dataset.interleave(
 							lambda x: tf.data.Dataset.from_generator(
-								parse_genbank,
+								iter_genbank,
 								args=(x,),
 								output_signature=(
 									tf.TensorSpec(shape=(6,103),dtype=tf.float32)
@@ -86,16 +107,16 @@ if __name__ == '__main__':
 							),
 							num_parallel_calls=tf.data.AUTOTUNE,
 							#cycle_length=70,
-							block_length=10
+							block_length=1
 							)
 		dataset = dataset.unbatch()
 		dataset = dataset.map(pack)
 		#dataset = dataset.shuffle(buffer_size=1000)
-		dataset = dataset.batch(4000)
+		dataset = dataset.batch(512)
 		dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
 		log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-		tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch = '1000,1010')
+		tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch = '512,1024')
 	
 		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath="multi",save_weights_only=True,verbose=1)
 
@@ -109,5 +130,5 @@ if __name__ == '__main__':
 			dataset,
 			epochs          = 3,
 			verbose         = 1,
-			callbacks=[ cp_callback] #, LossHistoryCallback() ] #,tensorboard_callback]
+			callbacks=[ cp_callback, tensorboard_callback] #, LossHistoryCallback() ] #,tensorboard_callback]
 		)
