@@ -72,7 +72,7 @@ def ppack(features):
 def pack(features): #labels,datas,windows): #features):
 	#labels,datas,windows = tf.split(features, [1,3,99], axis=-1)
 	labels,windows = tf.split(features, [1,99], axis=-1)
-	labels = tf.cast(labels, dtype=tf.int32)
+	#labels = tf.cast(labels, dtype=tf.int32)
 	labels = tf.one_hot(labels, depth=3, axis=-1) #, dtype=tf.int32)
 	#labels = tf.reshape(labels, [-1])
 	labels = tf.squeeze(labels)
@@ -115,11 +115,11 @@ if __name__ == '__main__':
 		generator = lambda : parse_locus(locus)
 		dataset = tf.data.Dataset.from_generator(
 								generator,
-								output_signature=(tf.TensorSpec(shape=(6,100),dtype=tf.float32))
+								output_signature=(tf.TensorSpec(shape=(6,100),dtype=tf.int32))
 								)
 		dataset = dataset.unbatch()
 		dataset = dataset.map(pack)
-		dataset = dataset.batch(1)
+		dataset = dataset.batch(512)
 		#for feature in dataset.take(1):
 		#	print( feature )
 		#	exit()
