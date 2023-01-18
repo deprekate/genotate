@@ -1,6 +1,6 @@
 
 all:
-	python3 -m pip install ../genotate/ --user
+	python3 -m pip install ../genotate/
 
 clean:
 	rm -fr build/
