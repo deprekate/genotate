@@ -169,6 +169,29 @@ def blend(args):
 	model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy'])
 	return model
 
+def api(args):
+	#
+	input_ = tf.keras.layers.Input(shape=(99,), dtype=tf.int32)
+	model_ = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(input_)
+	model_ = tf.keras.layers.Conv1D(filters=104, kernel_size=7, padding='same', activation='relu' )(model_)
+	model_ = tf.keras.layers.Conv1D(filters=104, kernel_size=7, padding='same', activation='relu' )(model_)
+	model_ = tf.keras.layers.Conv1D(filters=104, kernel_size=7, padding='same', activation='relu' )(model_)
+	model_ = tf.keras.layers.Flatten()(model_)
+	model_ = tf.keras.layers.Dense(88, activation='relu')(model_)
+	model_ = tf.keras.layers.Dropout(rate=0.05)(model_)
+	model_ = tf.keras.layers.Dense(88, activation='relu')(model_)
+	model_ = tf.keras.layers.Dropout(rate=0.05)(model_)
+	model_ = tf.keras.layers.Dense(88, activation='relu')(model_)
+	model_ = tf.keras.layers.Dropout(rate=0.05)(model_)
+	model_ = tf.keras.layers.Dense(3, activation='softmax')(model_)
+
+	model = tf.keras.models.Model(input_, outputs=model_)
+
+	#opt = tf.keras.optimizers.Adam(learning_rate=0.001)
+	#custom_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
+	model.compile(loss='categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
+	#model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
+	return model
 
 
 def create_model_api(args):
@@ -201,26 +224,3 @@ def create_model_api(args):
 	#model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
 	return model
 
-def api(args):
-	#
-	input_ = tf.keras.layers.Input(shape=(99,), dtype=tf.int32)
-	model_ = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(input_)
-	model_ = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(model_)
-	model_ = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(model_)
-	model_ = tf.keras.layers.Conv1D(filters=99, kernel_size=9, padding='same', activation='relu' )(model_)
-	model_ = tf.keras.layers.Flatten()(model_)
-	model_ = tf.keras.layers.Dense(99, activation='relu')(model_)
-	model_ = tf.keras.layers.Dropout(rate=0.05)(model_)
-	model_ = tf.keras.layers.Dense(99, activation='relu')(model_)
-	model_ = tf.keras.layers.Dropout(rate=0.05)(model_)
-	model_ = tf.keras.layers.Dense(99, activation='relu')(model_)
-	model_ = tf.keras.layers.Dropout(rate=0.05)(model_)
-	model_ = tf.keras.layers.Dense(3, activation='softmax')(model_)
-
-	model = tf.keras.models.Model(input_, outputs=model_)
-
-	opt = tf.keras.optimizers.Adam(learning_rate=0.001)
-	custom_loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
-	model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy'])
-	#model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
-	return model

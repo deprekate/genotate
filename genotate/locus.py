@@ -69,7 +69,6 @@ def has_stop(dna, strand):
 
 
 class Locus(Locus, feature=Feature):
-
 	def init(self, args):
 		#self._rbs = score_rbs.ScoreXlationInit()
 		self.stops = ['taa','tga','tag']
@@ -165,7 +164,7 @@ class Locus(Locus, feature=Feature):
 	def skew(self, nucs):
 		windowsize = stepsize = 100 #int(len(self.sequence) / 1000)
 		(nuc_1,nuc_2) = nucs
-		
+	
 		cumulative = 0
 		cm_list = []
 		i = windowsize // 2

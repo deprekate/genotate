@@ -149,7 +149,7 @@ def get_windows(dna):
 			#yield [str(gc), str(-at_skew[n//100]), str(-gc_skew[n//100]) ] + single_window(dna, n+f, -1)
 
 def parse_genbank(infile):
-	genbank = File(infile.decode())
+	genbank = File(infile)
 	# label the positions
 	for locus in genbank:
 		positions = dict()

@@ -10,11 +10,11 @@ import datetime
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 import tensorflow as tf
-from tensorflow.keras import mixed_precision
+#from tensorflow.keras import mixed_precision
 #tf.keras.backend.set_floatx('float16')
 import numpy as np
 
-mixed_precision.set_global_policy('mixed_float16')
+#mixed_precision.set_global_policy('mixed_float16')
 
 '''
 try:
@@ -29,14 +29,13 @@ policy = tf.keras.mixed_precision.Policy(policyConfig)
 tf.keras.mixed_precision.set_global_policy(policy)
 '''
 
-
 from genbank.file import File
-from genotate.functions import *
+from genotate.functions import parse_locus
 from genotate.make_model import create_model_blend, blend, api
 
-#physical_devices = tf.config.experimental.list_physical_devices('GPU')
-#if len(physical_devices) > 0:
-#	tf.config.experimental.set_memory_growth(physical_devices[0], True)
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+if len(physical_devices) > 0:
+	tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 
 def is_valid_file(x):
@@ -44,15 +43,16 @@ def is_valid_file(x):
 		raise argparse.ArgumentTypeError("{0} does not exist".format(x))
 	return x
 
-# @tf.function
 def pack(features): #labels,datas,windows): #features):
-	labels,datas,windows = tf.split(features, [1,3,99], axis=-1)
-	labels = tf.cast(labels, dtype=tf.int32)
+	#labels,windows,datas = tf.split(features, [1,99,3], axis=-1)
+	labels,windows = tf.split(features, [1,99], axis=-1)
+	#labels = tf.cast(labels, dtype=tf.int32)
 	labels = tf.one_hot(labels, depth=3, axis=-1) #, dtype=tf.int32)
 	#labels = tf.reshape(labels, [-1])
 	labels = tf.squeeze(labels)
 	#print(labels) ; print(datas) ; print(windows)
-	return (windows, datas) , labels
+	#return (windows, datas) , labels
+	return windows , labels
 
 def rev_comp(seq):
 	seq_dict = {'a':'t','t':'a','g':'c','c':'g',
@@ -78,7 +78,10 @@ class LossHistoryCallback(tf.keras.callbacks.Callback):
 			row.append(value)
 		print('\t'.join(map(str,row)), flush=True)
 
-#for row in iter_genbank(sys.argv[1].encode()):
+
+#np.set_printoptions(linewidth=500)
+#np.set_printoptions(formatter={'all': lambda x: " {:.0f} ".format(x)})
+#for row in iter_genbank('test/phiX174.fna'.encode()):
 #	print(row)
 #exit()
 
@@ -94,41 +97,47 @@ if __name__ == '__main__':
 
 
 	filenames = [os.path.join(args.directory,f) for f in listdir(args.directory) if isfile(join(args.directory, f))]
+	#filenames = list()
+	#for f in [os.path.join(args.directory,f) for f in listdir(args.directory) if isfile(join(args.directory, f))]:
+	#	if f[54] == '0':
+	#		filenames.append(f)
+	
 	print("Starting...")
 	with tf.device('/device:GPU:0'):
-		dataset = tf.data.Dataset.from_tensor_slices(filenames)
-		dataset = dataset.interleave(
-							lambda x: tf.data.Dataset.from_generator(
-								iter_genbank,
-								args=(x,),
-								output_signature=(
-									tf.TensorSpec(shape=(6,103),dtype=tf.float32)
-								)
-							),
-							num_parallel_calls=tf.data.AUTOTUNE,
-							#cycle_length=70,
-							block_length=1
+		model = api(args)
+		#model = blend(args)
+	dataset = tf.data.Dataset.from_tensor_slices(filenames)
+	dataset = dataset.interleave(
+						lambda x: tf.data.Dataset.from_generator(
+							iter_genbank,
+							args=(x,),
+							output_signature=(
+								tf.TensorSpec(shape=(6,100),dtype=tf.int32)
 							)
-		dataset = dataset.unbatch()
-		dataset = dataset.map(pack)
-		#dataset = dataset.shuffle(buffer_size=1000)
-		dataset = dataset.batch(512)
-		dataset = dataset.prefetch(tf.data.AUTOTUNE)
+						),
+						num_parallel_calls=tf.data.AUTOTUNE,
+						#cycle_length=70,
+						block_length=10
+						)
+	dataset = dataset.unbatch()
+	dataset = dataset.map(pack)
+	#dataset = dataset.shuffle(buffer_size=1000)
+	dataset = dataset.batch(4096)
+	dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
-		log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-		tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch = '512,1024')
-	
-		cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath="multi",save_weights_only=True,verbose=1)
+	log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+	tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch = '512,1024')
 
-		#for feature in dataset.take(1):
-		#	print( feature )
-		#exit()
+	cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath="multi",save_weights_only=True,verbose=1)
 
-		model = blend(args)
-		#model = create_model_blend(args)
-		model.fit(
-			dataset,
-			epochs          = 3,
-			verbose         = 1,
-			callbacks=[ cp_callback, tensorboard_callback] #, LossHistoryCallback() ] #,tensorboard_callback]
-		)
+	#for feature in dataset.take(1):
+	#	print( feature )
+	#exit()
+
+	#model = create_model_blend(args)
+	model.fit(
+		dataset,
+		epochs          = 10,
+		verbose         = 0,
+		callbacks=[ cp_callback, LossHistoryCallback() ] #,tensorboard_callback]
+	)

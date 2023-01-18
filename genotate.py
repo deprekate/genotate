@@ -25,9 +25,9 @@ import numpy as np
 # TensorFlow and tf.keras
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
-physical_devices = tf.config.experimental.list_physical_devices('GPU')
-if len(physical_devices) > 0:
-	tf.config.experimental.set_memory_growth(physical_devices[0], True)
+#physical_devices = tf.config.experimental.list_physical_devices('GPU')
+#if len(physical_devices) > 0:
+#	tf.config.experimental.set_memory_growth(physical_devices[0], True)
 import ruptures as rpt
 
 
@@ -70,13 +70,15 @@ def ppack(features):
 	return ((b,a),)
 
 def pack(features): #labels,datas,windows): #features):
-	labels,datas,windows = tf.split(features, [1,3,99], axis=-1)
+	#labels,datas,windows = tf.split(features, [1,3,99], axis=-1)
+	labels,windows = tf.split(features, [1,99], axis=-1)
 	labels = tf.cast(labels, dtype=tf.int32)
 	labels = tf.one_hot(labels, depth=3, axis=-1) #, dtype=tf.int32)
 	#labels = tf.reshape(labels, [-1])
 	labels = tf.squeeze(labels)
 	#print(labels) ; print(datas) ; print(windows)
-	return (windows, datas) , labels
+	#return (windows, datas) , labels
+	return windows , labels
 
 
 if __name__ == '__main__':
@@ -98,7 +100,8 @@ if __name__ == '__main__':
 	#ckpt_reader = tf.train.load_checkpoint(args.model)
 	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
 	#model = mm.create_model_deep(n)
-	model = blend(args)
+	#model = blend(args)
+	model = api(args)
 	#name = args.infile.split('/')[-1]
 	#me = name[10] if len(name) > 10 else None
 	#model.load_weights( "out/win_sub_w117_kern3/win_sub_trim=15,reg=False,fold=" + str(me) + ".ckpt" ).expect_partial()
@@ -112,7 +115,7 @@ if __name__ == '__main__':
 		generator = lambda : parse_locus(locus)
 		dataset = tf.data.Dataset.from_generator(
 								generator,
-								output_signature=(tf.TensorSpec(shape=(6,103),dtype=tf.float32))
+								output_signature=(tf.TensorSpec(shape=(6,100),dtype=tf.float32))
 								)
 		dataset = dataset.unbatch()
 		dataset = dataset.map(pack)
@@ -159,9 +162,9 @@ if __name__ == '__main__':
 						pairs = [ list(map(str,[3*(index+left)+frame+1, 3*(index+right)+frame])) ]
 						feature = locus.add_feature('CDS', strand, pairs) 
 						feature.tags['colour'] = ["100 100 100"]
-						start = [feature.left(), feature.right()][::feature.strand][0]
-						n = locus.nearest(start,feature.strand,['atg','gtg','ttg'])
-						feature.tags['NSTOP'] = [abs(n-start)]
+						#start = [feature.left(), feature.right()][::feature.strand][0]
+						#n = locus.nearest(start,feature.strand,['atg','gtg','ttg'])
+						#feature.tags['NSTOP'] = [abs(n-start)]
 
 		# merge regions
 		locus.merge()

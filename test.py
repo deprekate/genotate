@@ -16,20 +16,6 @@ import tensorflow as tf
 #os.environ['TF_ENABLE_AUTO_MIXED_PRECISION'] = '1'
 import numpy as np
 
-'''
-try:
-  tpu = tf.distribute.cluster_resolver.TPUClusterResolver() # TPU detection
-except ValueError:
-  tpu = None
-
-if tpu:
-  policyConfig = 'mixed_bfloat16'
-else:
-  policyConfig = 'mixed_float16'
-policy = tf.keras.mixed_precision.Policy(policyConfig)
-tf.keras.mixed_precision.set_global_policy(policy)
-'''
-
 
 from genbank.file import File
 from genotate.functions import *
