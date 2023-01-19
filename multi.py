@@ -30,7 +30,7 @@ tf.keras.mixed_precision.set_global_policy(policy)
 '''
 
 from genbank.file import File
-from genotate.functions import parse_locus
+from genotate.functions import parse_locus 
 from genotate.make_model import create_model_blend, blend, api
 
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
@@ -117,7 +117,7 @@ if __name__ == '__main__':
 						),
 						num_parallel_calls=tf.data.AUTOTUNE,
 						#cycle_length=70,
-						block_length=10
+						block_length=8
 						)
 	dataset = dataset.unbatch()
 	dataset = dataset.map(pack)
@@ -126,7 +126,7 @@ if __name__ == '__main__':
 	dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
 	log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-	tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch = '512,1024')
+	tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch = '1512,2024')
 
 	cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath="multi",save_weights_only=True,verbose=1)
 
@@ -139,5 +139,5 @@ if __name__ == '__main__':
 		dataset,
 		epochs          = 10,
 		verbose         = 0,
-		callbacks=[ cp_callback, LossHistoryCallback() ] #,tensorboard_callback]
+		callbacks=[ cp_callback, LossHistoryCallback() ,tensorboard_callback]
 	)

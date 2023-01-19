@@ -223,6 +223,7 @@ def model_builder(hp):
 from keras.layers import Activation
 from keras import backend as K
 from keras.utils.generic_utils import get_custom_objects
+import keras_tuner as kt
 class HyperRegressor(kt.HyperModel):
 	def build(self, hp):
 		get_custom_objects().update({'leaky-relu': Activation(tf.keras.layers.LeakyReLU(alpha=0.2))})

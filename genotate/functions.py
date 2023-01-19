@@ -115,9 +115,9 @@ def skew(seq, nucs):
 	slopes.append(m)
 	return slopes
 
-
 def parse_locus(locus):
-		#for locus in genbank:
+		#def iter_genbank(infile):
+		#for locus in File(infile.decode()):
 		# label the positions
 		positions = dict()
 		for feature in locus.features(include=['CDS']):
@@ -143,23 +143,27 @@ def parse_locus(locus):
 			#if base in 'acgt':
 			forward[i+48] = ((ord(base) >> 1) & 3) + 1
 			reverse[i+48] = ((forward[i+48] - 3) % 4) + 1
-		a = np.zeros([6, 100])
+		a = np.zeros([6, 100], dtype=int)
 		#a[:,100] = locus.gc_content() 
 		for n in range(0, len(dna)-2, 3):
-			for f in [0,1,2]:
-				i = n+f
-				#yield positions.get( n+f, 2) , [ gc,  at_skew[n//100],  gc_skew[n//100] ] , forward[n+f : n+f+99 ]
-				#yield positions.get(-n+f, 2) , [ gc, -at_skew[n//100], -gc_skew[n//100] ] , reverse[n+f : n+f+99 ][::-1]
-				#yield (np.array(positions.get( n+f, 2)), forward[n+f : n+f+99 ])
-				#yield (positions.get(-n+f, 2) , reverse[n+f : n+f+99 ][::-1])
-				#
-				pos = n//100
-				a[2*f  ,0] = positions.get( i, 2)
-				a[2*f+1,0] = positions.get(-i, 2)
-				a[2*f  ,1:100] = forward[i : i+99 ]
-				a[2*f+1,1:100] = reverse[i : i+99 ][::-1]
-				#a[2*f  ,101] =  at_skew[pos]
-				#a[2*f+1,101] = -at_skew[pos]
-				#a[2*f  ,102] =  gc_skew[pos]
-				#a[2*f+1,102] = -gc_skew[pos]
+			#pos = n//100
+			i = n + 0
+			a[0,0] = positions.get( i, 2)
+			a[1,0] = positions.get(-i, 2)
+			a[0,1:100] = forward[i : i+99 ]
+			a[1,1:100] = reverse[i : i+99 ]#[::-1]
+			i = n + 1
+			a[2,0] = positions.get( i, 2)
+			a[3,0] = positions.get(-i, 2)
+			a[2,1:100] = forward[i : i+99 ]
+			a[3,1:100] = reverse[i : i+99 ]#[::-1]
+			i = n + 2
+			a[4,0] = positions.get( i, 2)
+			a[5,0] = positions.get(-i, 2)
+			a[4,1:100] = forward[i : i+99 ]
+			a[5,1:100] = reverse[i : i+99 ]#[::-1]
+			#a[2*f  ,101] =  at_skew[pos]
+			#a[2*f+1,101] = -at_skew[pos]
+			#a[2*f  ,102] =  gc_skew[pos]
+			#a[2*f+1,102] = -gc_skew[pos]
 			yield a
