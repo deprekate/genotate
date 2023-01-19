@@ -255,6 +255,6 @@ class HyperRegressor(kt.HyperModel):
 		model.compile(loss='categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
 		return model
 
-	#def fit(self, hp, model, dataset, **kwargs):
-	#	mod = model.evaluate(dataset) 
-	#	return mod
+	def fit(self, hp, model, dataset, **kwargs):
+		mod = model.evaluate(dataset) 
+		return mod

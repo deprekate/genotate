@@ -113,26 +113,25 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold)
-	'''
+	physical_devices = tf.config.experimental.list_physical_devices('GPU')
+	tf.config.experimental.set_memory_growth(physical_devices[0], True)
 	if args.kfold == 0:
 		os.environ["KERASTUNER_TUNER_ID"]="chief"
 	else:
-		os.environ["KERASTUNER_TUNER_ID"]="tuner" + str(args.kfold)
+		os.environ["KERASTUNER_TUNER_ID"]="tuner" + str(args.kfold+8)
 	os.environ["KERASTUNER_ORACLE_IP"]="127.0.0.1"
 	os.environ["KERASTUNER_ORACLE_PORT"]="8000"
-	'''
-
 	#filenames = [os.path.join(args.directory,f) for f in listdir(args.directory) if isfile(join(args.directory, f))]
 	filenames = list()
 	valnames = list()
 	for f in [os.path.join(args.directory,f) for f in listdir(args.directory) if isfile(join(args.directory, f))]:
 		#if f[54] == '0':
-		if f[47] == '0': # or f[47] == '7':
+		if f[47] not in '1357': 
 			filenames.append(f)
-		elif f[47] == '5':
+		else:
 			valnames.append(f)
 
-	filenames = filenames[:10] ; valnames = valnames[:10]
+	#filenames = filenames[:12] ; valnames = valnames[:12]
 	print("Starting...")
 
 	dataset = tf.data.Dataset.from_tensor_slices(filenames)
@@ -173,24 +172,21 @@ if __name__ == '__main__':
 						)
 	valset = valset.unbatch().map(pack).batch(4096).prefetch(tf.data.AUTOTUNE)
 
-	with tf.device('/device:GPU:7'):
+	with tf.device('/device:GPU:0'):
 		model = api(args)
 		tuner = kt.Hyperband(HyperRegressor(),
+					 hyperband_iterations=1000,
                      #objective='val_accuracy',
-					 objective='val_loss',
+					 #objective='val_loss',
                      max_epochs=3,
                      factor=3,
                      directory='my_dir',
                      project_name='intro_to_kt')
 		stop_early = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
-		tuner.search(dataset, epochs=3, validation_data=valset, verbose=1, callbacks=[stop_early])
-		print(tuner.get_best_hyperparameters(num_trials=1)[0])
+		#tuner.search(dataset, validation_data=valset, verbose=1, callbacks=[stop_early])
+		tuner.search(dataset, validation_data=valset, verbose=0) #, callbacks=[stop_early])
+		if args.kfold == 0:
+			print(tuner.get_best_hyperparameters(1)[0].values)
+			print(tuner.get_best_hyperparameters(2)[1].values)
+			print(tuner.get_best_hyperparameters(3)[2].values)
 
-
-	#model = create_model_blend(args)
-	#model.fit(
-	#	dataset,
-	#	epochs          = 10,
-	#	verbose         = 0,
-	#	callbacks=[ cp_callback, LossHistoryCallback() ] #,tensorboard_callback]
-	#)
