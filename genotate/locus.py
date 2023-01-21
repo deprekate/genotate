@@ -9,8 +9,9 @@ import argparse
 import tempfile
 from collections import Counter
 from argparse import RawTextHelpFormatter
-from itertools import zip_longest, chain, tee, islice
+from itertools import zip_longest, chain, tee, islice, tee
 from itertools import cycle
+from copy import deepcopy
 
 from genbank.locus import Locus
 from genotate.feature import Feature
@@ -22,6 +23,12 @@ def previous_and_next(some_iterable):
 	prevs = chain([None], prevs)
 	nexts = chain(islice(nexts, 1, None), [None])
 	return zip(prevs, items, nexts)
+
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = tee(iterable)
+    next(b, None)
+    return zip(a, b)
 
 def count(dq, item):
 	return sum(elem == item for elem in dq)
@@ -66,7 +73,6 @@ def has_stop(dna, strand):
 		if dna[i:i+3] in codons:
 			return True
 	return False
-
 
 class Locus(Locus, feature=Feature):
 	def init(self, args):
@@ -145,21 +151,33 @@ class Locus(Locus, feature=Feature):
 			_last = _curr
 			_curr = _next
 
-	def check_sequencing_error(self):
-		for _last, _curr, _ in previous_and_next(sorted(self)):
-			if _last is None or (_last.type != 'CDS') or (_curr.type != 'CDS'):
-				pass
-			elif _curr.strand != _last.strand:
-				pass
-			elif _curr.strand > 0:
-				print(_last.right(), _curr.left(), _curr.start_distance())
-			elif _curr.strand < 0:
-				pass
+	def split(self):
+		stops = ['taa','tga','tag']
+		for feature in sorted(self):
+			stop_locations = [feature.left()]
+			for loc,codon in zip(feature.codon_locations(), feature.codons()):
+				if codon in stops:
+					stop_locations.append(loc[0])
+			stop_locations.append(feature.right())
+			del self[feature]
+			for pair in pairwise(sorted(set(stop_locations))):
+				copy = deepcopy(feature)
+				copy.pairs = tuple([tuple(map(str,pair)) for pair in [[item+1 for item in pair]]])
+				self[copy] = True
 
-	def adjust_ends(self, starts, stops):
-		pass
-		for feature in self:
-			feature.adjust_stop()
+
+	def adjust(self):
+		stops = ['taa','tga','tag']
+		for feature in sorted(self):
+			if feature.stop_codon() not in stops:
+				del self[feature]
+				if feature.strand > 0:
+					n = self.next(feature.left(),  stops, feature.strand)
+					feature.set_right(n+3)
+				else:
+					n = self.last(feature.right(), stops, feature.strand)
+					feature.set_left(n+1)
+				self[feature] = True
 
 	def skew(self, nucs):
 		windowsize = stepsize = 100 #int(len(self.sequence) / 1000)

@@ -188,8 +188,9 @@ def api(args):
 	model = tf.keras.models.Model(input_, outputs=model_)
 
 	#opt = tf.keras.optimizers.Adam(learning_rate=0.001)
+	opt = tf.keras.optimizers.legacy.Adam()
 	#custom_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
-	model.compile(loss='categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
+	model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
 	#model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
 	return model
 
@@ -222,7 +223,7 @@ def model_builder(hp):
 
 from keras.layers import Activation
 from keras import backend as K
-from keras.utils.generic_utils import get_custom_objects
+#from keras.utils.generic_utils import get_custom_objects
 import keras_tuner as kt
 class HyperRegressor(kt.HyperModel):
 	def build(self, hp):
