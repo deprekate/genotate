@@ -187,8 +187,11 @@ def api(args):
 
 	model = tf.keras.models.Model(input_, outputs=model_)
 
-	#opt = tf.keras.optimizers.Adam(learning_rate=0.001)
-	opt = tf.keras.optimizers.legacy.Adam()
+	
+	try:
+		opt = tf.keras.optimizers.legacy.Adam()
+	except:
+		opt = tf.keras.optimizers.Adam(learning_rate=0.001)
 	#custom_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
 	model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
 	#model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
