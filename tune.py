@@ -111,16 +111,18 @@ if __name__ == '__main__':
 	parser.add_argument('-t', '--trim', action="store", default=0, type=int, help='how many bases to trim off window ends')
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
-
-	os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold)
-	physical_devices = tf.config.experimental.list_physical_devices('GPU')
-	tf.config.experimental.set_memory_growth(physical_devices[0], True)
+	
 	if args.kfold == 0:
+		os.environ["CUDA_VISIBLE_DEVICES"]="0"
 		os.environ["KERASTUNER_TUNER_ID"]="chief"
 	else:
-		os.environ["KERASTUNER_TUNER_ID"]="tuner" + str(args.kfold+8)
+		os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold%7+1)
+		os.environ["KERASTUNER_TUNER_ID"]="tuner" + str(args.kfold)
 	os.environ["KERASTUNER_ORACLE_IP"]="127.0.0.1"
 	os.environ["KERASTUNER_ORACLE_PORT"]="8000"
+	physical_devices = tf.config.experimental.list_physical_devices('GPU')
+	tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
 	#filenames = [os.path.join(args.directory,f) for f in listdir(args.directory) if isfile(join(args.directory, f))]
 	filenames = list()
 	valnames = list()
@@ -178,13 +180,13 @@ if __name__ == '__main__':
 					 hyperband_iterations=1000,
                      #objective='val_accuracy',
 					 #objective='val_loss',
-                     max_epochs=3,
+                     max_epochs=10,
                      factor=3,
-                     directory='my_dir',
+                     directory='final',
                      project_name='intro_to_kt')
 		stop_early = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
 		#tuner.search(dataset, validation_data=valset, verbose=1, callbacks=[stop_early])
-		tuner.search(dataset, validation_data=valset, verbose=0) #, callbacks=[stop_early])
+		tuner.search(dataset, validation_data=valset, verbose=1) #, callbacks=[stop_early])
 		if args.kfold == 0:
 			print(tuner.get_best_hyperparameters(1)[0].values)
 			print(tuner.get_best_hyperparameters(2)[1].values)

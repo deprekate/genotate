@@ -226,28 +226,27 @@ from keras.utils.generic_utils import get_custom_objects
 import keras_tuner as kt
 class HyperRegressor(kt.HyperModel):
 	def build(self, hp):
-		get_custom_objects().update({'leaky-relu': Activation(tf.keras.layers.LeakyReLU(alpha=0.2))})
 		inputs = tf.keras.layers.Input(shape=(99,), dtype=tf.int32)
 		x = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(inputs)
 		# Tune the number of units in the first Dense layer
 		# Choose an optimal value between 32-512
-		for i in range(hp.Int("conv_layers", 2, 5, default=3)):
+		for i in range(hp.Int("conv_layers", 2, 5, default=5)):
 			x = tf.keras.layers.Conv1D(
-				filters=hp.Int("filters_" + str(i), 72, 128, step=8, default=96),
-				kernel_size=hp.Int("kernel_size_" + str(i), 3, 12, default=7),
-				activation=hp.Choice("activation", ["relu", "tanh","selu","leaky-relu"], default='relu'),
-				padding="same",
+				filters     = hp.Int(f"filters_{i}", 72, 128, step=8, default=96),
+				kernel_size = hp.Int(f"kernels_{i}",  3,  12, step=1, default= 7),
+				activation  = "relu",
+				padding     = "same",
 			)(x)
 		x = tf.keras.layers.Flatten()(x)
+		d = hp.Float("dropout", 0.00, 0.10, step=0.01, default=0.05)
 		for i in range(hp.Int("dense_layers", 1, 3, default=3)):
 			x = tf.keras.layers.Dense(
-				hp.Int("neurons_" + str(i), 72, 120, step=8, default=96),
-				activation=hp.Choice("activation", ["relu", "tanh","selu","leaky-relu"], default='relu')
+				units=hp.Int(f"neurons_{i}", min_value=72, max_value=128, step=8),
+				activation='relu'
 			)(x)
-			if hp.Boolean("dropout"):
-				x = tf.keras.layers.Dropout(
-					rate=hp.Float("dropout_" + str(i), 0.01, 0.10, step=0.01, default=0.05)
-				)(x)
+			x = tf.keras.layers.Dropout(
+				rate=d
+			)(x)
 		outputs = tf.keras.layers.Dense(3, activation='softmax')(x)
 	
 		model = tf.keras.models.Model(inputs, outputs)
