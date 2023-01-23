@@ -3,8 +3,12 @@ import textwrap
 
 
 class Feature(Feature):
+
 	def more(self):
 		return "mooore"
+
+	def stop_codon(self):
+		return self.seq()[-3:]
 
 	def nearest_start(self):
 		if self.strand > 0:
@@ -54,16 +58,5 @@ class Feature(Feature):
 			pairs = [list(tup) for tup in self.pairs]
 			pairs[-1][-1] = str(right)
 			self.pairs = tuple([tuple(lis) for lis in pairs])
-
-
-	def adjust_stop(self):
-		if self.stop_codon() not in ['taa','tag','tga']:
-			if self.strand > 0:
-				self.set_right(self.nearest_stop())
-			else:
-				self.set_right(self.nearest_stop())
-
-
-
 
 
