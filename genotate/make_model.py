@@ -221,9 +221,6 @@ def model_builder(hp):
 	model.compile(loss='categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
 	return model
 
-from keras.layers import Activation
-from keras import backend as K
-#from keras.utils.generic_utils import get_custom_objects
 import keras_tuner as kt
 class HyperRegressor(kt.HyperModel):
 	def build(self, hp):
