@@ -126,7 +126,7 @@ if __name__ == '__main__':
 	dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
 	log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-	tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch = '1512,2024')
+	#tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch = '1512,2024')
 
 	cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath="multi",save_weights_only=True,verbose=1)
 
@@ -138,6 +138,6 @@ if __name__ == '__main__':
 	model.fit(
 		dataset,
 		epochs          = 10,
-		verbose         = 0,
-		callbacks=[ cp_callback, LossHistoryCallback() ,tensorboard_callback]
+		verbose         = 1,
+		callbacks=[ cp_callback, LossHistoryCallback()] # ,tensorboard_callback]
 	)

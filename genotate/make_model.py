@@ -240,7 +240,7 @@ class HyperRegressor(kt.HyperModel):
 			)(x)
 		x = tf.keras.layers.Flatten()(x)
 		d = hp.Float("dropout", 0.00, 0.10, step=0.01, default=0.05)
-		for i in range(hp.Int("dense_layers", 1, 3, default=3)):
+		for i in range(hp.Int("dense_layers", 1, 4, default=4)):
 			x = tf.keras.layers.Dense(
 				units=hp.Int(f"neurons_{i}", min_value=72, max_value=128, step=8),
 				activation='relu'
@@ -255,6 +255,6 @@ class HyperRegressor(kt.HyperModel):
 		model.compile(loss='categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
 		return model
 
-	def fit(self, hp, model, dataset, **kwargs):
-		mod = model.evaluate(dataset) 
-		return mod
+	#def fit(self, hp, model, dataset, **kwargs):
+	#	mod = model.evaluate(dataset) 
+	#	return mod
