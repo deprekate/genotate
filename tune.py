@@ -116,6 +116,7 @@ if __name__ == '__main__':
 		os.environ["CUDA_VISIBLE_DEVICES"]="0"
 		os.environ["KERASTUNER_TUNER_ID"]="chief"
 	else:
+		#os.environ["CUDA_VISIBLE_DEVICES"]="0"
 		os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold%7+1)
 		os.environ["KERASTUNER_TUNER_ID"]="tuner" + str(args.kfold)
 	os.environ["KERASTUNER_ORACLE_IP"]="127.0.0.1"
@@ -126,12 +127,11 @@ if __name__ == '__main__':
 	#filenames = [os.path.join(args.directory,f) for f in listdir(args.directory) if isfile(join(args.directory, f))]
 	filenames = list()
 	valnames = list()
-	for f in [os.path.join(args.directory,f) for f in listdir(args.directory) if isfile(join(args.directory, f))]:
-		#if f[54] == '0':
-		if f[47] not in '1357': 
-			filenames.append(f)
+	for f in listdir(args.directory):
+		if f[9] not in '1357': 
+			filenames.append(os.path.join(args.directory,f))
 		else:
-			valnames.append(f)
+			valnames.append(os.path.join(args.directory,f))
 
 	#filenames = filenames[:12] ; valnames = valnames[:12]
 	print("Starting...")
@@ -178,15 +178,15 @@ if __name__ == '__main__':
 		model = api(args)
 		tuner = kt.Hyperband(HyperRegressor(),
 					 hyperband_iterations=1000,
-                     #objective='val_accuracy',
+                     objective='val_accuracy',
 					 #objective='val_loss',
                      max_epochs=10,
                      factor=3,
                      directory='final',
                      project_name='intro_to_kt')
 		stop_early = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
-		#tuner.search(dataset, validation_data=valset, verbose=1, callbacks=[stop_early])
-		tuner.search(dataset, validation_data=valset, verbose=1) #, callbacks=[stop_early])
+		
+		tuner.search(dataset, validation_data=valset, verbose=0) #, callbacks=[]) #stop_early])
 		if args.kfold == 0:
 			print(tuner.get_best_hyperparameters(1)[0].values)
 			print(tuner.get_best_hyperparameters(2)[1].values)
