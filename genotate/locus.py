@@ -15,6 +15,7 @@ from copy import deepcopy
 
 from genbank.locus import Locus
 from genotate.feature import Feature
+from genotate.functions import rev_comp
 
 import numpy as np
 
@@ -101,7 +102,7 @@ class Locus(Locus, feature=Feature):
 	def merge(self):	
 		_last = _curr = None
 		#for _, _, _next in previous_and_next(sorted(self)):
-		for _next in sorted(self):
+		for _next in chain(sorted(self), [None]):
 			# THIS JUST MKES SURE THE FEATURE LOCATIONS ARE IN THE SAME FRAME
 			#for i in _curr.base_locations():
 			#	_curr.dna += self.dna[ i-1 : i ]
@@ -134,37 +135,27 @@ class Locus(Locus, feature=Feature):
 					self[_last] = True
 					_last,_curr = _curr,_last
 					continue
-			elif _curr.strand > 0:
-				pass
-			elif _curr.strand < 0:
-				'''
-				if abs(_curr.stop_distance()) > 100 and _curr.nearest_stop() < _last.right():
-					del self[_last]
-					del self[_curr]
-					_last.pairs = _last.pairs + _curr.pairs
-					_last.tags['joined'] = ['true']
-					self[_last] = True
-					_curr = _next
-					continue
-				'''
-				pass
 			_last = _curr
 			_curr = _next
 
 	def split(self):
 		stops = ['taa','tga','tag']
 		for feature in sorted(self):
-			stop_locations = [feature.left()]
+			stop_locations = [feature.left()-3]
 			for loc,codon in zip(feature.codon_locations(), feature.codons()):
 				if codon in stops:
-					stop_locations.append(loc[0])
+					stop_locations.append(loc[0]+0)
 			stop_locations.append(feature.right())
 			del self[feature]
 			for pair in pairwise(sorted(set(stop_locations))):
-				copy = deepcopy(feature)
-				copy.pairs = tuple([tuple(map(str,pair)) for pair in [[item+1 for item in pair]]])
-				self[copy] = True
+				if pair[1]-pair[0] > 30:
+					if feature.strand > 0:
+						pairs = [[pair[0]+4,pair[1]+3]]
+					else:
+						pairs = [[pair[0]+1,pair[1]+0]]
 
+					pairs = tuple([tuple(map(str,pair)) for pair in pairs])
+					self.add_feature('CDS', feature.strand, pairs, tags=feature.tags)
 
 	def adjust(self):
 		stops = ['taa','tga','tag']
@@ -172,12 +163,44 @@ class Locus(Locus, feature=Feature):
 			if feature.stop_codon() not in stops:
 				del self[feature]
 				if feature.strand > 0:
-					n = self.next(feature.left(),  stops, feature.strand)
-					feature.set_right(n+3)
+					left  = self.last(feature.right(),  stops, feature.strand)
+					right = self.next(feature.right(),  stops, feature.strand)
+					left  = left  if left  else 0
+					right = right if right else self.length()-3
+					# goto closer stop
+					if feature.right() - left < right - feature.right():
+						feature.set_right(left+3)
+					else:
+						feature.set_right(right+3)
 				else:
-					n = self.last(feature.right(), stops, feature.strand)
-					feature.set_left(n+1)
+					left  = self.next(feature.left(), stops, feature.strand)
+					right = self.last(feature.left(), stops, feature.strand)
+					left = left if left else 0
+					right = right if right else self.length()-3
+					# goto closer stop
+					if feature.left() - left < right - feature.left():
+						feature.set_left(left+1)
+					else:
+						feature.set_left(left+1)
 				self[feature] = True
+
+	def count_starts(self):
+		counts = dict()
+		for feature in self:
+			codon = feature.seq()[0:3]
+			counts[codon] = counts.setdefault(codon,0) + 1
+		return counts
+
+	def count_stops(self):
+		counts = {item : 0 for item in self.stops}
+		for feature in self.features(include='CDS'):
+			dna = feature.seq()
+			for i in range(30, len(dna) - 30, 3):
+				if dna[i:i+3] in self.stops:
+					counts[dna[i:i+3]] += 1
+		for stop in counts:
+			counts[stop] /= self.seq().count(stop) + self.seq().count(rev_comp(stop))
+		return counts
 
 	def skew(self, nucs):
 		windowsize = stepsize = 100 #int(len(self.sequence) / 1000)

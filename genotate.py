@@ -112,6 +112,7 @@ if __name__ == '__main__':
 	genbank = File(args.infile)
 	for locus in genbank:
 		locus.clear()
+		locus.stops = ['taa','tga','tag']
 		generator = lambda : parse_locus(locus)
 		dataset = tf.data.Dataset.from_generator(
 								generator,
@@ -166,14 +167,24 @@ if __name__ == '__main__':
 						#n = locus.nearest(start,feature.strand,['atg','gtg','ttg'])
 						#feature.tags['NSTOP'] = [abs(n-start)]
 
+		
+		
+
+
+		#stop_counts = locus.count_stops()
+
 		# merge regions
 		locus.merge()
 
 		# split regions on stop codons
-		locus.split()
+		#locus.split()
 
 		# adjust ends
-		locus.adjust()
+		#locus.adjust()
+
+		#counts = locus.count_starts()
+		#print( { k: v for k, v in sorted(counts.items(), key=lambda item: item[1], reverse=True)} )
+		#exit()
 
 		# sort them so they are in numerical order instead of by frame
 		# this may be a bad way to do this
