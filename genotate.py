@@ -110,7 +110,7 @@ if __name__ == '__main__':
 	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
 	#model = mm.create_model_deep(n)
 	#model = blend(args)
-	with quiet() ,tf.device('/device:GPU:0'):
+	with quiet() ,tf.device('/device:GPU:0'), quiet():
 		model = api(args)
 		#name = args.infile.split('/')[-1]
 		#me = name[10] if len(name) > 10 else None
