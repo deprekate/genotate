@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import logging
 import os
 import sys
 import argparse
@@ -8,28 +9,34 @@ from statistics import mode
 
 import faulthandler
 
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+logging.getLogger('tensorflow').setLevel(logging.FATAL)
 sys.path.pop(0)
 from genotate.file import File
 import genotate.make_train as mt
 from genotate.make_model import create_model_blend, blend, api
 from genotate.make_train import get_windows
 from genotate.functions import *
-#from genotate.windows import get_windows
-#from genotate.mt import get_windows
-
 	
 # Helper libraries
-os.environ['OPENBLAS_NUM_THREADS'] = '1'
-os.environ['MKL_NUM_THREADS'] = '1'
 import numpy as np
 # TensorFlow and tf.keras
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
 if len(physical_devices) > 0:
 	tf.config.experimental.set_memory_growth(physical_devices[0], True)
 import ruptures as rpt
 
+
+class quiet:
+	def __enter__(self):
+		fd = os.open('/dev/null',os.O_WRONLY)
+		self.savefd = os.dup(1)
+		os.dup2(fd,1)
+	def __exit__(self, *args):
+		os.dup2(self.savefd,1)
 
 nucs = ['T', 'C', 'A', 'G']
 codons = [a+b+c for a in nucs for b in nucs for c in nucs]
@@ -86,28 +93,31 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='', formatter_class=RawTextHelpFormatter, usage=usage)
 	parser.add_argument('infile', type=is_valid_file, help='input file')
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
+	parser.add_argument('-f', '--format', help='Output the features in the specified format', type=str, default='genbank', choices=['gbk','gff3','gff'])
 	parser.add_argument('-m', '--model', help='', required=True)
 	parser.add_argument('-c', '--cutoff', help='The minimum cutoff length for runs', type=int, default=29)
 	parser.add_argument('-g', '--genes', action="store_true")
 	#parser.add_argument('-a', '--amino', action="store_true")
 	parser.add_argument('-a', '--activation', action="store", default='relu', type=str, help='activation function')
-	parser.add_argument('-f', '--plot_frames', action="store_true")
+	parser.add_argument('-p', '--plot_frames', action="store_true")
 	parser.add_argument('-s', '--plot_strands', action="store_true")
 	parser.add_argument('-t', '--trim', action="store", default=15, type=int, help='how many bases to trim off window ends')
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
+
 	#ckpt_reader = tf.train.load_checkpoint(args.model)
 	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
 	#model = mm.create_model_deep(n)
 	#model = blend(args)
-	model = api(args)
-	#name = args.infile.split('/')[-1]
-	#me = name[10] if len(name) > 10 else None
-	#model.load_weights( "out/win_sub_w117_kern3/win_sub_trim=15,reg=False,fold=" + str(me) + ".ckpt" ).expect_partial()
-	model.load_weights(args.model).expect_partial()
-	#print(model.summary())
-	#faulthandler.enable()
+	with quiet() ,tf.device('/device:GPU:0'):
+		model = api(args)
+		#name = args.infile.split('/')[-1]
+		#me = name[10] if len(name) > 10 else None
+		#model.load_weights( "out/win_sub_w117_kern3/win_sub_trim=15,reg=False,fold=" + str(me) + ".ckpt" ).expect_partial()
+		model.load_weights(args.model).expect_partial()
+		#print(model.summary())
+		#faulthandler.enable()
 
 	genbank = File(args.infile)
 	for locus in genbank:
@@ -124,10 +134,9 @@ if __name__ == '__main__':
 		#for feature in dataset.take(1):
 		#	print( feature )
 		#	exit()
-		#exit()
-		with tf.device('/device:GPU:0'):
+		with quiet():
 			p = model.predict(dataset)
-		
+
 		if args.plot_frames:
 			plot_frames(p)
 		#p = tf.nn.softmax(p).numpy()
@@ -180,7 +189,7 @@ if __name__ == '__main__':
 		#locus.split()
 
 		# adjust ends
-		#locus.adjust()
+		locus.adjust()
 
 		#counts = locus.count_starts()
 		#print( { k: v for k, v in sorted(counts.items(), key=lambda item: item[1], reverse=True)} )
@@ -191,5 +200,5 @@ if __name__ == '__main__':
 		for key in sorted(locus):
 			locus[key] = locus.pop(key)
 		
-		locus.write(args.outfile)
+		locus.write(args.outfile, args=args)
 	

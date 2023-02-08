@@ -139,11 +139,11 @@ class Locus(Locus, feature=Feature):
 			_curr = _next
 
 	def split(self):
-		stops = ['taa','tga','tag']
+		#stops = ['taa','tga','tag']
 		for feature in sorted(self):
 			stop_locations = [feature.left()-3]
 			for loc,codon in zip(feature.codon_locations(), feature.codons()):
-				if codon in stops:
+				if codon in self.stops:
 					stop_locations.append(loc[0]+0)
 			stop_locations.append(feature.right())
 			del self[feature]
@@ -158,13 +158,13 @@ class Locus(Locus, feature=Feature):
 					self.add_feature('CDS', feature.strand, pairs, tags=feature.tags)
 
 	def adjust(self):
-		stops = ['taa','tga','tag']
+		#stops = ['taa','tga','tag']
 		for feature in sorted(self):
-			if feature.stop_codon() not in stops:
+			if feature.stop_codon() not in self.stops:
 				del self[feature]
 				if feature.strand > 0:
-					left  = self.last(feature.right(),  stops, feature.strand)
-					right = self.next(feature.right(),  stops, feature.strand)
+					left  = self.last(feature.right(), self.stops, feature.strand)
+					right = self.next(feature.right(), self.stops, feature.strand)
 					left  = left  if left  else 0
 					right = right if right else self.length()-3
 					# goto closer stop
@@ -173,8 +173,8 @@ class Locus(Locus, feature=Feature):
 					else:
 						feature.set_right(right+3)
 				else:
-					left  = self.next(feature.left(), stops, feature.strand)
-					right = self.last(feature.left(), stops, feature.strand)
+					left  = self.next(feature.left(), self.stops, feature.strand)
+					right = self.last(feature.left(), self.stops, feature.strand)
 					left = left if left else 0
 					right = right if right else self.length()-3
 					# goto closer stop
