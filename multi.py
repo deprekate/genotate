@@ -6,6 +6,7 @@ from argparse import RawTextHelpFormatter
 from os import listdir
 from os.path import isfile, join
 import datetime
+import time
 
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
@@ -13,7 +14,7 @@ import tensorflow as tf
 #from tensorflow.keras import mixed_precision
 #tf.keras.backend.set_floatx('float16')
 import numpy as np
-
+time.sleep(1)
 #mixed_precision.set_global_policy('mixed_float16')
 
 '''
@@ -30,7 +31,7 @@ tf.keras.mixed_precision.set_global_policy(policy)
 '''
 
 from genbank.file import File
-from genotate.functions import parse_locus 
+from genotate.functions import parse_locus, to_dna 
 from genotate.make_model import create_model_blend, blend, api
 
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
@@ -81,8 +82,9 @@ class LossHistoryCallback(tf.keras.callbacks.Callback):
 
 #np.set_printoptions(linewidth=500)
 #np.set_printoptions(formatter={'all': lambda x: " {:.0f} ".format(x)})
-#for row in iter_genbank('test/phiX174.fna'.encode()):
-#	print(row)
+#for row in iter_genbank(sys.argv[1].encode()):
+#	for i in range(6):
+#		print(row[i,0], to_dna(row[i,1:].tolist()))
 #exit()
 
 if __name__ == '__main__':
@@ -96,13 +98,22 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 
-	filenames = [os.path.join(args.directory,f) for f in listdir(args.directory) if isfile(join(args.directory, f))]
-	#filenames = list()
-	#for f in [os.path.join(args.directory,f) for f in listdir(args.directory) if isfile(join(args.directory, f))]:
-	#	if f[54] == '0':
-	#		filenames.append(f)
-	
-	print("Starting...")
+	#filenames = [os.path.join(args.directory,f) for f in listdir(args.directory) if isfile(join(args.directory, f))]
+	filenames = list()
+	valnames = list()
+	for f in listdir(args.directory):
+		if (int(f[11])%5) != args.kfold: 
+			filenames.append(os.path.join(args.directory,f))
+		else:
+			valnames.append(os.path.join(args.directory,f))
+
+	print(filenames)
+	print(len(filenames))
+	print(valnames)
+	print(len(valnames))
+	print()
+	#filenames = filenames[:10] ; valnames = valnames[:10]
+	print("Starting...",flush=True)
 	with tf.device('/device:GPU:0'):
 		model = api(args)
 		#model = blend(args)
@@ -125,10 +136,13 @@ if __name__ == '__main__':
 	dataset = dataset.batch(4096)
 	dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
-	log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+	#log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 	#tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch = '1512,2024')
 
-	cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath="multi",save_weights_only=True,verbose=1)
+	#cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath="phage_fold-"+args.kfold ,save_weights_only=True,verbose=1)
+	checkpoint = tf.keras.callbacks.ModelCheckpoint('phage_' + str(args.kfold) + 'fold-{epoch:03d}', save_weights_only=True, save_freq=1)
+	es_callback = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=3)
+
 
 	#for feature in dataset.take(1):
 	#	print( feature )
@@ -137,7 +151,7 @@ if __name__ == '__main__':
 	#model = create_model_blend(args)
 	model.fit(
 		dataset,
-		epochs          = 10,
-		verbose         = 1,
-		callbacks=[ cp_callback, LossHistoryCallback()] # ,tensorboard_callback]
+		epochs          = 100,
+		verbose         = 0,
+		callbacks=[ checkpoint, es_callback, LossHistoryCallback() ] # ,tensorboard_callback]
 	)

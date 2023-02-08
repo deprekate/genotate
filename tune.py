@@ -116,11 +116,11 @@ if __name__ == '__main__':
 		os.environ["CUDA_VISIBLE_DEVICES"]="0"
 		os.environ["KERASTUNER_TUNER_ID"]="chief"
 	else:
-		#os.environ["CUDA_VISIBLE_DEVICES"]="0"
-		os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold%7+1)
-		os.environ["KERASTUNER_TUNER_ID"]="tuner" + str(args.kfold)
+		os.environ["CUDA_VISIBLE_DEVICES"]="0"
+		#os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold%7+1)
+		os.environ["KERASTUNER_TUNER_ID"]="tuner" + str(args.kfold+100)
 	os.environ["KERASTUNER_ORACLE_IP"]="127.0.0.1"
-	os.environ["KERASTUNER_ORACLE_PORT"]="8000"
+	os.environ["KERASTUNER_ORACLE_PORT"]="18000"
 	physical_devices = tf.config.experimental.list_physical_devices('GPU')
 	tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
@@ -186,7 +186,7 @@ if __name__ == '__main__':
                      project_name='intro_to_kt')
 		stop_early = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
 		
-		tuner.search(dataset, validation_data=valset, verbose=0) #, callbacks=[]) #stop_early])
+		tuner.search(dataset, validation_data=valset, verbose=1) #, callbacks=[]) #stop_early])
 		if args.kfold == 0:
 			print(tuner.get_best_hyperparameters(1)[0].values)
 			print(tuner.get_best_hyperparameters(2)[1].values)
