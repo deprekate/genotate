@@ -116,11 +116,11 @@ if __name__ == '__main__':
 		os.environ["CUDA_VISIBLE_DEVICES"]="0"
 		os.environ["KERASTUNER_TUNER_ID"]="chief"
 	else:
-		os.environ["CUDA_VISIBLE_DEVICES"]="0"
-		#os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold%7+1)
-		os.environ["KERASTUNER_TUNER_ID"]="tuner" + str(args.kfold+100)
+		#os.environ["CUDA_VISIBLE_DEVICES"]="0"
+		os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold%7+1)
+		os.environ["KERASTUNER_TUNER_ID"]="tuner" + str(args.kfold)
 	os.environ["KERASTUNER_ORACLE_IP"]="127.0.0.1"
-	os.environ["KERASTUNER_ORACLE_PORT"]="18000"
+	os.environ["KERASTUNER_ORACLE_PORT"]="8000"
 	physical_devices = tf.config.experimental.list_physical_devices('GPU')
 	tf.config.experimental.set_memory_growth(physical_devices[0], True)
 

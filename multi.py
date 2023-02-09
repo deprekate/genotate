@@ -34,9 +34,9 @@ from genbank.file import File
 from genotate.functions import parse_locus, to_dna 
 from genotate.make_model import create_model_blend, blend, api
 
-physical_devices = tf.config.experimental.list_physical_devices('GPU')
-if len(physical_devices) > 0:
-	tf.config.experimental.set_memory_growth(physical_devices[0], True)
+#physical_devices = tf.config.experimental.list_physical_devices('GPU')
+#if len(physical_devices) > 0:
+#	tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 
 def is_valid_file(x):
@@ -97,16 +97,19 @@ if __name__ == '__main__':
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
+	os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold+2)
+	physical_devices = tf.config.experimental.list_physical_devices('GPU')
+	tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
 
 	#filenames = [os.path.join(args.directory,f) for f in listdir(args.directory) if isfile(join(args.directory, f))]
 	filenames = list()
 	valnames = list()
 	for f in listdir(args.directory):
-		if (int(f[11])%5) != args.kfold: 
+		if (int(f[11])%5) != args.kfold - 1: 
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
-
 	print(filenames)
 	print(len(filenames))
 	print(valnames)
@@ -136,12 +139,26 @@ if __name__ == '__main__':
 	dataset = dataset.batch(4096)
 	dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
+	valset = tf.data.Dataset.from_tensor_slices(valnames)
+	valset = valset.interleave(
+						lambda x: tf.data.Dataset.from_generator(
+							iter_genbank,
+							args=(x,),
+							output_signature=(
+								tf.TensorSpec(shape=(6,100),dtype=tf.int32)
+							)
+						),
+						num_parallel_calls=tf.data.AUTOTUNE,
+						#cycle_length=70,
+						block_length=10
+						)
+	valset = valset.unbatch().map(pack).batch(4096).prefetch(tf.data.AUTOTUNE)
 	#log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 	#tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch = '1512,2024')
 
 	#cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath="phage_fold-"+args.kfold ,save_weights_only=True,verbose=1)
-	checkpoint = tf.keras.callbacks.ModelCheckpoint('phage_' + str(args.kfold) + 'fold-{epoch:03d}', save_weights_only=True, save_freq=1)
-	es_callback = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=3)
+	checkpoint = tf.keras.callbacks.ModelCheckpoint('phage_' + str(args.kfold) + 'fold-{epoch:03d}', save_weights_only=True, save_freq='epoch')
+	es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=3)
 
 
 	#for feature in dataset.take(1):
@@ -151,7 +168,8 @@ if __name__ == '__main__':
 	#model = create_model_blend(args)
 	model.fit(
 		dataset,
+		validation_data = valset,
 		epochs          = 100,
-		verbose         = 0,
+		verbose         = 1,
 		callbacks=[ checkpoint, es_callback, LossHistoryCallback() ] # ,tensorboard_callback]
 	)

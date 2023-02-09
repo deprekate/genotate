@@ -9,6 +9,7 @@ from statistics import mode
 
 import faulthandler
 
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
