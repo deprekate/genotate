@@ -85,7 +85,7 @@ class LossHistoryCallback(tf.keras.callbacks.Callback):
 #for row in iter_genbank(sys.argv[1].encode()):
 #	for i in range(6):
 #		print(row[i,0], to_dna(row[i,1:].tolist()))
-#		exit()
+#exit()
 
 if __name__ == '__main__':
 	usage = '%s [-opt1, [-opt2, ...]] directory' % __file__
@@ -97,7 +97,7 @@ if __name__ == '__main__':
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
-	#os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold+2)
+	os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold+2)
 	physical_devices = tf.config.experimental.list_physical_devices('GPU')
 	tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 							)
 						),
 						num_parallel_calls=tf.data.AUTOTUNE,
-						#cycle_length=70,
+						cycle_length=64,
 						block_length=8
 						)
 	dataset = dataset.unbatch()
@@ -149,15 +149,15 @@ if __name__ == '__main__':
 							)
 						),
 						num_parallel_calls=tf.data.AUTOTUNE,
-						#cycle_length=70,
-						block_length=10
+						cycle_length=64,
+						block_length=8
 						)
 	valset = valset.unbatch().map(pack).batch(4096).prefetch(tf.data.AUTOTUNE)
 	#log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 	#tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch = '1512,2024')
 
 	#cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath="phage_fold-"+args.kfold ,save_weights_only=True,verbose=1)
-	checkpoint = tf.keras.callbacks.ModelCheckpoint('bacteria_' + str(args.kfold) + 'fold-{epoch:03d}', save_weights_only=True, save_freq='epoch')
+	checkpoint = tf.keras.callbacks.ModelCheckpoint('phage_' + str(args.kfold) + 'fold-{epoch:03d}', save_weights_only=True, save_freq='epoch')
 	es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=3)
 
 
@@ -170,6 +170,6 @@ if __name__ == '__main__':
 		dataset,
 		validation_data = valset,
 		epochs          = 100,
-		verbose         = 1,
+		verbose         = 0,
 		callbacks=[ checkpoint, es_callback, LossHistoryCallback() ] # ,tensorboard_callback]
 	)
