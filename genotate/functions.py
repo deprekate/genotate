@@ -115,6 +115,7 @@ def skew(seq, nucs):
 	slopes.append(m)
 	return slopes
 
+
 def parse_locus(locus):
 		#def iter_genbank(infile):
 		#for locus in File(infile.decode()):

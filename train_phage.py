@@ -47,10 +47,12 @@ def is_valid_file(x):
 def pack(features): #labels,datas,windows): #features):
 	#labels,windows,datas = tf.split(features, [1,99,3], axis=-1)
 	labels,windows = tf.split(features, [1,99], axis=-1)
+	#windows = tf.unstack(windows)
 	#labels = tf.cast(labels, dtype=tf.int32)
 	labels = tf.one_hot(labels, depth=3, axis=-1) #, dtype=tf.int32)
-	#labels = tf.reshape(labels, [-1])
 	labels = tf.squeeze(labels)
+	#labels = tf.reshape(labels, [-1])
+	#labels = tf.unstack(labels)
 	#print(labels) ; print(datas) ; print(windows)
 	#return (windows, datas) , labels
 	return windows , labels
@@ -87,6 +89,8 @@ class LossHistoryCallback(tf.keras.callbacks.Callback):
 #		print(row[i,0], to_dna(row[i,1:].tolist()))
 #		exit()
 
+from genotate.fun import GenomeDataset
+
 if __name__ == '__main__':
 	usage = '%s [-opt1, [-opt2, ...]] directory' % __file__
 	parser = argparse.ArgumentParser(description='', formatter_class=RawTextHelpFormatter, usage=usage)
@@ -110,11 +114,13 @@ if __name__ == '__main__':
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
+	'''
 	print(filenames)
 	print(len(filenames))
 	print(valnames)
 	print(len(valnames))
 	print()
+	'''
 	#filenames = filenames[:10] ; valnames = valnames[:10]
 	print("Starting...",flush=True)
 	with tf.device('/device:GPU:0'):
@@ -122,22 +128,31 @@ if __name__ == '__main__':
 		#model = blend(args)
 	dataset = tf.data.Dataset.from_tensor_slices(filenames)
 	dataset = dataset.interleave(
-						lambda x: tf.data.Dataset.from_generator(
-							iter_genbank,
-							args=(x,),
-							output_signature=(
-								tf.TensorSpec(shape=(6,100),dtype=tf.int32)
-							)
-						),
+						#lambda x: GenomeDataset(x).unbatch(),
+						lambda x: GenomeDataset(x).flat_map(tf.data.Dataset.from_tensor_slices),
+						#lambda x: tf.data.Dataset.from_generator(
+						#	iter_genbank,
+						#	args=(x,),
+						#	output_signature=(
+						#		tf.TensorSpec(shape=(6,100),dtype=tf.int32)
+						#	)
+						#),
 						num_parallel_calls=tf.data.AUTOTUNE,
-						#cycle_length=70,
-						block_length=8
+						cycle_length=32,
+						block_length=1,
+						deterministic=False
 						)
-	dataset = dataset.unbatch()
-	dataset = dataset.map(pack)
+	#dataset = dataset.unbatch()
+	#dataset = dataset.cache()
 	#dataset = dataset.shuffle(buffer_size=1000)
-	dataset = dataset.batch(4096)
+	dataset = dataset.map(pack, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
+	dataset = dataset.batch(2048, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
 	dataset = dataset.prefetch(tf.data.AUTOTUNE)
+	
+	#for feature in dataset.take(1):
+	#	print( feature[0].shape )
+	#	print( feature )
+	#exit()
 
 	valset = tf.data.Dataset.from_tensor_slices(valnames)
 	valset = valset.interleave(
@@ -150,26 +165,23 @@ if __name__ == '__main__':
 						),
 						num_parallel_calls=tf.data.AUTOTUNE,
 						#cycle_length=70,
-						block_length=10
+						block_length=16,
+						deterministic=False
 						)
 	valset = valset.unbatch().map(pack).batch(4096).prefetch(tf.data.AUTOTUNE)
-	#log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-	#tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch = '1512,2024')
+	#valset = valset.batch(4096).prefetch(tf.data.AUTOTUNE)
+	tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"), histogram_freq=1, profile_batch = '1512,2024')
 
 	#cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath="phage_fold-"+args.kfold ,save_weights_only=True,verbose=1)
-	checkpoint = tf.keras.callbacks.ModelCheckpoint('bacteria_' + str(args.kfold) + 'fold-{epoch:03d}', save_weights_only=True, save_freq='epoch')
+	checkpoint = tf.keras.callbacks.ModelCheckpoint('phage_' + str(args.kfold) + 'fold-{epoch:03d}', save_weights_only=True, save_freq='epoch')
 	es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=3)
 
-
-	#for feature in dataset.take(1):
-	#	print( feature )
-	#exit()
-
+	print(dataset)
 	#model = create_model_blend(args)
 	model.fit(
 		dataset,
-		validation_data = valset,
+		#validation_data = valset,
 		epochs          = 100,
 		verbose         = 1,
-		callbacks=[ checkpoint, es_callback, LossHistoryCallback() ] # ,tensorboard_callback]
+		callbacks=[ checkpoint, es_callback, LossHistoryCallback() ,tensorboard_callback]
 	)
