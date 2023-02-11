@@ -38,19 +38,49 @@ from genotate.make_model import create_model_blend, blend, api
 #if len(physical_devices) > 0:
 #	tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
+def iter_genbank(infile):
+	for locus in File(infile.decode()):
+		# label the positions
+		positions = dict()
+		for feature in locus.features(include=['CDS']):
+			for i,*_ in feature.codon_locations():
+				# do the other 5 frames
+				for sign,offset in [(+1,1), (+1,2), (-1,1), (-1,2), (-1,0)]:
+					pos = sign * (i + offset) * feature.strand
+					if pos not in positions:
+						positions[pos] = 0
+				# do the current frame
+				sign,offset = (+1,0)
+				pos = sign * (i + offset) * feature.strand
+				positions[pos] = 1
+		dna = locus.seq()
+		forward = np.zeros(48+len(dna)+50)
+		reverse = np.zeros(48+len(dna)+50)
+		for i,base in enumerate(dna):
+			#if base in 'acgt':
+			forward[i+48] = ((ord(base) >> 1) & 3) + 1
+			reverse[i+48] = ((forward[i+48] - 3) % 4) + 1
+		a = np.zeros([6, 100], dtype=int)
+		# leave this here for numpy < 1.20 backwards compat
+		#forfor = np.concatenate(( forward, forward[:-1] ))
+		#L = len(forward)
+		#n = forfor.strides[0]
+		#f = np.lib.stride_tricks.as_strided(forfor[L-1:], (L,L), (-n,n))
+		w = np.lib.stride_tricks.sliding_window_view(a,99)
+		yield w
 
 def is_valid_file(x):
 	if not os.path.exists(x):
 		raise argparse.ArgumentTypeError("{0} does not exist".format(x))
 	return x
 
-def pack(features): #labels,datas,windows): #features):
+def pack(labels, windows): #labels,datas,windows): #features):
 	#labels,windows,datas = tf.split(features, [1,99,3], axis=-1)
-	labels,windows = tf.split(features, [1,99], axis=-1)
+	#labels,windows = tf.split(features, [1,99], axis=-1)
 	#windows = tf.unstack(windows)
 	#labels = tf.cast(labels, dtype=tf.int32)
 	labels = tf.one_hot(labels, depth=3, axis=-1) #, dtype=tf.int32)
-	labels = tf.squeeze(labels)
+	#labels = tf.squeeze(labels)
 	#labels = tf.reshape(labels, [-1])
 	#labels = tf.unstack(labels)
 	#print(labels) ; print(datas) ; print(windows)
@@ -129,7 +159,7 @@ if __name__ == '__main__':
 	dataset = tf.data.Dataset.from_tensor_slices(filenames)
 	dataset = dataset.interleave(
 						#lambda x: GenomeDataset(x).unbatch(),
-						lambda x: GenomeDataset(x).flat_map(tf.data.Dataset.from_tensor_slices),
+						lambda x: GenomeDataset(x), #.flat_map(tf.data.Dataset.from_tensor_slices),
 						#lambda x: tf.data.Dataset.from_generator(
 						#	iter_genbank,
 						#	args=(x,),
@@ -138,15 +168,15 @@ if __name__ == '__main__':
 						#	)
 						#),
 						num_parallel_calls=tf.data.AUTOTUNE,
-						cycle_length=32,
-						block_length=1,
+						cycle_length=64,
+						block_length=6,
 						deterministic=False
 						)
 	#dataset = dataset.unbatch()
 	#dataset = dataset.cache()
 	#dataset = dataset.shuffle(buffer_size=1000)
 	dataset = dataset.map(pack, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
-	dataset = dataset.batch(2048, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
+	dataset = dataset.batch(4096, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
 	dataset = dataset.prefetch(tf.data.AUTOTUNE)
 	
 	#for feature in dataset.take(1):
@@ -156,20 +186,21 @@ if __name__ == '__main__':
 
 	valset = tf.data.Dataset.from_tensor_slices(valnames)
 	valset = valset.interleave(
-						lambda x: tf.data.Dataset.from_generator(
-							iter_genbank,
-							args=(x,),
-							output_signature=(
-								tf.TensorSpec(shape=(6,100),dtype=tf.int32)
-							)
-						),
+						lambda x: GenomeDataset(x), #.flat_map(tf.data.Dataset.from_tensor_slices),
+						#lambda x: tf.data.Dataset.from_generator(
+						#	iter_genbank,
+						#	args=(x,),
+						#	output_signature=(
+						#		tf.TensorSpec(shape=(6,100),dtype=tf.int32)
+						#	)
+						#),
 						num_parallel_calls=tf.data.AUTOTUNE,
-						#cycle_length=70,
-						block_length=16,
+						cycle_length=64,
+						block_length=6,
 						deterministic=False
 						)
-	valset = valset.unbatch().map(pack).batch(4096).prefetch(tf.data.AUTOTUNE)
-	#valset = valset.batch(4096).prefetch(tf.data.AUTOTUNE)
+	#valset = valset.unbatch().map(pack).batch(4096).prefetch(tf.data.AUTOTUNE)
+	valset = valset.map(pack).batch(4096).prefetch(tf.data.AUTOTUNE)
 	tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"), histogram_freq=1, profile_batch = '1512,2024')
 
 	#cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath="phage_fold-"+args.kfold ,save_weights_only=True,verbose=1)
