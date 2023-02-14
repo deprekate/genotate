@@ -14,7 +14,6 @@ import tensorflow as tf
 #from tensorflow.keras import mixed_precision
 #tf.keras.backend.set_floatx('float16')
 import numpy as np
-time.sleep(1)
 #mixed_precision.set_global_policy('mixed_float16')
 
 '''

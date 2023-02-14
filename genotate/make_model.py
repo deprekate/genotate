@@ -196,33 +196,6 @@ def api(args):
 	#model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
 	return model
 
-
-def model_builder(hp):
-	inputs = tf.keras.layers.Input(shape=(99,), dtype=tf.int32)
-	model = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(inputs)
-	# Tune the number of units in the first Dense layer
-	# Choose an optimal value between 32-512
-	hp_units = hp.Int('units', min_value=32, max_value=160, step=32)
-	model = tf.keras.layers.Conv1D(filters=hp_units, kernel_size=7, padding='same', activation='relu' )(model)
-	model = tf.keras.layers.Conv1D(filters=hp_units, kernel_size=7, padding='same', activation='relu' )(model)
-	model = tf.keras.layers.Conv1D(filters=hp_units, kernel_size=7, padding='same', activation='relu' )(model)
-	model = tf.keras.layers.Flatten()(model)
-	model = tf.keras.layers.Dense(88, activation='relu')(model)
-	model = tf.keras.layers.Dropout(rate=0.05)(model)
-	model = tf.keras.layers.Dense(88, activation='relu')(model)
-	model = tf.keras.layers.Dropout(rate=0.05)(model)
-	model = tf.keras.layers.Dense(88, activation='relu')(model)
-	model = tf.keras.layers.Dropout(rate=0.05)(model)
-	model = tf.keras.layers.Dense(3, activation='softmax')(model)
-
-	model = tf.keras.models.Model(inputs, outputs=model)
-	# Tune the learning rate for the optimizer
-	# Choose an optimal value from 0.01, 0.001, or 0.0001
-	#hp_learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4])
-
-	model.compile(loss='categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
-	return model
-
 import keras_tuner as kt
 class HyperRegressor(kt.HyperModel):
 	def build(self, hp):

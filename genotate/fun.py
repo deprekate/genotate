@@ -6,36 +6,67 @@ import tensorflow as tf
 from scipy.linalg import circulant, toeplitz
 from genbank.file import File
 
-def parse_genbank(infile):
-	for locus in File(infile.decode()):
-		# label the positions
-		positions = dict()
-		for feature in locus.features(include=['CDS']):
-			for i,*_ in feature.codon_locations():
-				# do the other 5 frames
-				for sign,offset in [(+1,1), (+1,2), (-1,1), (-1,2), (-1,0)]:
-					pos = sign * (i + offset) * feature.strand
-					if pos not in positions:
-						positions[pos] = 0
-				# do the current frame
-				sign,offset = (+1,0)
-				pos = sign * (i + offset) * feature.strand
-				positions[pos] = 1
-		dna = locus.seq()
-		forward = np.zeros(48+len(dna)+50)
-		reverse = np.zeros(48+len(dna)+50)
-		for i,base in enumerate(dna):
-			#if base in 'acgt':
-			forward[i+48] = ((ord(base) >> 1) & 3) + 1
-			reverse[i+48] = ((forward[i+48] - 3) % 4) + 1
-		a = np.zeros([6, 100], dtype=int)
-		# leave this here for numpy < 1.20 backwards compat
-		#forfor = np.concatenate(( forward, forward[:-1] ))
-		#L = len(forward)
-		#n = forfor.strides[0]
-		#f = np.lib.stride_tricks.as_strided(forfor[L-1:], (L,L), (-n,n))
-		w = np.lib.stride_tricks.sliding_window_view(a,99)
-		yield w
+class GenDataset(tf.data.Dataset):
+	#@tf.function
+	def __new__(self, infile):
+		#return tf.py_function(self.parse_genbank, infile, Tout=tf.TensorSpec(shape = (99, ) ) )
+		return tf.data.Dataset.from_generator(
+			self.parse_genbank,
+			#output_signature = tf.TensorSpec(shape = (None,99), dtype = tf.int32),
+			output_signature = (
+								tf.TensorSpec(shape = (None,99), dtype = tf.int32),
+								tf.TensorSpec(shape = (None,3 ), dtype = tf.int32)
+								),
+			args=(infile,)
+		).unbatch() #.flat_map(tf.data.Dataset.from_tensor_slices),
+	def parse_genbank(infile):
+		genbank = File(infile.decode())
+		#A = np.zeros([len(genbank.dna()),99])
+		# intergenic
+		for locus in genbank:
+			dna = locus.seq()
+			X = np.zeros([len(dna)*2 ,99])
+			Y = np.zeros([len(dna)*2+5,3])
+			Y[:,2] = 1
+			# label the positions
+			positions = dict()
+			for feature in locus.features(include=['CDS']):
+				s = (feature.strand * -1 + 1) >> 1
+				for i,*_ in feature.codon_locations():
+					# coding
+					Y[2*i+0+s,1] = 1
+					# noncoding
+					Y[2*i+0+s,0] = 1
+					Y[2*i+1+s,0] = 1
+					Y[2*i+2+s,0] = 1
+					Y[2*i+3+s,0] = 1
+					Y[2*i+4+s,0] = 1
+					Y[2*i+5+s,0] = 1
+					Y[2*i+0+s,2] = 0
+					Y[2*i+1+s,2] = 0
+					Y[2*i+2+s,2] = 0
+					Y[2*i+3+s,2] = 0
+					Y[2*i+4+s,2] = 0
+					Y[2*i+5+s,2] = 0
+			Y[Y[:,1]==1,0] = 0
+			forward = np.zeros(48+len(dna)+50)
+			reverse = np.zeros(48+len(dna)+50)
+			for i,base in enumerate(dna):
+				#if base in 'acgt':
+				forward[i+48] = ((ord(base) >> 1) & 3) + 1
+				reverse[i+48] = ((forward[i+48] - 3) % 4) + 1
+			#a = np.zeros([6, 100], dtype=int)
+			# leave this here for numpy < 1.20 backwards compat
+			#forfor = np.concatenate(( forward, forward[:-1] ))
+			#L = len(forward)
+			#n = forfor.strides[0]
+			#f = np.lib.stride_tricks.as_strided(forfor[L-1:], (L,L), (-n,n))
+			X[0::2] = np.lib.stride_tricks.sliding_window_view(forward,99)
+			X[1::2] = np.lib.stride_tricks.sliding_window_view(reverse,99)[:,::-1]
+			#A[I:i+1,:] = w
+			#I = i
+			yield X,Y[:-5]
+		#return w
 
 class GenomeDataset(tf.data.Dataset):
 	#@tf.function
@@ -85,11 +116,8 @@ class GenomeDataset(tf.data.Dataset):
 			#L = len(forward)
 			#n = forfor.strides[0]
 			#f = np.lib.stride_tricks.as_strided(forfor[L-1:], (L,L), (-n,n))
-			w = np.lib.stride_tricks.sliding_window_view(a,99)
-			print(f[0,1:99])
-			yield a
+			#w = np.lib.stride_tricks.sliding_window_view(a,99)
 			#a[:,100] = locus.gc_content() 
-			'''
 			for n in range(0, len(dna)-2, 3):
 				#pos = n//100
 				i = n + 0
@@ -114,4 +142,3 @@ class GenomeDataset(tf.data.Dataset):
 				a[4,1:100] = forward[i : i+99 ]
 				a[5,1:100] = reverse[i : i+99 ][::-1]
 				yield a
-			'''
