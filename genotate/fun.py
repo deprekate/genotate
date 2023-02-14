@@ -1,72 +1,88 @@
 import os
 import sys
+from itertools import zip_longest
 
 import numpy as np
 import tensorflow as tf
-from scipy.linalg import circulant, toeplitz
 from genbank.file import File
+
+def grouper(iterable, n, fillvalue=None):
+    args = [iter(iterable)] * n
+    return zip_longest(*args, fillvalue=fillvalue)
+
+def parse_genbank(infile):
+	#gc.collect()
+	genbank = File(infile.decode())
+	#A = np.zeros([len(genbank.dna()),99])
+	# intergenic
+	for locus in genbank:
+		dna = locus.seq()
+		X = np.zeros([len(dna)*2  ,99],dtype=np.uint8)
+		Y = np.zeros([len(dna)*2+5,3],dtype=np.uint8)
+		Y[:,2] = 1
+		# label the positions
+		positions = dict()
+		for feature in locus.features(include=['CDS']):
+			s = (feature.strand * -1 + 1) >> 1
+			for pair in feature.pairs:
+				left,right = pair
+				if "<" in left:
+					left = -(int(right)%3)
+					right = int(right)
+				else:
+					left = int(left)
+					right = int(right.replace('>',''))
+				#for i,*_ in feature.codon_locations():
+				for i in grouper(range(left,right+1),3):
+					# coding
+					Y[2*i[0]+0+s,1] = 1
+					# noncoding
+					Y[2*i[0]+0+s,0] = 1
+					Y[2*i[0]+1+s,0] = 1
+					Y[2*i[0]+2+s,0] = 1
+					Y[2*i[0]+3+s,0] = 1
+					Y[2*i[0]+4+s,0] = 1
+					Y[2*i[0]+5+s,0] = 1
+					Y[2*i[0]+0+s,2] = 0
+					Y[2*i[0]+1+s,2] = 0
+					Y[2*i[0]+2+s,2] = 0
+					Y[2*i[0]+3+s,2] = 0
+					Y[2*i[0]+4+s,2] = 0
+					Y[2*i[0]+5+s,2] = 0
+		Y[Y[:,1]==1,0] = 0
+		forward = np.zeros(48+len(dna)+50,dtype=np.uint8)
+		reverse = np.zeros(48+len(dna)+50,dtype=np.int16)
+		for i,base in enumerate(dna):
+			#if base in 'acgt':
+			forward[i+48] = ((ord(base) >> 1) & 3) + 1
+			reverse[i+48] = ((forward[i+48] - 3) % 4) + 1
+		#a = np.zeros([6, 100], dtype=int)
+		# leave this here for numpy < 1.20 backwards compat
+		#forfor = np.concatenate(( forward, forward[:-1] ))
+		#L = len(forward)
+		#n = forfor.strides[0]
+		#f = np.lib.stride_tricks.as_strided(forfor[L-1:], (L,L), (-n,n))
+		X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward,99)
+		X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse,99)[:,::-1]
+		#A[I:i+1,:] = w
+		#I = i
+		yield X,Y[:-5]
+	del genbank
 
 class GenDataset(tf.data.Dataset):
 	#@tf.function
 	def __new__(self, infile):
-		#return tf.py_function(self.parse_genbank, infile, Tout=tf.TensorSpec(shape = (99, ) ) )
+		spec = (tf.TensorSpec(shape = (None,99), dtype = tf.int16),tf.TensorSpec(shape = (None,3), dtype = tf.int16))
+		#return tf.py_function(self.parse_genbank, infile, Tout=spec )
 		return tf.data.Dataset.from_generator(
-			self.parse_genbank,
+			parse_genbank,
 			#output_signature = tf.TensorSpec(shape = (None,99), dtype = tf.int32),
-			output_signature = (
-								tf.TensorSpec(shape = (None,99), dtype = tf.int32),
-								tf.TensorSpec(shape = (None,3 ), dtype = tf.int32)
-								),
+			output_signature = spec,
 			args=(infile,)
-		).unbatch() #.flat_map(tf.data.Dataset.from_tensor_slices),
-	def parse_genbank(infile):
-		genbank = File(infile.decode())
-		#A = np.zeros([len(genbank.dna()),99])
-		# intergenic
-		for locus in genbank:
-			dna = locus.seq()
-			X = np.zeros([len(dna)*2 ,99])
-			Y = np.zeros([len(dna)*2+5,3])
-			Y[:,2] = 1
-			# label the positions
-			positions = dict()
-			for feature in locus.features(include=['CDS']):
-				s = (feature.strand * -1 + 1) >> 1
-				for i,*_ in feature.codon_locations():
-					# coding
-					Y[2*i+0+s,1] = 1
-					# noncoding
-					Y[2*i+0+s,0] = 1
-					Y[2*i+1+s,0] = 1
-					Y[2*i+2+s,0] = 1
-					Y[2*i+3+s,0] = 1
-					Y[2*i+4+s,0] = 1
-					Y[2*i+5+s,0] = 1
-					Y[2*i+0+s,2] = 0
-					Y[2*i+1+s,2] = 0
-					Y[2*i+2+s,2] = 0
-					Y[2*i+3+s,2] = 0
-					Y[2*i+4+s,2] = 0
-					Y[2*i+5+s,2] = 0
-			Y[Y[:,1]==1,0] = 0
-			forward = np.zeros(48+len(dna)+50)
-			reverse = np.zeros(48+len(dna)+50)
-			for i,base in enumerate(dna):
-				#if base in 'acgt':
-				forward[i+48] = ((ord(base) >> 1) & 3) + 1
-				reverse[i+48] = ((forward[i+48] - 3) % 4) + 1
-			#a = np.zeros([6, 100], dtype=int)
-			# leave this here for numpy < 1.20 backwards compat
-			#forfor = np.concatenate(( forward, forward[:-1] ))
-			#L = len(forward)
-			#n = forfor.strides[0]
-			#f = np.lib.stride_tricks.as_strided(forfor[L-1:], (L,L), (-n,n))
-			X[0::2] = np.lib.stride_tricks.sliding_window_view(forward,99)
-			X[1::2] = np.lib.stride_tricks.sliding_window_view(reverse,99)[:,::-1]
-			#A[I:i+1,:] = w
-			#I = i
-			yield X,Y[:-5]
-		#return w
+		) #.unbatch() #.flat_map(tf.data.Dataset.from_tensor_slices),
+
+
+
 
 class GenomeDataset(tf.data.Dataset):
 	#@tf.function

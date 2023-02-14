@@ -171,8 +171,9 @@ def blend(args):
 
 def api(args):
 	#
-	input_ = tf.keras.layers.Input(shape=(99,), dtype=tf.int32)
-	model_ = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(input_)
+	input_ = tf.keras.layers.Input(shape=(99,), dtype=tf.int16)
+	model_ = tf.cast(input_, dtype=tf.int32)
+	model_ = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(model_)
 	model_ = tf.keras.layers.Conv1D(filters=104, kernel_size=12, padding='same', activation='relu' )(model_)
 	model_ = tf.keras.layers.Conv1D(filters=104, kernel_size= 8, padding='same', activation='relu' )(model_)
 	model_ = tf.keras.layers.Conv1D(filters= 96, kernel_size= 9, padding='same', activation='relu' )(model_)
