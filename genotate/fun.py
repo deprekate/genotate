@@ -1,6 +1,7 @@
 import os
 import sys
 from itertools import zip_longest
+import gc
 
 import numpy as np
 import tensorflow as tf
@@ -11,29 +12,22 @@ def grouper(iterable, n, fillvalue=None):
     return zip_longest(*args, fillvalue=fillvalue)
 
 def parse_genbank(infile):
-	#gc.collect()
+	gc.collect()
 	genbank = File(infile.decode())
 	#A = np.zeros([len(genbank.dna()),99])
 	# intergenic
 	for locus in genbank:
 		dna = locus.seq()
 		X = np.zeros([len(dna)*2  ,99],dtype=np.uint8)
-		Y = np.zeros([len(dna)*2+5,3],dtype=np.uint8)
+		Y = np.zeros([len(dna)*2+7,3],dtype=np.uint8)
 		Y[:,2] = 1
 		# label the positions
 		positions = dict()
 		for feature in locus.features(include=['CDS']):
 			s = (feature.strand * -1 + 1) >> 1
-			for pair in feature.pairs:
-				left,right = pair
-				if "<" in left:
-					left = -(int(right)%3)
-					right = int(right)
-				else:
-					left = int(left)
-					right = int(right.replace('>',''))
-				#for i,*_ in feature.codon_locations():
-				for i in grouper(range(left,right+1),3):
+				locations = feature.codon_locations()
+				if feature.partial() = 'left': next(locations)
+				for i in locations:
 					# coding
 					Y[2*i[0]+0+s,1] = 1
 					# noncoding
@@ -66,7 +60,7 @@ def parse_genbank(infile):
 		X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse,99)[:,::-1]
 		#A[I:i+1,:] = w
 		#I = i
-		yield X,Y[:-5]
+		yield X,Y[:-7]
 	del genbank
 
 class GenDataset(tf.data.Dataset):

@@ -1,6 +1,8 @@
 import os
 import sys
 import time
+from signal import signal, SIGPIPE, SIG_DFL
+signal(SIGPIPE,SIG_DFL)
 
 os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -14,7 +16,7 @@ import datetime
 import time
 
 
-os.environ["CUDA_VISIBLE_DEVICES"]="3" #,4,5,7"
+#os.environ["CUDA_VISIBLE_DEVICES"]="3" #,4,5,7"
 gpus = tf.config.list_physical_devices('GPU')
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
@@ -70,12 +72,16 @@ def iter_genbank(infile):
 		for data in parse_locus(locus):
 			yield data
 
-'''
-dataset = GenDataset("/home/mcnair/assembly/phages/train/GCA_000851005.1.gbff.gz")
-for window,label in dataset.take(50000):
-	print(label, to_dna(window.numpy()))
+
+data = parse_genbank("/home/mcnair/assembly/phages/train/GCA_008313955.1.gbff.gz".encode())
+for X,Y in data:
+	for i in range(len(X)):
+		print(Y[i,], to_dna(X[i,]))
 exit()
-'''
+#dataset = GenDataset("/home/mcnair/assembly/phages/train/GCA_000851005.1.gbff.gz")
+#for window,label in dataset.take(50000):
+#	print(label, to_dna(window.numpy()))
+#exit()
 
 spec = (tf.TensorSpec(shape = (None,99), dtype = tf.int32),tf.TensorSpec(shape = (None,3), dtype = tf.int32))
 directory = sys.argv[1]
@@ -92,15 +98,15 @@ dataset = dataset.interleave(
 				#		output_signature=spec,
 				#),
 				deterministic=False,
-                num_parallel_calls=16, #tf.data.AUTOTUNE,
-                #cycle_length=128,
+                num_parallel_calls=4, #tf.data.AUTOTUNE,
+                cycle_length=4,
                 block_length=128,
                 )
 #dataset = dataset.unbatch()
 #dataset = dataset.cache('cache')
 #dataset = dataset.map(pack, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
 #dataset = dataset.map(pack, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
-dataset = dataset.batch(4096, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
+dataset = dataset.batch(8192, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
 dataset = dataset.prefetch(tf.data.AUTOTUNE)
 #print(dataset)
 #for item in dataset.take(1):
@@ -108,15 +114,15 @@ dataset = dataset.prefetch(tf.data.AUTOTUNE)
 #exit()
 
 #tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"), histogram_freq=1, profile_batch = '1512,2024')
-#gpus = [item.name.replace('physical_device:','').lower() for item in gpus]
-#strategy = tf.distribute.MirroredStrategy(devices=gpus)
-#with strategy.scope():
-with tf.device('/device:GPU:0'):
+gpus = [item.name.replace('physical_device:','').lower() for item in gpus]
+strategy = tf.distribute.MirroredStrategy(devices=gpus)
+with strategy.scope():
+#with tf.device('/device:GPU:0'):
 	model = api(None)
 model.fit(
 	dataset,
 	#validation_data = valset,
-	epochs          = 3,
+	epochs          = 10,
 	verbose         = 1,
 	#callbacks       = [tensorboard_callback]
 )
