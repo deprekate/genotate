@@ -73,10 +73,12 @@ def iter_genbank(infile):
 			yield data
 
 
-data = parse_genbank("/home/mcnair/assembly/phages/train/GCA_008313955.1.gbff.gz".encode())
+data = parse_genbank("test/NC_000866.fna". encode()) #home/mcnair/assembly/bacteria/train/GCA_000005825.2.gbff.gz".encode())
 for X,Y in data:
+	#print(X.size * X.itemsize, sys.getsizeof(X))
 	for i in range(len(X)):
-		print(Y[i,], to_dna(X[i,]))
+		#print(Y[i,], to_dna(X[i,]))
+		print( to_dna(X[i,]))
 exit()
 #dataset = GenDataset("/home/mcnair/assembly/phages/train/GCA_000851005.1.gbff.gz")
 #for window,label in dataset.take(50000):

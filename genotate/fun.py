@@ -18,34 +18,33 @@ def parse_genbank(infile):
 	# intergenic
 	for locus in genbank:
 		dna = locus.seq()
-		X = np.zeros([len(dna)*2  ,99],dtype=np.uint8)
 		Y = np.zeros([len(dna)*2+7,3],dtype=np.uint8)
 		Y[:,2] = 1
 		# label the positions
 		positions = dict()
 		for feature in locus.features(include=['CDS']):
 			s = (feature.strand * -1 + 1) >> 1
-				locations = feature.codon_locations()
-				if feature.partial() = 'left': next(locations)
-				for i in locations:
-					# coding
-					Y[2*i[0]+0+s,1] = 1
-					# noncoding
-					Y[2*i[0]+0+s,0] = 1
-					Y[2*i[0]+1+s,0] = 1
-					Y[2*i[0]+2+s,0] = 1
-					Y[2*i[0]+3+s,0] = 1
-					Y[2*i[0]+4+s,0] = 1
-					Y[2*i[0]+5+s,0] = 1
-					Y[2*i[0]+0+s,2] = 0
-					Y[2*i[0]+1+s,2] = 0
-					Y[2*i[0]+2+s,2] = 0
-					Y[2*i[0]+3+s,2] = 0
-					Y[2*i[0]+4+s,2] = 0
-					Y[2*i[0]+5+s,2] = 0
+			locations = feature.codon_locations()
+			if feature.partial() == 'left': next(locations)
+			for i in locations:
+				# coding
+				Y[2*i[0]+0+s,1] = 1
+				# noncoding
+				Y[2*i[0]+0+s,0] = 1
+				Y[2*i[0]+1+s,0] = 1
+				Y[2*i[0]+2+s,0] = 1
+				Y[2*i[0]+3+s,0] = 1
+				Y[2*i[0]+4+s,0] = 1
+				Y[2*i[0]+5+s,0] = 1
+				Y[2*i[0]+0+s,2] = 0
+				Y[2*i[0]+1+s,2] = 0
+				Y[2*i[0]+2+s,2] = 0
+				Y[2*i[0]+3+s,2] = 0
+				Y[2*i[0]+4+s,2] = 0
+				Y[2*i[0]+5+s,2] = 0
 		Y[Y[:,1]==1,0] = 0
 		forward = np.zeros(48+len(dna)+50,dtype=np.uint8)
-		reverse = np.zeros(48+len(dna)+50,dtype=np.int16)
+		reverse = np.zeros(48+len(dna)+50,dtype=np.uint8)
 		for i,base in enumerate(dna):
 			#if base in 'acgt':
 			forward[i+48] = ((ord(base) >> 1) & 3) + 1
@@ -56,17 +55,31 @@ def parse_genbank(infile):
 		#L = len(forward)
 		#n = forfor.strides[0]
 		#f = np.lib.stride_tricks.as_strided(forfor[L-1:], (L,L), (-n,n))
+		'''
+		# this is creates one BIG numpy array
+		X = np.zeros([len(dna)*2  ,99],dtype=np.uint8)
 		X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward,99)
 		X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse,99)[:,::-1]
 		#A[I:i+1,:] = w
 		#I = i
 		yield X,Y[:-7]
+		'''
+		# this splits the BIG numpy array into two to limit ram usage
+		X = np.zeros([len(dna) + len(dna)%2  ,99],dtype=np.uint8)
+		middle = len(dna)//2  + (len(dna) % 2 > 0)
+		X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[:middle+98],99)
+		X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[:middle+98],99)[:,::-1]
+		yield X,Y[:len(X),:]
+		X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[middle-(len(dna)%2):],99)
+		X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[middle-(len(dna)%2):],99)[:,::-1]
+		yield X[2*(len(dna)%2):,:],Y[len(X):-7,:]
 	del genbank
 
 class GenDataset(tf.data.Dataset):
 	#@tf.function
 	def __new__(self, infile):
-		spec = (tf.TensorSpec(shape = (None,99), dtype = tf.int16),tf.TensorSpec(shape = (None,3), dtype = tf.int16))
+		spec = (tf.TensorSpec(shape = (None,99), dtype = tf.experimental.numpy.int8),
+				tf.TensorSpec(shape = (None, 3), dtype = tf.experimental.numpy.int8))
 		#return tf.py_function(self.parse_genbank, infile, Tout=spec )
 		return tf.data.Dataset.from_generator(
 			parse_genbank,
