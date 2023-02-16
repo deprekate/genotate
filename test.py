@@ -4,6 +4,7 @@ import time
 from signal import signal, SIGPIPE, SIG_DFL
 signal(SIGPIPE,SIG_DFL)
 
+os.environ["CUDA_VISIBLE_DEVICES"]="4,5,6,7"
 os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from genotate.fun import GenomeDataset, GenDataset, parse_genbank
@@ -73,13 +74,13 @@ def iter_genbank(infile):
 			yield data
 
 
-data = parse_genbank("test/NC_000866.fna". encode()) #home/mcnair/assembly/bacteria/train/GCA_000005825.2.gbff.gz".encode())
-for X,Y in data:
+#data = parse_genbank("test/NC_000866.fna". encode()) #home/mcnair/assembly/bacteria/train/GCA_000005825.2.gbff.gz".encode())
+#for X,Y in data:
 	#print(X.size * X.itemsize, sys.getsizeof(X))
-	for i in range(len(X)):
+#	for i in range(len(X)):
 		#print(Y[i,], to_dna(X[i,]))
-		print( to_dna(X[i,]))
-exit()
+#		print( to_dna(X[i,]))
+#exit()
 #dataset = GenDataset("/home/mcnair/assembly/phages/train/GCA_000851005.1.gbff.gz")
 #for window,label in dataset.take(50000):
 #	print(label, to_dna(window.numpy()))
@@ -99,10 +100,10 @@ dataset = dataset.interleave(
 				#		args=(x,),
 				#		output_signature=spec,
 				#),
-				deterministic=False,
-                num_parallel_calls=4, #tf.data.AUTOTUNE,
-                cycle_length=4,
-                block_length=128,
+				#deterministic=False,
+                #num_parallel_calls=1, #tf.data.AUTOTUNE,
+                cycle_length=16,
+                block_length=512,
                 )
 #dataset = dataset.unbatch()
 #dataset = dataset.cache('cache')
@@ -114,6 +115,11 @@ dataset = dataset.prefetch(tf.data.AUTOTUNE)
 #for item in dataset.take(1):
 #	print(item)
 #exit()
+
+#options = tf.data.Options()
+#options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
+#dataset = dataset.with_options(options)
+
 
 #tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"), histogram_freq=1, profile_batch = '1512,2024')
 gpus = [item.name.replace('physical_device:','').lower() for item in gpus]
