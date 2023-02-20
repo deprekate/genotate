@@ -62,7 +62,7 @@ def grouper(iterable, n, fillvalue=None):
 def parse_genbank(infile):
 	gc.collect()
 	genbank = File(infile.decode())
-	print('\nopen',infile.decode()) 
+	#print('\nopen',infile.decode()) 
 	#A = np.zeros([len(genbank.dna()),99])
 	# intergenic
 	for locus in genbank:
@@ -122,7 +122,7 @@ def parse_genbank(infile):
 		X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[middle-(len(dna)%2):],99)
 		X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[middle-(len(dna)%2):],99)[:,::-1]
 		yield X[2*(len(dna)%2):,:],Y[len(X):-7,:]
-	print('\nclose',infile.decode(), sys.getsizeof(genbank))
+	#print('\nclose',infile.decode(), sys.getsizeof(genbank))
 	del genbank
 
 class GenDataset(tf.data.Dataset):

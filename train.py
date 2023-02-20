@@ -1,0 +1,149 @@
+import os
+import sys
+import time
+from signal import signal, SIGPIPE, SIG_DFL
+signal(SIGPIPE,SIG_DFL)
+
+#os.environ["CUDA_VISIBLE_DEVICES"]="4,5,6,7"
+os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
+os.environ['TF_GPU_THREAD_COUNT'] = '4'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+from genotate.fun import GenomeDataset, GenDataset, parse_genbank
+from genotate.make_model import create_model_blend, blend, api
+import tensorflow as tf
+import numpy as np
+from genbank.file import File
+from genotate.functions import parse_locus, to_dna
+import datetime
+import time
+
+
+#os.environ["CUDA_VISIBLE_DEVICES"]="3" #,4,5,7"
+gpus = tf.config.list_physical_devices('GPU')
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
+
+def iter_genbank(infile):
+	for locus in File(infile.decode()):
+		# label the positions
+		positions = dict()
+		for feature in locus.features(include=['CDS']):
+			for i,*_ in feature.codon_locations():
+				# do the other 5 frames
+				for sign,offset in [(+1,1), (+1,2), (-1,1), (-1,2), (-1,0)]:
+					pos = sign * (i + offset) * feature.strand
+					if pos not in positions:
+						positions[pos] = 0
+				# do the current frame
+				sign,offset = (+1,0)
+				pos = sign * (i + offset) * feature.strand
+				positions[pos] = 1
+		dna = locus.seq()
+		forward = np.zeros(48+len(dna)+50)
+		reverse = np.zeros(48+len(dna)+50)
+		for i,base in enumerate(dna):
+			#if base in 'acgt':
+			forward[i+48] = ((ord(base) >> 1) & 3) + 1
+			reverse[i+48] = ((forward[i+48] - 3) % 4) + 1
+		a = np.zeros([6, 100], dtype=int)
+		# leave this here for numpy < 1.20 backwards compat
+		#forfor = np.concatenate(( forward, forward[:-1] ))
+		#L = len(forward)
+		#n = forfor.strides[0]
+		#f = np.lib.stride_tricks.as_strided(forfor[L-1:], (L,L), (-n,n))
+		w = np.lib.stride_tricks.sliding_window_view(a,99)
+		yield w
+
+
+def pack(features): #labels, windows): #labels,datas,windows): #features):
+	#labels,windows,datas = tf.split(features, [1,99,3], axis=-1)
+	labels,windows = tf.split(features, [1,99], axis=-1)
+	#windows = tf.unstack(windows)
+	#labels = tf.cast(labels, dtype=tf.int32)
+	labels = tf.one_hot(labels, depth=3, axis=-1) #, dtype=tf.int32)
+	labels = tf.squeeze(labels)
+	#labels = tf.reshape(labels, [-1])
+	#labels = tf.unstack(labels)
+	#print(labels) ; print(datas) ; print(windows)
+	#return (windows, datas) , labels
+	return windows , labels
+
+def iter_genbank(infile):
+	genbank = File(infile.decode())
+	for locus in genbank:
+		for data in parse_locus(locus):
+			yield data
+
+
+#data = parse_genbank("test/NC_000866.fna". encode()) #home/mcnair/assembly/bacteria/train/GCA_000005825.2.gbff.gz".encode())
+#for X,Y in data:
+	#print(X.size * X.itemsize, sys.getsizeof(X))
+#	for i in range(len(X)):
+		#print(Y[i,], to_dna(X[i,]))
+#		print( to_dna(X[i,]))
+#exit()
+#dataset = GenDataset("/home/mcnair/assembly/phages/train/GCA_000851005.1.gbff.gz")
+#for window,label in dataset.take(1):
+#	print(window)
+#	print(label, to_dna(window.numpy()))
+#exit()
+
+if __name__ == '__main__':
+	usage = '%s [-opt1, [-opt2, ...]] directory' % __file__
+	parser = argparse.ArgumentParser(description='', formatter_class=RawTextHelpFormatter, usage=usage)
+	parser.add_argument('directory', type=is_valid_file, help='input directory')
+	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
+	parser.add_argument('-k', '--kfold', action="store", default=0, type=int, help='which kfold')
+	parser.add_argument('-t', '--trim', action="store", default=0, type=int, help='how many bases to trim off window ends')
+	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
+	args = parser.parse_args()
+
+	filenames = [os.path.join(args.directory,f) for f in os.listdir(args.directory) if os.path.isfile(os.path.join(args.directory, f))]
+	for f in listdir(args.directory):
+		if (int(f[11])%5) != args.kfold - 1: 
+			filenames.append(os.path.join(args.directory,f))
+		else:
+			valnames.append(os.path.join(args.directory,f))
+
+	#print(filenames)
+	dataset = tf.data.Dataset.from_tensor_slices(filenames)
+	dataset = dataset.interleave(
+	                #lambda x: GenDataset(x), #.flat_map(tf.data.Dataset.from_tensor_slices),
+					#lambda x: GenDataset(x).flat_map(lambda *x : tf.data.Dataset.from_tensor_slices(x)),
+					lambda x: GenDataset(x).unbatch(),
+					#lambda x: tf.data.Dataset.from_generator(
+					#		parse_genbank,
+					#		args=(x,),
+					#		output_signature=spec,
+					#),
+	                num_parallel_calls=tf.data.AUTOTUNE,
+					deterministic=True,
+	                cycle_length=96,
+	                block_length=96,
+	                )
+	dataset = dataset.batch(9216, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
+	dataset = dataset.prefetch(tf.data.AUTOTUNE)
+	#print(dataset)
+	#for item in dataset.take(1):
+	#	print(item)
+	#exit()
+	
+	options = tf.data.Options()
+	options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.FILE
+	dataset = dataset.with_options(options) 
+	
+	checkpoint = tf.keras.callbacks.ModelCheckpoint('bact-{epoch:03d}', save_weights_only=True, save_freq='epoch')
+	
+	#tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"), histogram_freq=1, profile_batch = '1512,2024')
+	gpus = [item.name.replace('physical_device:','').lower() for item in gpus]
+	strategy = tf.distribute.MirroredStrategy(devices=gpus)
+	with strategy.scope():
+	#with tf.device('/device:GPU:0'):
+		model = api(None)
+	model.fit(
+		dataset,
+		#validation_data = valset,
+		epochs          = 10,
+		verbose         = 1,
+		callbacks       = [checkpoint] #tensorboard_callback]
+	)

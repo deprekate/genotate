@@ -174,6 +174,7 @@ def api(args):
 	input_ = tf.keras.layers.Input(shape=(99,), dtype=tf.int16)
 	model_ = tf.cast(input_, dtype=tf.int32)
 	model_ = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(model_)
+	#model_ = tf.keras.layers.CategoryEncoding(num_tokens=5, output_mode='one_hot')(model_)
 	model_ = tf.keras.layers.Conv1D(filters=104, kernel_size=12, padding='same', activation='relu' )(model_)
 	model_ = tf.keras.layers.Conv1D(filters=104, kernel_size= 8, padding='same', activation='relu' )(model_)
 	model_ = tf.keras.layers.Conv1D(filters= 96, kernel_size= 9, padding='same', activation='relu' )(model_)
@@ -196,7 +197,7 @@ def api(args):
 	model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
 	#model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
 	return model
-
+'''
 import keras_tuner as kt
 class HyperRegressor(kt.HyperModel):
 	def build(self, hp):
@@ -231,3 +232,4 @@ class HyperRegressor(kt.HyperModel):
 	#def fit(self, hp, model, dataset, **kwargs):
 	#	mod = model.evaluate(dataset) 
 	#	return mod
+'''
