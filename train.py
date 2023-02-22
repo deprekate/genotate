@@ -5,11 +5,11 @@ from argparse import RawTextHelpFormatter
 from signal import signal, SIGPIPE, SIG_DFL
 signal(SIGPIPE,SIG_DFL)
 
-os.environ["OMP_NUM_THREADS"]="16" 
+#os.environ["OMP_NUM_THREADS"]="16" 
 #os.environ["CUDA_VISIBLE_DEVICES"]="4,5,6,7"
 os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 os.environ['TF_GPU_THREAD_COUNT'] = '4'
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from genotate.make_model import create_model_blend, blend, api
 import tensorflow as tf
 import numpy as np
@@ -46,6 +46,8 @@ class GenomeDataset:
 		#		tf.TensorSpec(shape = (None, 3), dtype = tf.experimental.numpy.int8))
 		self.file = File(filename.decode())
 	def __iter__(self):
+		n = 10000
+		X = np.zeros([2*n ,99],dtype=np.uint8)
 		for locus in self.file:
 			dna = locus.seq()
 			Y = np.zeros([len(dna)*2+7,3],dtype=np.uint8)
@@ -84,8 +86,8 @@ class GenomeDataset:
 			#L = len(forward)
 			#n = forfor.strides[0]
 			#f = np.lib.stride_tricks.as_strided(forfor[L-1:], (L,L), (-n,n))
-			'''
 			# this is creates one BIG numpy array
+			'''
 			X = np.zeros([len(dna)*2  ,99],dtype=np.uint8)
 			X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward,99)
 			X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse,99)[:,::-1]
@@ -93,21 +95,24 @@ class GenomeDataset:
 			#I = i
 			yield X,Y[:-7]
 			'''
-			# this splits the BIG numpy array into two to limit ram usage
-			X = np.zeros([len(dna) + len(dna)%2  ,99],dtype=np.uint8)
-			middle = len(dna)//2  + (len(dna) % 2 > 0)
-			X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[:middle+98],99)
-			X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[:middle+98],99)[:,::-1]
-			yield X,Y[:len(X),:]
-			X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[middle-(len(dna)%2):],99)
-			X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[middle-(len(dna)%2):],99)[:,::-1]
-			yield X[2*(len(dna)%2):,:],Y[len(X):-7,:]
-		#print('\nclose',infile.decode(), sys.getsizeof(genbank))
+			# this splits the BIG numpy array into n sized chunks to limit ram usage
+			for i in range( len(dna) // n):
+				X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[ i*n : i*n+n+98],99)
+				X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i*n : i*n+n+98],99)[:,::-1]
+				yield X,Y[ i*2*n:i*2*n+2*n , :]
+			i = len(dna) // n * n
+			r = len(dna) % n
+			X[0:2*r:2,] = np.lib.stride_tricks.sliding_window_view(forward[ i : i+r+98],99)
+			X[1:2*r:2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+r+98],99)[:,::-1]
+			yield X[ : 2*r , : ],Y[ i*2: i*2+2*r , :]
 
-#dataset = GenomeDataset("/home/mcnair/assembly/phages/train/GCA_000851005.1.gbff.gz".encode())
-#print(dataset)
-#for row in dataset:
-#	print(row)
+
+#dataset = GenomeDataset("/data/katelyn/assembly/bacteria/train/GCA_000005825.2.gbff.gz".encode())
+#dataset = GenomeDataset("/home/katelyn/develop/genotate/test/NC_001416.gbk".encode())
+#for x,y in dataset:
+	#print(x.shape, y.shape)
+	#for i in range(len(x)):
+	#	print(y[i,:], to_dna(x[i,:]))		
 #exit()
 #for window,label in dataset.take(1):
 #	print(window)
@@ -135,7 +140,7 @@ if __name__ == '__main__':
 		else:
 			valnames.append(os.path.join(args.directory,f))
 	#filenames = filenames[:10] ; valnames = valnames[:5]
-	print(filenames) ; print(valnames)
+	print(len(filenames)) ; print(len(valnames))
 	
 	spec = (tf.TensorSpec(shape = (None,99), dtype = tf.experimental.numpy.int8),
 			tf.TensorSpec(shape = (None, 3), dtype = tf.experimental.numpy.int8))
@@ -147,8 +152,9 @@ if __name__ == '__main__':
 						args=(x,),
 						output_signature=spec
 					).unbatch(),
+					#).rebatch(9216),
 	                num_parallel_calls=tf.data.AUTOTUNE,
-					deterministic=True,cycle_length=96,block_length=96,
+					deterministic=True,cycle_length=192,block_length=48,
 	                )
 	dataset = dataset.batch(9216, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
 	dataset = dataset.prefetch(tf.data.AUTOTUNE)
@@ -168,9 +174,9 @@ if __name__ == '__main__':
 						output_signature=spec
 					).unbatch(),
 	                num_parallel_calls=tf.data.AUTOTUNE,
-					deterministic=False,cycle_length=1024,block_length=9,
+					deterministic=False,cycle_length=8,block_length=1024,
 	                )
-	valiset = valiset.batch(9216, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
+	valiset = valiset.batch(8192, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
 	valiset = valiset.prefetch(tf.data.AUTOTUNE)
 	valiset = valiset.with_options(options) 
 	
@@ -178,10 +184,10 @@ if __name__ == '__main__':
 	es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=3)
 	
 	#tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"), histogram_freq=1, profile_batch = '1512,2024')
-	gpus = [item.name.replace('physical_device:','').lower() for item in gpus]
-	strategy = tf.distribute.MirroredStrategy(devices=gpus)
-	with strategy.scope():
-	#with tf.device('/device:GPU:0'):
+	#gpus = [item.name.replace('physical_device:','').lower() for item in gpus]
+	#strategy = tf.distribute.MirroredStrategy(devices=gpus)
+	#with strategy.scope():
+	with tf.device('/device:GPU:0'):
 		model = api(None)
 	model.fit(
 		dataset,
