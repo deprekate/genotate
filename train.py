@@ -14,7 +14,7 @@ from genotate.make_model import create_model_blend, blend, api
 import tensorflow as tf
 import numpy as np
 from genbank.file import File
-from genotate.functions import parse_locus, to_dna
+from genotate.functions import parse_locus, to_dna, getsize
 import datetime
 import time
 
@@ -46,41 +46,35 @@ class GenomeDataset:
 		#		tf.TensorSpec(shape = (None, 3), dtype = tf.experimental.numpy.int8))
 		self.file = File(filename.decode())
 	def __iter__(self):
-		n = 10000
+		n = 20000
 		X = np.zeros([2*n ,99],dtype=np.uint8)
 		for locus in self.file:
-			dna = locus.seq()
-			Y = np.zeros([len(dna)*2+7,3],dtype=np.uint8)
+			length = len(locus.dna)
+			Y = np.zeros([length*2+7,3],dtype=np.uint8)
 			Y[:,2] = 1
 			# label the positions
-			positions = dict()
 			for feature in locus.features(include=['CDS']):
 				s = (feature.strand * -1 + 1) >> 1
 				locations = feature.codon_locations()
 				if feature.partial() == 'left': next(locations)
-				for i in locations:
+				for i,*_ in locations:
+					i += s
+					i *= 2
 					# coding
-					Y[2*i[0]+0+s,1] = 1
+					Y[i    ,1] = 1
 					# noncoding
-					Y[2*i[0]+0+s,0] = 1
-					Y[2*i[0]+1+s,0] = 1
-					Y[2*i[0]+2+s,0] = 1
-					Y[2*i[0]+3+s,0] = 1
-					Y[2*i[0]+4+s,0] = 1
-					Y[2*i[0]+5+s,0] = 1
-					Y[2*i[0]+0+s,2] = 0
-					Y[2*i[0]+1+s,2] = 0
-					Y[2*i[0]+2+s,2] = 0
-					Y[2*i[0]+3+s,2] = 0
-					Y[2*i[0]+4+s,2] = 0
-					Y[2*i[0]+5+s,2] = 0
+					Y[i:i+5,0] = 1
+					Y[i:i+5,2] = 0
+				locus[feature] = None
 			Y[Y[:,1]==1,0] = 0
-			forward = np.zeros(48+len(dna)+50,dtype=np.uint8)
-			reverse = np.zeros(48+len(dna)+50,dtype=np.uint8)
-			for i,base in enumerate(dna):
+			forward = np.zeros(48+length+50,dtype=np.uint8)
+			reverse = np.zeros(48+length+50,dtype=np.uint8)
+			for i,base in enumerate(locus.dna):
+				i += 48
 				#if base in 'acgt':
-				forward[i+48] = ((ord(base) >> 1) & 3) + 1
-				reverse[i+48] = ((forward[i+48] - 3) % 4) + 1
+				forward[i] = ((ord(base) >> 1) & 3) + 1
+				reverse[i] = ((forward[i] - 3) % 4) + 1
+			locus.dna = None
 			# leave this here for numpy < 1.20 backwards compat
 			#forfor = np.concatenate(( forward, forward[:-1] ))
 			#L = len(forward)
@@ -96,27 +90,28 @@ class GenomeDataset:
 			yield X,Y[:-7]
 			'''
 			# this splits the BIG numpy array into n sized chunks to limit ram usage
-			for i in range( len(dna) // n):
-				X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[ i*n : i*n+n+98],99)
-				X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i*n : i*n+n+98],99)[:,::-1]
-				yield X,Y[ i*2*n:i*2*n+2*n , :]
-			i = len(dna) // n * n
-			r = len(dna) % n
+			for i in range( length // n):
+				i *= n
+				X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[ i : i+n+98],99)
+				X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+n+98],99)[:,::-1]
+				yield X,Y[ i*2:i*2+n*2 , :]
+			i = length // n * n
+			r = length % n
 			X[0:2*r:2,] = np.lib.stride_tricks.sliding_window_view(forward[ i : i+r+98],99)
 			X[1:2*r:2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+r+98],99)[:,::-1]
-			yield X[ : 2*r , : ],Y[ i*2: i*2+2*r , :]
+			yield tf.convert_to_tensor(X[ : 2*r , : ]),tf.convert_to_tensor(Y[ i*2: i*2+2*r , :])
 
 
 #dataset = GenomeDataset("/data/katelyn/assembly/bacteria/train/GCA_000005825.2.gbff.gz".encode())
+#print(getsize(dataset))
 #dataset = GenomeDataset("/home/katelyn/develop/genotate/test/NC_001416.gbk".encode())
 #for x,y in dataset:
-	#print(x.shape, y.shape)
+#	print(x.shape, y.shape)
+#	break
 	#for i in range(len(x)):
 	#	print(y[i,:], to_dna(x[i,:]))		
 #exit()
-#for window,label in dataset.take(1):
-#	print(window)
-#	print(label, to_dna(window.numpy()))
+#print(getsize(dataset))
 #exit()
 
 if __name__ == '__main__':
@@ -139,7 +134,7 @@ if __name__ == '__main__':
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
-	#filenames = filenames[:10] ; valnames = valnames[:5]
+	filenames = filenames[:10] ; valnames = valnames[:5]
 	print(len(filenames)) ; print(len(valnames))
 	
 	spec = (tf.TensorSpec(shape = (None,99), dtype = tf.experimental.numpy.int8),
@@ -147,6 +142,7 @@ if __name__ == '__main__':
 	dataset = tf.data.Dataset.from_tensor_slices(filenames)
 	dataset = dataset.interleave(
 					#lambda x: GenomeDataset(x).unbatch(),
+					#lambda x: tf.data.Dataset.from_tensor_slices(GenomeDataset(x)).unbatch(),
 					lambda x: tf.data.Dataset.from_generator(
 						GenomeDataset,
 						args=(x,),
