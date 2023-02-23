@@ -5,8 +5,8 @@ from argparse import RawTextHelpFormatter
 from signal import signal, SIGPIPE, SIG_DFL
 signal(SIGPIPE,SIG_DFL)
 
-#os.environ["OMP_NUM_THREADS"]="16" 
-#os.environ["CUDA_VISIBLE_DEVICES"]="4,5,6,7"
+os.environ["OMP_NUM_THREADS"]="16" 
+os.environ["CUDA_VISIBLE_DEVICES"]="3,4,5,6,7"
 os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 os.environ['TF_GPU_THREAD_COUNT'] = '4'
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -19,7 +19,6 @@ import datetime
 import time
 
 
-#os.environ["CUDA_VISIBLE_DEVICES"]="3" #,4,5,7"
 gpus = tf.config.list_physical_devices('GPU')
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
@@ -102,11 +101,11 @@ class GenomeDataset:
 			yield tf.convert_to_tensor(X[ : 2*r , : ]),tf.convert_to_tensor(Y[ i*2: i*2+2*r , :])
 
 
-#dataset = GenomeDataset("/data/katelyn/assembly/bacteria/train/GCA_000005825.2.gbff.gz".encode())
+#dataset = GenomeDataset("/dev/shm/tmp/GCA_000005825.2.gbff.gz".encode())
 #print(getsize(dataset))
 #dataset = GenomeDataset("/home/katelyn/develop/genotate/test/NC_001416.gbk".encode())
 #for x,y in dataset:
-#	print(x.shape, y.shape)
+	#print(x.shape, y.shape)
 #	break
 	#for i in range(len(x)):
 	#	print(y[i,:], to_dna(x[i,:]))		
@@ -134,7 +133,7 @@ if __name__ == '__main__':
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
-	filenames = filenames[:10] ; valnames = valnames[:5]
+	#filenames = filenames[:10] ; valnames = valnames[:5]
 	print(len(filenames)) ; print(len(valnames))
 	
 	spec = (tf.TensorSpec(shape = (None,99), dtype = tf.experimental.numpy.int8),
@@ -150,9 +149,9 @@ if __name__ == '__main__':
 					).unbatch(),
 					#).rebatch(9216),
 	                num_parallel_calls=tf.data.AUTOTUNE,
-					deterministic=True,cycle_length=192,block_length=48,
+					deterministic=True,cycle_length=256,block_length=48,
 	                )
-	dataset = dataset.batch(9216, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
+	dataset = dataset.batch(12288, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
 	dataset = dataset.prefetch(tf.data.AUTOTUNE)
 	dataset = dataset.with_options(options) 
 
@@ -176,19 +175,20 @@ if __name__ == '__main__':
 	valiset = valiset.prefetch(tf.data.AUTOTUNE)
 	valiset = valiset.with_options(options) 
 	
-	checkpoint = tf.keras.callbacks.ModelCheckpoint('bact-{epoch:03d}', save_weights_only=True, save_freq='epoch')
+	checkpoint = tf.keras.callbacks.ModelCheckpoint('bact' + str(args.kfold) + '-{epoch:03d}', save_weights_only=True, save_freq='epoch')
 	es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=3)
+	save = tf.keras.callbacks.BackupAndRestore("./train"+str(args.kfold)+"_backup", save_freq="epoch", delete_checkpoint=True)
 	
 	#tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"), histogram_freq=1, profile_batch = '1512,2024')
-	#gpus = [item.name.replace('physical_device:','').lower() for item in gpus]
-	#strategy = tf.distribute.MirroredStrategy(devices=gpus)
-	#with strategy.scope():
-	with tf.device('/device:GPU:0'):
+	gpus = [item.name.replace('physical_device:','').lower() for item in gpus]
+	strategy = tf.distribute.MirroredStrategy(devices=gpus)
+	with strategy.scope():
+	#with tf.device('/device:GPU:0'):
 		model = api(None)
 	model.fit(
 		dataset,
 		validation_data = valiset,
 		epochs          = 10,
-		verbose         = 1,
-		callbacks       = [checkpoint, es_callback, LossHistoryCallback() ] #tensorboard_callback]
+		verbose         = 0,
+		callbacks       = [save, checkpoint, es_callback, LossHistoryCallback() ] #tensorboard_callback]
 	)
