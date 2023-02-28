@@ -5,8 +5,8 @@ from argparse import RawTextHelpFormatter
 from signal import signal, SIGPIPE, SIG_DFL
 signal(SIGPIPE,SIG_DFL)
 
-os.environ["OMP_NUM_THREADS"]="16" 
-os.environ["CUDA_VISIBLE_DEVICES"]="3,4,5,6,7"
+os.environ["OMP_NUM_THREADS"]="24" 
+os.environ["CUDA_VISIBLE_DEVICES"]="0,1,2,3,4,5,6,7"
 os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 os.environ['TF_GPU_THREAD_COUNT'] = '4'
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -14,7 +14,7 @@ from genotate.make_model import create_model_blend, blend, api
 import tensorflow as tf
 import numpy as np
 from genbank.file import File
-from genotate.functions import parse_locus, to_dna, getsize
+from genotate.functions import to_dna, getsize
 import datetime
 import time
 
@@ -22,6 +22,7 @@ import time
 gpus = tf.config.list_physical_devices('GPU')
 for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
+
 
 def is_valid_file(x):
 	if not os.path.exists(x):
@@ -96,12 +97,13 @@ class GenomeDataset:
 				yield X,Y[ i*2:i*2+n*2 , :]
 			i = length // n * n
 			r = length % n
-			X[0:2*r:2,] = np.lib.stride_tricks.sliding_window_view(forward[ i : i+r+98],99)
-			X[1:2*r:2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+r+98],99)[:,::-1]
-			yield tf.convert_to_tensor(X[ : 2*r , : ]),tf.convert_to_tensor(Y[ i*2: i*2+2*r , :])
+			if r:
+				X[0:2*r:2,] = np.lib.stride_tricks.sliding_window_view(forward[ i : i+r+98],99)
+				X[1:2*r:2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+r+98],99)[:,::-1]
+				yield X[ : 2*r , : ] , Y[ i*2: i*2+2*r , :]
 
 
-#dataset = GenomeDataset("/dev/shm/tmp/GCA_000005825.2.gbff.gz".encode())
+#dataset = GenomeDataset("/data/katelyn/assembly/bacteria/train/GCA_000005825.2.gbff.gz".encode())
 #print(getsize(dataset))
 #dataset = GenomeDataset("/home/katelyn/develop/genotate/test/NC_001416.gbk".encode())
 #for x,y in dataset:
