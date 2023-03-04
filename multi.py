@@ -3,12 +3,11 @@ import sys
 import re
 import argparse
 from argparse import RawTextHelpFormatter
-from os import listdir
 from os.path import isfile, join
 import datetime
 import time
 
-#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 import tensorflow as tf
 #from tensorflow.keras import mixed_precision
@@ -66,6 +65,7 @@ def rev_comp(seq):
 def iter_genbank(infile):
 	genbank = File(infile.decode())
 	for locus in genbank:
+		locus.file = infile.decode()	
 		for data in parse_locus(locus):
 			yield data
 
@@ -79,8 +79,21 @@ class LossHistoryCallback(tf.keras.callbacks.Callback):
 			row.append(value)
 		print('\t'.join(map(str,row)), flush=True)
 
+np.set_printoptions(linewidth=500)
 
-#np.set_printoptions(linewidth=500)
+dataset = iter_genbank("/data/katelyn/assembly/phages/train/GCA_000840865.2.gbff.gz".encode())
+n = 0
+for xy in dataset:
+	#print(x.shape, y.shape)
+#	break
+	for i in range(len(xy)):
+		tem = np.zeros(3, dtype=np.uint8)
+		tem[xy[i,0]] = 1
+		print(n//2, tem, to_dna(xy[i,1:]))
+		n += 1
+exit()
+
+
 #np.set_printoptions(formatter={'all': lambda x: " {:.0f} ".format(x)})
 #for row in iter_genbank(sys.argv[1].encode()):
 #	for i in range(6):
@@ -97,7 +110,7 @@ if __name__ == '__main__':
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
-	os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold+2)
+	#os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold+2)
 	physical_devices = tf.config.experimental.list_physical_devices('GPU')
 	tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
@@ -105,16 +118,14 @@ if __name__ == '__main__':
 	#filenames = [os.path.join(args.directory,f) for f in listdir(args.directory) if isfile(join(args.directory, f))]
 	filenames = list()
 	valnames = list()
-	for f in listdir(args.directory):
-		if (int(f[11])%5) != args.kfold - 1: 
+	for f in sorted(os.listdir(args.directory)):
+		if (int(f[11])%5) != args.kfold: 
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
-	print(filenames)
-	print(len(filenames))
-	print(valnames)
-	print(len(valnames))
-	print()
+	#print(filenames) ; print(valnames)
+	print(len(filenames)) ; print(len(valnames))
+	
 	#filenames = filenames[:10] ; valnames = valnames[:10]
 	print("Starting...",flush=True)
 	with tf.device('/device:GPU:0'):
@@ -130,13 +141,22 @@ if __name__ == '__main__':
 							)
 						),
 						num_parallel_calls=tf.data.AUTOTUNE,
+						deterministic=True,
 						cycle_length=64,
 						block_length=8
 						)
 	dataset = dataset.unbatch()
 	dataset = dataset.map(pack)
+	dataset = dataset.batch(4096, deterministic=True)
 	#dataset = dataset.shuffle(buffer_size=1000)
-	dataset = dataset.batch(4096)
+	print(dataset)
+	for x,y in dataset.take(1):
+		x = x.numpy()
+		y = y.numpy()
+		for i in range(len(x)):
+			print(y[i,:], x[i,:])
+		
+	exit()
 	dataset = dataset.prefetch(tf.data.AUTOTUNE)
 
 	valset = tf.data.Dataset.from_tensor_slices(valnames)

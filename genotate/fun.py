@@ -118,6 +118,7 @@ def parse_genbank(infile):
 		middle = len(dna)//2  + (len(dna) % 2 > 0)
 		X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[:middle+98],99)
 		X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[:middle+98],99)[:,::-1]
+		X[:,0:9] = [int(s) for s in filename.decode()[-19:-10]]
 		yield X,Y[:len(X),:]
 		X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[middle-(len(dna)%2):],99)
 		X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[middle-(len(dna)%2):],99)[:,::-1]

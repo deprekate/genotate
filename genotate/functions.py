@@ -187,6 +187,7 @@ def parse_locus(locus):
 			a[5,0] = positions.get(-i, 2)
 			a[4,1:100] = forward[i : i+99 ]
 			a[5,1:100] = reverse[i : i+99 ][::-1]
+			#a[:,1:10] = [int(s) for s in locus.file[-19:-10]]
 			#a[2*f  ,101] =  at_skew[pos]
 			#a[2*f+1,101] = -at_skew[pos]
 			#a[2*f  ,102] =  gc_skew[pos]
