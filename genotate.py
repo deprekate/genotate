@@ -7,6 +7,8 @@ import argparse
 from argparse import RawTextHelpFormatter
 from statistics import mode
 
+#sys.argv = [sys.argv[0]] + sys.argv[1].split()
+
 import faulthandler
 
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
@@ -25,9 +27,9 @@ from genotate.functions import *
 import numpy as np
 # TensorFlow and tf.keras
 import tensorflow as tf
-physical_devices = tf.config.experimental.list_physical_devices('GPU')
-if len(physical_devices) > 0:
-	tf.config.experimental.set_memory_growth(physical_devices[0], True)
+gpus = tf.config.list_physical_devices('GPU')
+for gpu in gpus:
+    tf.config.experimental.set_memory_growth(gpu, True)
 import ruptures as rpt
 
 
@@ -106,11 +108,12 @@ if __name__ == '__main__':
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
-
 	#ckpt_reader = tf.train.load_checkpoint(args.model)
 	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
 	#model = mm.create_model_deep(n)
 	#model = blend(args)
+	k = 1 + int(os.path.basename(args.infile)[11]) % 5
+	args.model = args.model.replace('#', str(k))
 	with quiet() ,tf.device('/device:GPU:0'), quiet():
 		model = api(args)
 		#name = args.infile.split('/')[-1]
@@ -127,11 +130,11 @@ if __name__ == '__main__':
 		generator = lambda : parse_locus(locus)
 		dataset = tf.data.Dataset.from_generator(
 								generator,
-								output_signature=(tf.TensorSpec(shape=(6,100),dtype=tf.int32))
+								output_signature=(tf.TensorSpec(shape=(6,100),dtype=np.uint8))
 								)
 		dataset = dataset.unbatch()
 		dataset = dataset.map(pack)
-		dataset = dataset.batch(512)
+		dataset = dataset.batch(32)
 		#for feature in dataset.take(1):
 		#	print( feature )
 		#	exit()
@@ -177,12 +180,12 @@ if __name__ == '__main__':
 						#n = locus.nearest(start,feature.strand,['atg','gtg','ttg'])
 						#feature.tags['NSTOP'] = [abs(n-start)]
 
-		
-		
-
-
-		#stop_counts = locus.count_stops()
-
+		mid,end = locus.count_stops()
+		args.outfile.write(str(mid))
+		args.outfile.write('\n')
+		args.outfile.write(str(end))
+		args.outfile.write('\n')
+		exit()
 		# merge regions
 		locus.merge()
 
@@ -190,7 +193,7 @@ if __name__ == '__main__':
 		#locus.split()
 
 		# adjust ends
-		locus.adjust()
+		#locus.adjust()
 
 		#counts = locus.count_starts()
 		#print( { k: v for k, v in sorted(counts.items(), key=lambda item: item[1], reverse=True)} )

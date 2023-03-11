@@ -193,9 +193,9 @@ def api(args):
 	#opt = tf.keras.optimizers.legacy.Adam()
 	#except:
 	opt = tf.keras.optimizers.Adam(learning_rate=0.001)
-	#custom_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
-	model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
-	#model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy','Recall', 'Precision','FalseNegatives','FalsePositives'])
+	custom_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
+	#model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
+	model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy']) #,'Recall', 'Precision','FalseNegatives','FalsePositives'])
 	return model
 '''
 import keras_tuner as kt

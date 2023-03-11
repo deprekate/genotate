@@ -192,15 +192,30 @@ class Locus(Locus, feature=Feature):
 		return counts
 
 	def count_stops(self):
-		counts = {item : 0 for item in self.stops}
+		counts = {item : 1 for item in self.stops}
+		mid = {item : 0 for item in self.stops}
+		end = {item : 0 for item in self.stops}
 		for feature in self.features(include='CDS'):
+			acids = feature.translation()
+			mid['taa'] += acids[:-10].count('#')
+			end['taa'] += acids[-10:].count('#')
+			mid['tag'] += acids[:-10].count('+')
+			end['tag'] += acids[-10:].count('+')
+			mid['tga'] += acids[:-10].count('*')
+			end['tga'] += acids[-10:].count('*')
+		return mid, end
+		'''
 			dna = feature.seq()
 			for i in range(30, len(dna) - 30, 3):
 				if dna[i:i+3] in self.stops:
 					counts[dna[i:i+3]] += 1
-		for stop in counts:
-			counts[stop] /= self.seq().count(stop) + self.seq().count(rev_comp(stop))
-		return counts
+		#for stop in counts:
+			#print(stop, counts[stop] , self.seq().count(stop), self.seq().count(rev_comp(stop) ) )
+		#	counts[stop] /= self.seq().count(stop) + self.seq().count(rev_comp(stop))
+		#print(counts)
+		#exit()
+		#return counts
+		'''
 
 	def skew(self, nucs):
 		windowsize = stepsize = 100 #int(len(self.sequence) / 1000)

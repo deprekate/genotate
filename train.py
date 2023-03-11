@@ -6,7 +6,7 @@ from signal import signal, SIGPIPE, SIG_DFL
 signal(SIGPIPE,SIG_DFL)
 
 os.environ["OMP_NUM_THREADS"]="24" 
-os.environ["CUDA_VISIBLE_DEVICES"]="0,1,2,3,4,5,6,7"
+os.environ["CUDA_VISIBLE_DEVICES"]="0" #,1,2,3,4,5,6,7"
 os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 os.environ['TF_GPU_THREAD_COUNT'] = '4'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -77,6 +77,21 @@ class GenomeDataset:
 				forward[i] = ((ord(base) >> 1) & 3) + 1
 				reverse[i] = ((forward[i] - 3) % 4) + 1
 			locus.dna = None
+			'''
+			a = np.zeros([6, 99], dtype=np.uint8)
+			for n in range(0, length-2, 3):
+				#pos = n//100
+				i = n + 0
+				a[0,0:99] = forward[i : i+99 ]
+				a[1,0:99] = reverse[i : i+99 ][::-1]
+				i = n + 1
+				a[2,0:99] = forward[i : i+99 ]
+				a[3,0:99] = reverse[i : i+99 ][::-1]
+				i = n + 2
+				a[4,0:99] = forward[i : i+99 ]
+				a[5,0:99] = reverse[i : i+99 ][::-1]
+				yield a,Y[2*n:2*n+6,:]
+			'''
 			# leave this here for numpy < 1.20 backwards compat
 			#forfor = np.concatenate(( forward, forward[:-1] ))
 			#L = len(forward)
@@ -105,20 +120,21 @@ class GenomeDataset:
 				X[1:2*r:2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+r+98],99)[:,::-1]
 				yield X[ : 2*r , : ] , Y[ i*2: i*2+2*r , :]
 
-
-#dataset = GenomeDataset("/data/katelyn/assembly/phages/train/GCA_000840865.2.gbff.gz".encode())
+'''
+dataset = GenomeDataset(sys.argv[1].encode())
 #print(getsize(dataset))
 #dataset = GenomeDataset("/home/katelyn/develop/genotate/test/NC_001416.gbk".encode())
-#n = 0
-#for x,y in dataset:
+n = 0
+for x,y in dataset:
 	#print(x.shape, y.shape)
 #	break
-#	for i in range(len(x)):
-#		print(n//2, y[i,:], to_dna(x[i,:]))		
-#		n += 1
-#exit()
+	for i in range(len(x)):
+		print(n//2, y[i,:], to_dna(x[i,:]))		
+		n += 1
+exit()
 #print(getsize(dataset))
 #exit()
+'''
 
 if __name__ == '__main__':
 	usage = '%s [-opt1, [-opt2, ...]] directory' % __file__
@@ -135,17 +151,19 @@ if __name__ == '__main__':
 	#filenames = [os.path.join(args.directory,f) for f in os.listdir(args.directory) if os.path.isfile(os.path.join(args.directory, f))]
 	filenames = list()
 	valnames = list()
-	for f in sorted(os.listdir(args.directory)):
+	for f in os.listdir(args.directory):
 		if (int(f[11])%5) != args.kfold: 
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
-	#filenames = filenames[:10] ; valnames = valnames[:5]
-	#print(filenames) ; print(valnames)
+	filenames = filenames[:10] ; valnames = valnames[:10]
+	print(filenames) ; print(valnames)
 	print(len(filenames)) ; print(len(valnames))
 	spec = (tf.TensorSpec(shape = (None,99), dtype = tf.experimental.numpy.int8),
 			tf.TensorSpec(shape = (None, 3), dtype = tf.experimental.numpy.int8))
 	dataset = tf.data.Dataset.from_tensor_slices(filenames)
+	dataset = dataset.with_options(options) 
+	dataset = dataset.shuffle(buffer_size=64)
 	dataset = dataset.interleave(
 					#lambda x: GenomeDataset(x).unbatch(),
 					#lambda x: tf.data.Dataset.from_tensor_slices(GenomeDataset(x)).unbatch(),
@@ -154,13 +172,15 @@ if __name__ == '__main__':
 						args=(x,),
 						output_signature=spec
 					).unbatch(),
-					#).rebatch(9216),
 	                num_parallel_calls=tf.data.AUTOTUNE,
-					deterministic=True,cycle_length=256,block_length=48,
+					deterministic=False,
+					cycle_length=192,
+					block_length=48,
 	                )
-	dataset = dataset.batch(12288, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
+	#dataset = dataset.unbatch()
+	dataset = dataset.batch(9216) #, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
 	dataset = dataset.prefetch(tf.data.AUTOTUNE)
-	dataset = dataset.with_options(options) 
+	dataset = dataset.shuffle(buffer_size=9216)
 
 	#print(dataset)
 	#for x,y in dataset.take(1):
@@ -180,16 +200,17 @@ if __name__ == '__main__':
 						output_signature=spec
 					).unbatch(),
 	                num_parallel_calls=tf.data.AUTOTUNE,
-					#deterministic=False,cycle_length=8,block_length=1024,
-					deterministic=False,cycle_length=8,block_length=1024,
+					deterministic=False,
+					cycle_length=8,block_length=512,
 	                )
-	valiset = valiset.batch(8192, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
+	valiset = valiset.batch(4096, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
 	valiset = valiset.prefetch(tf.data.AUTOTUNE)
-	valiset = valiset.with_options(options) 
-	
-	checkpoint = tf.keras.callbacks.ModelCheckpoint('bact' + str(args.kfold) + '-{epoch:03d}', save_weights_only=True, save_freq='epoch')
+	#valiset = valiset.with_options(options) 
+
+	name = '_'.join(os.path.dirname(args.directory).split('/')[-2:])
+	checkpoint = tf.keras.callbacks.ModelCheckpoint(name + str(args.kfold) + '-{epoch:03d}', save_weights_only=True, save_freq='epoch')
 	es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=3)
-	save = tf.keras.callbacks.BackupAndRestore("./train"+str(args.kfold)+"_backup", save_freq="epoch", delete_checkpoint=True)
+	save = tf.keras.callbacks.BackupAndRestore(name+str(args.kfold)+"_backup", save_freq="epoch", delete_checkpoint=True)
 	
 	#tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"), histogram_freq=1, profile_batch = '1512,2024')
 	#gpus = [item.name.replace('physical_device:','').lower() for item in gpus]
@@ -200,7 +221,7 @@ if __name__ == '__main__':
 	model.fit(
 		dataset,
 		validation_data = valiset,
-		epochs          = 10,
-		verbose         = 1,
-		callbacks       = [save, checkpoint, es_callback, LossHistoryCallback() ] #tensorboard_callback]
+		epochs          = 3,
+		verbose         = 0,
+		callbacks       = [LossHistoryCallback()] #save, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
 	)
