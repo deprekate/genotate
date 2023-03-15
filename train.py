@@ -5,11 +5,10 @@ from argparse import RawTextHelpFormatter
 from signal import signal, SIGPIPE, SIG_DFL
 signal(SIGPIPE,SIG_DFL)
 
-os.environ["OMP_NUM_THREADS"]="24" 
-os.environ["CUDA_VISIBLE_DEVICES"]="0" #,1,2,3,4,5,6,7"
 os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
-os.environ['TF_GPU_THREAD_COUNT'] = '4'
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+#os.environ["OMP_NUM_THREADS"]="4" 
+#os.environ['TF_GPU_THREAD_COUNT'] = '4'
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from genotate.make_model import create_model_blend, blend, api
 import tensorflow as tf
 import numpy as np
@@ -17,13 +16,6 @@ from genbank.file import File
 from genotate.functions import to_dna, getsize
 import datetime
 import time
-
-np.set_printoptions(linewidth=500)
-
-gpus = tf.config.list_physical_devices('GPU')
-for gpu in gpus:
-    tf.config.experimental.set_memory_growth(gpu, True)
-
 
 def is_valid_file(x):
 	if not os.path.exists(x):
@@ -146,8 +138,14 @@ if __name__ == '__main__':
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
-	options = tf.data.Options()
-	options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.FILE
+
+	"""
+	os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold)
+	"""
+	gpus = tf.config.list_physical_devices('GPU')
+	for gpu in gpus:
+		tf.config.experimental.set_memory_growth(gpu, True)
+
 	#filenames = [os.path.join(args.directory,f) for f in os.listdir(args.directory) if os.path.isfile(os.path.join(args.directory, f))]
 	filenames = list()
 	valnames = list()
@@ -156,13 +154,13 @@ if __name__ == '__main__':
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
-	filenames = filenames[:10] ; valnames = valnames[:10]
-	print(filenames) ; print(valnames)
+	#filenames = filenames[:10] ; valnames = valnames[:10]
+	#print(filenames) ; print(valnames)
 	print(len(filenames)) ; print(len(valnames))
 	spec = (tf.TensorSpec(shape = (None,99), dtype = tf.experimental.numpy.int8),
 			tf.TensorSpec(shape = (None, 3), dtype = tf.experimental.numpy.int8))
+	strategy = tf.distribute.MirroredStrategy(devices=[item.name.replace('physical_device:','').lower() for item in gpus])
 	dataset = tf.data.Dataset.from_tensor_slices(filenames)
-	dataset = dataset.with_options(options) 
 	dataset = dataset.shuffle(buffer_size=64)
 	dataset = dataset.interleave(
 					#lambda x: GenomeDataset(x).unbatch(),
@@ -178,9 +176,15 @@ if __name__ == '__main__':
 					block_length=48,
 	                )
 	#dataset = dataset.unbatch()
-	dataset = dataset.batch(9216) #, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
+	dataset = dataset.shuffle(buffer_size=64)
+	dataset = dataset.batch(9216*len(gpus), num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
+	dataset = dataset.shuffle(buffer_size=8)
 	dataset = dataset.prefetch(tf.data.AUTOTUNE)
-	dataset = dataset.shuffle(buffer_size=9216)
+	#dataset = strategy.experimental_distribute_dataset(dataset)
+
+	options = tf.data.Options()
+	options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.FILE
+	dataset = dataset.with_options(options) 
 
 	#print(dataset)
 	#for x,y in dataset.take(1):
@@ -201,27 +205,26 @@ if __name__ == '__main__':
 					).unbatch(),
 	                num_parallel_calls=tf.data.AUTOTUNE,
 					deterministic=False,
-					cycle_length=8,block_length=512,
+					cycle_length=18,block_length=512,
 	                )
-	valiset = valiset.batch(4096, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
+	valiset = valiset.batch(9216*len(gpus), num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
 	valiset = valiset.prefetch(tf.data.AUTOTUNE)
-	#valiset = valiset.with_options(options) 
+	#valiset = strategy.experimental_distribute_dataset(valiset)
+	valiset = valiset.with_options(options) 
 
 	name = '_'.join(os.path.dirname(args.directory).split('/')[-2:])
 	checkpoint = tf.keras.callbacks.ModelCheckpoint(name + str(args.kfold) + '-{epoch:03d}', save_weights_only=True, save_freq='epoch')
-	es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=3)
+	es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=4)
 	save = tf.keras.callbacks.BackupAndRestore(name+str(args.kfold)+"_backup", save_freq="epoch", delete_checkpoint=True)
 	
 	#tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"), histogram_freq=1, profile_batch = '1512,2024')
-	#gpus = [item.name.replace('physical_device:','').lower() for item in gpus]
-	#strategy = tf.distribute.MirroredStrategy(devices=gpus)
-	#with strategy.scope():
-	with tf.device('/device:GPU:0'):
+	with strategy.scope():
+	#with tf.device('/device:GPU:0'):
 		model = api(None)
 	model.fit(
 		dataset,
 		validation_data = valiset,
-		epochs          = 3,
+		epochs          = 20,
 		verbose         = 0,
-		callbacks       = [LossHistoryCallback()] #save, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
+		callbacks       = [LossHistoryCallback(), checkpoint, es_callback, save] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
 	)
