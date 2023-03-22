@@ -112,7 +112,7 @@ if __name__ == '__main__':
 	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
 	#model = mm.create_model_deep(n)
 	#model = blend(args)
-	k = 1 + int(os.path.basename(args.infile)[11]) % 5
+	k = 1 #int(os.path.basename(args.infile)[11]) % 5
 	args.model = args.model.replace('#', str(k))
 	with quiet() ,tf.device('/device:GPU:0'), quiet():
 		model = api(args)
@@ -134,7 +134,7 @@ if __name__ == '__main__':
 								)
 		dataset = dataset.unbatch()
 		dataset = dataset.map(pack)
-		dataset = dataset.batch(32)
+		dataset = dataset.batch(128)
 		#for feature in dataset.take(1):
 		#	print( feature )
 		#	exit()
@@ -158,42 +158,37 @@ if __name__ == '__main__':
 								np.divide( reverse[:,:,2] + forward[:,:,2], 6).sum(axis=0).clip(0,1) , 
 								forward[:,:,1].sum(axis=0).clip(0,1) 
 								]).T
-		#forward[:,:,1] = forward[:,:,1] + reverse[:,:,1]
-		#reverse[:,:,1] = forward[:,:,1] + reverse[:,:,1]
 		strand_switches = predict_switches(strand_wise, 33, 33)
 		
 		# predict frames of strand
 		for (index,offset),strand in strand_switches.items():
 			index , offset , strand = max(index - 30, 0) , min(offset + 30, len(strand_wise)-1) , strand-1
-			#pairs = [map(str,[3*index+1, 3*offset+1])]
-			#locus.add_feature('mRNA', strand, pairs )
+			#locus.add_feature('mRNA', strand, [map(str,[3*index+1, 3*offset+1])])
 			if strand == 0:continue
 			for frame in [0,1,2]:
-				local = forward[frame, index : offset//3*3, :] if strand > 0 else reverse[frame, index : offset, :]
-				switches = predict_switches(local, 33, 10)
+				frame_wise = forward[frame, index : offset//3*3, :] if strand > 0 else reverse[frame, index : offset, :]
+				switches = predict_switches(frame_wise, 33, 10)
 				for (left,right),label in switches.items(): 
 					if label == 1:
 						pairs = [ list(map(str,[3*(index+left)+frame+1, 3*(index+right)+frame])) ]
 						feature = locus.add_feature('CDS', strand, pairs) 
 						feature.tags['colour'] = ["100 100 100"]
-						#start = [feature.left(), feature.right()][::feature.strand][0]
-						#n = locus.nearest(start,feature.strand,['atg','gtg','ttg'])
-						#feature.tags['NSTOP'] = [abs(n-start)]
 
-		mid,end = locus.count_stops()
-		args.outfile.write(str(mid))
-		args.outfile.write('\n')
-		args.outfile.write(str(end))
-		args.outfile.write('\n')
-		exit()
+		# look for stop codon readthrough
+		locus.stops = locus.detect_stops()
+
+		locus.write(open('before','w'), args=args)
 		# merge regions
 		locus.merge()
 
+		for key in sorted(locus):
+			locus[key] = locus.pop(key)
+		
 		# split regions on stop codons
-		#locus.split()
+		locus.split()
 
 		# adjust ends
-		#locus.adjust()
+		locus.adjust()
 
 		#counts = locus.count_starts()
 		#print( { k: v for k, v in sorted(counts.items(), key=lambda item: item[1], reverse=True)} )
@@ -203,6 +198,5 @@ if __name__ == '__main__':
 		# this may be a bad way to do this
 		for key in sorted(locus):
 			locus[key] = locus.pop(key)
-		
 		locus.write(args.outfile, args=args)
 	

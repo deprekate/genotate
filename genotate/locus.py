@@ -36,50 +36,16 @@ def count(dq, item):
 def nint(x):
 	return int(x.replace('<','').replace('>',''))
 
-def find_median(sorted_list):
-	indices = []
-	list_size = len(sorted_list)
-	median = 0
-	if list_size % 2 == 0:
-		indices.append(int(list_size / 2) - 1)  # -1 because index starts from 0
-		indices.append(int(list_size / 2))
-		median = (sorted_list[indices[0]] + sorted_list[indices[1]]) / 2
-		pass
-	else:
-		indices.append(int(list_size / 2))
-		median = sorted_list[indices[0]]
-		pass
-	return median, indices
-	pass
-
-def has_outlier(unsorted_list):
-	if min(unsorted_list) < (np.mean(unsorted_list) - 2*np.std(unsorted_list)):
-		return True
-	else:
-		return False
-	sorted_list = sorted(unsorted_list)
-	median, median_indices = find_median(sorted_list)
-	q25, q25_indices = find_median(sorted_list[:median_indices[0]])
-	q75, q75_indices = find_median(sorted_list[median_indices[-1] + 1:])
-	iqr = q75 - q25
-	lower = q25 - (iqr * 1.5)
-	if sorted_list[0] < lower:
-		return True
-	else:
-		return False
-
-def has_stop(dna, strand):
-	codons = ['taa','tag','tga'] if strand > 0 else ['tta','cta','tca']
-	for i in range(0, len(dna), 3):
-		if dna[i:i+3] in codons:
-			return True
-	return False
-
 class Locus(Locus, feature=Feature):
 	def init(self, args):
 		#self._rbs = score_rbs.ScoreXlationInit()
 		self.stops = ['taa','tga','tag']
 		pass
+	def has_stop(self, dna):
+		for i in range(0, len(dna), 3):
+			if dna[i:i+3] in self.stops:
+				return True
+		return False
 
 	def score_rbs(self, rbs):
 		return self._rbs.score_init_rbs(rbs,20)[0]
@@ -106,27 +72,28 @@ class Locus(Locus, feature=Feature):
 			# THIS JUST MKES SURE THE FEATURE LOCATIONS ARE IN THE SAME FRAME
 			#for i in _curr.base_locations():
 			#	_curr.dna += self.dna[ i-1 : i ]
-			if _last is None or _curr is None or (_last.type != 'CDS') or (_curr.type != 'CDS'):
+			if None in [_last,_curr,_next]: # or (_last.type != 'CDS') or (_curr.type != 'CDS'):
 				pass
-			elif _curr.strand != _last.strand:
-				pass
-			elif _last.frame('right') == _curr.frame('left'):
+			#elif _curr.strand != _last.strand:
+			#	pass
+			#elif _last.frame('right') == _curr.frame('left'):
+			elif _curr.frame() == _next.frame():
 				# THIS MERGES ADJACENT FRAMES
-				seq = self.seq(_last.right()-30 , _curr.left()+32)
-				if not has_stop(seq, _last.strand):
-					del self[_last]
+				seq = self.seq(_curr.right()-30 , _next.left()+30, _next.strand)
+				if not self.has_stop(seq):
 					del self[_curr]
-					_last.tags['note'] = ['"merged:' + str(_last.pairs) + str(_curr.pairs) + '"' ]
-					_last.pairs = ( (_last.pairs[0][0] , _curr.pairs[-1][-1]), )
-					self[_last] = True
-					_curr = _next
+					del self[_next]
+					_curr.tags['note'] = ['"merged:' + str(_curr.pairs) + str(_next.pairs) + '"' ]
+					_curr.pairs = ( (_curr.pairs[0][0] , _next.pairs[-1][-1]), )
+					self[_curr] = True
+					#_curr = _next
 					continue
 			elif _next is None:
 				pass
-			elif _last.frame('right') == _next.frame('left'):
+			elif _last.frame() == _next.frame():
 				# THIS MERGES FRAMES BROKEN BY AN EMBEDDED GENE
-				seq = self.seq(_last.right()-30 , _next.left()+32)
-				if not has_stop(seq, _last.strand):
+				seq = self.seq(_last.right()-30 , _next.left()+30, _next.strand)
+				if not self.has_stop(seq):
 					del self[_last]
 					del self[_next]
 					_last.tags['note'] = ['"merged:' + str(_last.pairs) + str(_next.pairs) + '"' ]
@@ -163,25 +130,27 @@ class Locus(Locus, feature=Feature):
 			if feature.stop_codon() not in self.stops:
 				del self[feature]
 				if feature.strand > 0:
-					left  = self.last(feature.right(), self.stops, feature.strand)
+					#left  = self.last(feature.right(), self.stops, feature.strand)
 					right = self.next(feature.right(), self.stops, feature.strand)
-					left  = left  if left  else 0
+					#left  = left  if left  else 0
 					right = right if right else self.length()-3
+					feature.set_right(right)
 					# goto closer stop
-					if feature.right() - left < right - feature.right():
-						feature.set_right(left+3)
-					else:
-						feature.set_right(right+3)
+					#if feature.right() - left < right - feature.right():
+					#	feature.set_right(left+3)
+					#else:
+					#	feature.set_right(right+3)
 				else:
 					left  = self.next(feature.left(), self.stops, feature.strand)
-					right = self.last(feature.left(), self.stops, feature.strand)
+					#right = self.last(feature.left(), self.stops, feature.strand)
 					left = left if left else 0
-					right = right if right else self.length()-3
+					feature.set_left(left)
+					#right = right if right else self.length()-3
 					# goto closer stop
-					if feature.left() - left < right - feature.left():
-						feature.set_left(left+1)
-					else:
-						feature.set_left(left+1)
+					#if feature.left() - left < right - feature.left():
+					#	feature.set_left(left+1)
+					#else:
+					#	feature.set_left(left+1)
 				self[feature] = True
 
 	def count_starts(self):
@@ -191,31 +160,26 @@ class Locus(Locus, feature=Feature):
 			counts[codon] = counts.setdefault(codon,0) + 1
 		return counts
 
-	def count_stops(self):
-		counts = {item : 1 for item in self.stops}
+	def detect_stops(self):
+		n = 10
 		mid = {item : 0 for item in self.stops}
 		end = {item : 0 for item in self.stops}
 		for feature in self.features(include='CDS'):
 			acids = feature.translation()
-			mid['taa'] += acids[:-10].count('#')
-			end['taa'] += acids[-10:].count('#')
-			mid['tag'] += acids[:-10].count('+')
-			end['tag'] += acids[-10:].count('+')
-			mid['tga'] += acids[:-10].count('*')
-			end['tga'] += acids[-10:].count('*')
-		return mid, end
-		'''
-			dna = feature.seq()
-			for i in range(30, len(dna) - 30, 3):
-				if dna[i:i+3] in self.stops:
-					counts[dna[i:i+3]] += 1
-		#for stop in counts:
-			#print(stop, counts[stop] , self.seq().count(stop), self.seq().count(rev_comp(stop) ) )
-		#	counts[stop] /= self.seq().count(stop) + self.seq().count(rev_comp(stop))
-		#print(counts)
-		#exit()
-		#return counts
-		'''
+			m = acids[  :-n]
+			e = acids[-n:  ]
+			if sum(['#' in m, '+' in m, '*' in m]) == 1:
+				mid['taa'] += m.count('#')
+				mid['tag'] += m.count('+')
+				mid['tga'] += m.count('*')
+			end['taa'] += e.count('#')
+			end['tag'] += e.count('+')
+			end['tga'] += e.count('*')
+		stops = self.stops
+		for stop in mid:
+			if mid[stop] - end[stop] >= n :
+				stops.remove(stop)
+		return stops
 
 	def skew(self, nucs):
 		windowsize = stepsize = 100 #int(len(self.sequence) / 1000)

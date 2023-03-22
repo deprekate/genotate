@@ -156,7 +156,7 @@ if __name__ == '__main__':
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
-	filenames = filenames[:10] ; valnames = valnames[:10]
+	filenames = filenames[:150] ; valnames = valnames[:50]
 	print(filenames) ; print(valnames)
 	print(len(filenames)) ; print(len(valnames))
 	spec = (tf.TensorSpec(shape = (None,99), dtype = tf.experimental.numpy.int8),
@@ -221,7 +221,7 @@ if __name__ == '__main__':
 	model.fit(
 		dataset,
 		validation_data = valiset,
-		epochs          = 3,
-		verbose         = 0,
+		epochs          = 30,
+		verbose         = 1,
 		callbacks       = [LossHistoryCallback()] #save, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
 	)
