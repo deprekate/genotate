@@ -7,8 +7,6 @@ import argparse
 from argparse import RawTextHelpFormatter
 from statistics import mode
 
-#sys.argv = [sys.argv[0]] + sys.argv[1].split()
-
 import faulthandler
 
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
@@ -143,6 +141,7 @@ if __name__ == '__main__':
 
 		if args.plot_frames:
 			plot_frames(p)
+			continue
 		#p = tf.nn.softmax(p).numpy()
 		#p = smoo(p)
 		#p = best(p)
@@ -176,8 +175,8 @@ if __name__ == '__main__':
 
 		# look for stop codon readthrough
 		locus.stops = locus.detect_stops()
+		locus.write(open('before.gb','w'), args=args)
 
-		locus.write(open('before','w'), args=args)
 		# merge regions
 		locus.merge()
 

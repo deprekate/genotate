@@ -111,7 +111,7 @@ class Locus(Locus, feature=Feature):
 			stop_locations = [feature.left()-3]
 			for loc,codon in zip(feature.codon_locations(), feature.codons()):
 				if codon in self.stops:
-					stop_locations.append(loc[0]+0)
+					stop_locations.append(loc[0])
 			stop_locations.append(feature.right())
 			del self[feature]
 			for pair in pairwise(sorted(set(stop_locations))):
