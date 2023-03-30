@@ -9,8 +9,9 @@ os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 #os.environ["OMP_NUM_THREADS"]="4" 
 #os.environ['TF_GPU_THREAD_COUNT'] = '4'
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-from genotate.make_model import create_model_blend, blend, api
 import tensorflow as tf
+import keras_tuner as kt
+from genotate.make_model import create_model_blend, blend, api, HyperRegressor
 import numpy as np
 from genbank.file import File
 from genotate.functions import to_dna, getsize
@@ -62,8 +63,8 @@ class GenomeDataset:
 					Y[i:i+6,2] = 0
 				locus[feature] = None
 			Y[Y[:,1]==1,0] = 0
-			forward = np.zeros((w//2-1)+length+(w//2+1),dtype=np.uint8)
-			reverse = np.zeros((w//2-1)+length+(w//2+1),dtype=np.uint8)
+			forward = np.zeros((w//2-1)+length+(w//+1),dtype=np.uint8)
+			reverse = np.zeros((w//2-1)+length+(w//+1),dtype=np.uint8)
 			for i,base in enumerate(locus.dna):
 				i += w//2-1
 				#if base in 'acgt':
@@ -139,10 +140,16 @@ if __name__ == '__main__':
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
+	if args.kfold == 0:
+		os.environ["CUDA_VISIBLE_DEVICES"]="0"
+		os.environ["KERASTUNER_TUNER_ID"]="chief"
+	else:
+		os.environ["CUDA_VISIBLE_DEVICES"]="0"
+		#os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold)
+		os.environ["KERASTUNER_TUNER_ID"]="tuner" + str(10+args.kfold)
+	os.environ["KERASTUNER_ORACLE_IP"]="127.0.0.1"
+	os.environ["KERASTUNER_ORACLE_PORT"]="18000"
 
-	"""
-	os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold)
-	"""
 	gpus = tf.config.list_physical_devices('GPU')
 	for gpu in gpus:
 		tf.config.experimental.set_memory_growth(gpu, True)
@@ -151,11 +158,12 @@ if __name__ == '__main__':
 	filenames = list()
 	valnames = list()
 	for f in os.listdir(args.directory):
-		if (int(f[11])%5) != args.kfold: 
+		#if (int(f[11])%5) != args.kfold: 
+		if f[11] not in '357': 
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
-	filenames = filenames[:250] ; valnames = valnames[:50]
+	#filenames = filenames[:10] ; valnames = valnames[:10]
 	#print(filenames) ; print(valnames)
 	print(len(filenames)) ; print(len(valnames))
 	spec = (tf.TensorSpec(shape = (None,87), dtype = tf.experimental.numpy.int8),
@@ -213,6 +221,7 @@ if __name__ == '__main__':
 	#valiset = strategy.experimental_distribute_dataset(valiset)
 	valiset = valiset.with_options(options) 
 
+	'''
 	name = '_'.join(os.path.dirname(args.directory).split('/')[-2:])
 	checkpoint = tf.keras.callbacks.ModelCheckpoint(name + str(args.kfold) + '-{epoch:03d}', save_weights_only=True, save_freq='epoch')
 	es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=4)
@@ -225,7 +234,25 @@ if __name__ == '__main__':
 	model.fit(
 		dataset,
 		validation_data = valiset,
-		epochs          = 50,
+		epochs          = 20,
 		verbose         = 0,
-		callbacks       = [LossHistoryCallback()]#, checkpoint, es_callback, save] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
+		callbacks       = [LossHistoryCallback(), checkpoint, es_callback, save] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
 	)
+	'''
+	with tf.device('/device:GPU:0'):
+		model = api(args)
+		tuner = kt.Hyperband(HyperRegressor(),
+					 hyperband_iterations=1000,
+                     objective='val_accuracy',
+					 #objective='val_loss',
+                     max_epochs=15,
+                     factor=3,
+                     directory='tuner',
+                     project_name='phages')
+		stop_early = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
+		
+		tuner.search(dataset, validation_data=valiset, verbose=1) #, callbacks=[]) #stop_early])
+		if args.kfold == 0:
+			print(tuner.get_best_hyperparameters(1)[0].values)
+			print(tuner.get_best_hyperparameters(2)[1].values)
+			print(tuner.get_best_hyperparameters(3)[2].values)
