@@ -40,8 +40,9 @@ class GenomeDataset:
 		self.name = filename
 		self.file = File(filename.decode())
 	def __iter__(self):
+		w = 87
 		n = 20000
-		X = np.zeros([2*n ,99],dtype=np.uint8)
+		X = np.zeros([2*n ,w],dtype=np.uint8)
 		for locus in self.file:
 			length = len(locus.dna)
 			Y = np.zeros([length*2+7,3],dtype=np.uint8)
@@ -61,10 +62,10 @@ class GenomeDataset:
 					Y[i:i+6,2] = 0
 				locus[feature] = None
 			Y[Y[:,1]==1,0] = 0
-			forward = np.zeros(48+length+50,dtype=np.uint8)
-			reverse = np.zeros(48+length+50,dtype=np.uint8)
+			forward = np.zeros((w//2-1)+length+(w//2+1),dtype=np.uint8)
+			reverse = np.zeros((w//2-1)+length+(w//2+1),dtype=np.uint8)
 			for i,base in enumerate(locus.dna):
-				i += 48
+				i += w//2-1
 				#if base in 'acgt':
 				forward[i] = ((ord(base) >> 1) & 3) + 1
 				reverse[i] = ((forward[i] - 3) % 4) + 1
@@ -102,14 +103,14 @@ class GenomeDataset:
 			# this splits the BIG numpy array into n sized chunks to limit ram usage
 			for i in range( length // n):
 				i *= n
-				X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[ i : i+n+98],99)
-				X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+n+98],99)[:,::-1]
+				X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[ i : i+n+w-1],w)
+				X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+n+w-1],w)[:,::-1]
 				yield X,Y[ i*2:i*2+n*2 , :]
 			i = length // n * n
 			r = length % n
 			if r:
-				X[0:2*r:2,] = np.lib.stride_tricks.sliding_window_view(forward[ i : i+r+98],99)
-				X[1:2*r:2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+r+98],99)[:,::-1]
+				X[0:2*r:2,] = np.lib.stride_tricks.sliding_window_view(forward[ i : i+r+w-1],w)
+				X[1:2*r:2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+r+w-1],w)[:,::-1]
 				yield X[ : 2*r , : ] , Y[ i*2: i*2+2*r , :]
 
 '''
@@ -154,10 +155,10 @@ if __name__ == '__main__':
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
-	#filenames = filenames[:10] ; valnames = valnames[:10]
+	filenames = filenames[:250] ; valnames = valnames[:50]
 	#print(filenames) ; print(valnames)
 	print(len(filenames)) ; print(len(valnames))
-	spec = (tf.TensorSpec(shape = (None,99), dtype = tf.experimental.numpy.int8),
+	spec = (tf.TensorSpec(shape = (None,87), dtype = tf.experimental.numpy.int8),
 			tf.TensorSpec(shape = (None, 3), dtype = tf.experimental.numpy.int8))
 	strategy = tf.distribute.MirroredStrategy(devices=[item.name.replace('physical_device:','').lower() for item in gpus])
 	dataset = tf.data.Dataset.from_tensor_slices(filenames)
@@ -224,7 +225,7 @@ if __name__ == '__main__':
 	model.fit(
 		dataset,
 		validation_data = valiset,
-		epochs          = 20,
+		epochs          = 50,
 		verbose         = 0,
-		callbacks       = [LossHistoryCallback(), checkpoint, es_callback, save] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
+		callbacks       = [LossHistoryCallback()]#, checkpoint, es_callback, save] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
 	)
