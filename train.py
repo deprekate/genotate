@@ -4,6 +4,7 @@ import argparse
 from argparse import RawTextHelpFormatter
 from signal import signal, SIGPIPE, SIG_DFL
 signal(SIGPIPE,SIG_DFL)
+import socket
 
 os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 #os.environ["OMP_NUM_THREADS"]="4" 
@@ -41,7 +42,7 @@ class GenomeDataset:
 		self.name = filename
 		self.file = File(filename.decode())
 	def __iter__(self):
-		w = 87
+		w = 63
 		n = 20000
 		X = np.zeros([2*n ,w],dtype=np.uint8)
 		for locus in self.file:
@@ -144,11 +145,11 @@ if __name__ == '__main__':
 		os.environ["CUDA_VISIBLE_DEVICES"]="0"
 		os.environ["KERASTUNER_TUNER_ID"]="chief"
 	else:
-		os.environ["CUDA_VISIBLE_DEVICES"]="0"
-		#os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold)
-		os.environ["KERASTUNER_TUNER_ID"]="tuner" + str(10+args.kfold)
+		#os.environ["CUDA_VISIBLE_DEVICES"]="0"
+		os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold-1)
+		os.environ["KERASTUNER_TUNER_ID"]="tuner" + str(abs(hash(socket.gethostname()))) + str(args.kfold)
 	os.environ["KERASTUNER_ORACLE_IP"]="127.0.0.1"
-	os.environ["KERASTUNER_ORACLE_PORT"]="18000"
+	os.environ["KERASTUNER_ORACLE_PORT"]="8000"
 
 	gpus = tf.config.list_physical_devices('GPU')
 	for gpu in gpus:
@@ -166,7 +167,7 @@ if __name__ == '__main__':
 	#filenames = filenames[:10] ; valnames = valnames[:10]
 	#print(filenames) ; print(valnames)
 	print(len(filenames)) ; print(len(valnames))
-	spec = (tf.TensorSpec(shape = (None,87), dtype = tf.experimental.numpy.int8),
+	spec = (tf.TensorSpec(shape = (None,63), dtype = tf.experimental.numpy.int8),
 			tf.TensorSpec(shape = (None, 3), dtype = tf.experimental.numpy.int8))
 	strategy = tf.distribute.MirroredStrategy(devices=[item.name.replace('physical_device:','').lower() for item in gpus])
 	dataset = tf.data.Dataset.from_tensor_slices(filenames)
