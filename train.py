@@ -63,8 +63,8 @@ class GenomeDataset:
 					Y[i:i+6,2] = 0
 				locus[feature] = None
 			Y[Y[:,1]==1,0] = 0
-			forward = np.zeros((w//2-1)+length+(w//+1),dtype=np.uint8)
-			reverse = np.zeros((w//2-1)+length+(w//+1),dtype=np.uint8)
+			forward = np.zeros((w//2-1)+length+(w//2+1),dtype=np.uint8)
+			reverse = np.zeros((w//2-1)+length+(w//2+1),dtype=np.uint8)
 			for i,base in enumerate(locus.dna):
 				i += w//2-1
 				#if base in 'acgt':
