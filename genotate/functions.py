@@ -82,7 +82,6 @@ def plot_strands(p):
 		print(3*i+1, strand_wise[i,0], strand_wise[i,1], strand_wise[i,2], c, sep='\t')
 		print(3*i+2, strand_wise[i,0], strand_wise[i,1], strand_wise[i,2], c, sep='\t')
 		print(3*i+3, strand_wise[i,0], strand_wise[i,1], strand_wise[i,2], c, sep='\t')
-	exit()
 
 def plot_frames(p):
 	print("# BASE VAL1  VAL2 VAL3  VAL4 VAL5 VAL6 VAL7")
@@ -107,7 +106,6 @@ def plot_frames(p):
 		print('\t'.join(map(str,v)))
 		print(i // 2 + 3, end='\t')
 		print('\t'.join(map(str,v)))
-	exit()
 
 def to_dna(s):
 	to_base = {0:'n',1:'a',2:'c',3:'t',4:'g'}

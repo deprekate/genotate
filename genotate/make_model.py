@@ -197,26 +197,27 @@ def api(args):
 	#model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
 	model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy']) #,'Recall', 'Precision','FalseNegatives','FalsePositives'])
 	return model
-'''
+
+
 import keras_tuner as kt
 class HyperRegressor(kt.HyperModel):
 	def build(self, hp):
-		inputs = tf.keras.layers.Input(shape=(99,), dtype=tf.int32)
+		inputs = tf.keras.layers.Input(shape=(87,), dtype=tf.uint8)
 		x = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(inputs)
 		# Tune the number of units in the first Dense layer
 		# Choose an optimal value between 32-512
-		for i in range(hp.Int("conv_layers", 2, 5, default=5)):
+		for i in range(hp.Int("conv_layers", 2, 4, default=4)):
 			x = tf.keras.layers.Conv1D(
-				filters     = hp.Int(f"filters_{i}", 72, 128, step=8, default=96),
-				kernel_size = hp.Int(f"kernels_{i}",  3,  12, step=1, default= 7),
+				filters     = hp.Int(f"filters_{i}", 72, 120, step=8, default=96),
+				kernel_size = hp.Int(f"kernels_{i}",  5,  13, step=1, default= 7),
 				activation  = "relu",
 				padding     = "same",
 			)(x)
 		x = tf.keras.layers.Flatten()(x)
 		d = hp.Float("dropout", 0.00, 0.10, step=0.01, default=0.05)
-		for i in range(hp.Int("dense_layers", 1, 4, default=4)):
+		for i in range(hp.Int("dense_layers", 2, 4, default=4)):
 			x = tf.keras.layers.Dense(
-				units=hp.Int(f"neurons_{i}", min_value=72, max_value=128, step=8),
+				units=hp.Int(f"neurons_{i}", min_value=32, max_value=120, step=8),
 				activation='relu'
 			)(x)
 			x = tf.keras.layers.Dropout(
@@ -225,11 +226,11 @@ class HyperRegressor(kt.HyperModel):
 		outputs = tf.keras.layers.Dense(3, activation='softmax')(x)
 	
 		model = tf.keras.models.Model(inputs, outputs)
-	
-		model.compile(loss='categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
+		opt = tf.keras.optimizers.Adam(learning_rate=0.001)
+		custom_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
+		model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy'])
 		return model
 
 	#def fit(self, hp, model, dataset, **kwargs):
 	#	mod = model.evaluate(dataset) 
 	#	return mod
-'''

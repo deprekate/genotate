@@ -50,13 +50,13 @@ class Feature(Feature):
 	def set_left(self, left):
 		if left:
 			pairs = [list(tup) for tup in self.pairs]
-			pairs[0][0] = str(left)
+			pairs[0][0] = str(left+1)
 			self.pairs = tuple([tuple(lis) for lis in pairs])
 
 	def set_right(self, right):
 		if right:
 			pairs = [list(tup) for tup in self.pairs]
-			pairs[-1][-1] = str(right)
+			pairs[-1][-1] = str(right+3)
 			self.pairs = tuple([tuple(lis) for lis in pairs])
 
 
