@@ -202,21 +202,21 @@ def api(args):
 import keras_tuner as kt
 class HyperRegressor(kt.HyperModel):
 	def build(self, hp):
-		inputs = tf.keras.layers.Input(shape=(63,), dtype=tf.uint8)
+		inputs = tf.keras.layers.Input(shape=(87,), dtype=tf.uint8)
 		x = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(inputs)
 		# Tune the number of units in the first Dense layer
-		for i in range(hp.Int("conv_layers", 1, 4, default=4)):
+		for i in range(hp.Int("conv_layers", 2, 4, default=4)):
 			x = tf.keras.layers.Conv1D(
-				filters     = hp.Int(f"filters_{i}", 32, 88, step=8, default=88),
-				kernel_size = hp.Int(f"kernels_{i}",  5,  14, step=1, default= 7),
+				filters     = hp.Int(f"filters_{i}", 40, 120, step=8, default=88),
+				kernel_size = hp.Int(f"kernels_{i}",  6,  18, step=1, default= 7),
 				activation  = "relu",
 				padding     = "same",
 			)(x)
 		x = tf.keras.layers.Flatten()(x)
 		d = hp.Float("dropout", 0.00, 0.10, step=0.01, default=0.05)
-		for i in range(hp.Int("dense_layers", 1, 4, default=4)):
+		for i in range(hp.Int("dense_layers", 2, 4, default=4)):
 			x = tf.keras.layers.Dense(
-				units=hp.Int(f"neurons_{i}", min_value=24, max_value=96, step=8),
+				units=hp.Int(f"neurons_{i}", min_value=32, max_value=120, step=8),
 				activation='relu'
 			)(x)
 			x = tf.keras.layers.Dropout(
