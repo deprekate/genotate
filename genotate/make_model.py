@@ -171,7 +171,7 @@ def blend(args):
 
 def api(args):
 	#
-	input_ = tf.keras.layers.Input(shape=(99,), dtype=tf.int16)
+	input_ = tf.keras.layers.Input(shape=(87,), dtype=tf.int16)
 	model_ = tf.cast(input_, dtype=tf.int32)
 	model_ = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(model_)
 	#model_ = tf.keras.layers.CategoryEncoding(num_tokens=5, output_mode='one_hot')(model_)
