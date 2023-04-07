@@ -175,15 +175,16 @@ def api(args):
 	model_ = tf.cast(input_, dtype=tf.int32)
 	model_ = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(model_)
 	#model_ = tf.keras.layers.CategoryEncoding(num_tokens=5, output_mode='one_hot')(model_)
-	model_ = tf.keras.layers.Conv1D(filters=104, kernel_size=12, padding='same', activation='relu' )(model_)
-	model_ = tf.keras.layers.Conv1D(filters=104, kernel_size= 8, padding='same', activation='relu' )(model_)
-	model_ = tf.keras.layers.Conv1D(filters= 96, kernel_size= 9, padding='same', activation='relu' )(model_)
+	model_ = tf.keras.layers.Conv1D(filters=120, kernel_size=15, padding='same', activation='relu' )(model_)
+	model_ = tf.keras.layers.Conv1D(filters= 80, kernel_size=18, padding='same', activation='relu' )(model_)
 	model_ = tf.keras.layers.Flatten()(model_)
-	model_ = tf.keras.layers.Dense(104, activation='relu')(model_)
+	model_ = tf.keras.layers.Dense(120, activation='relu')(model_)
 	model_ = tf.keras.layers.Dropout(rate=0.01)(model_)
-	model_ = tf.keras.layers.Dense(88, activation='relu')(model_)
+	model_ = tf.keras.layers.Dense( 32, activation='relu')(model_)
 	model_ = tf.keras.layers.Dropout(rate=0.01)(model_)
-	model_ = tf.keras.layers.Dense(80, activation='relu')(model_)
+	model_ = tf.keras.layers.Dense( 32, activation='relu')(model_)
+	model_ = tf.keras.layers.Dropout(rate=0.01)(model_)
+	model_ = tf.keras.layers.Dense( 32, activation='relu')(model_)
 	model_ = tf.keras.layers.Dropout(rate=0.01)(model_)
 	model_ = tf.keras.layers.Dense(3, activation='softmax')(model_)
 
@@ -207,16 +208,16 @@ class HyperRegressor(kt.HyperModel):
 		# Tune the number of units in the first Dense layer
 		for i in range(hp.Int("conv_layers", 2, 4, default=4)):
 			x = tf.keras.layers.Conv1D(
-				filters     = hp.Int(f"filters_{i}", 40, 120, step=8, default=88),
-				kernel_size = hp.Int(f"kernels_{i}",  6,  18, step=1, default= 7),
+				filters     = hp.Int(f"filters_{i}", 64, 128, step=8, default=88),
+				kernel_size = hp.Int(f"kernels_{i}",  6,  20, step=1, default= 7),
 				activation  = "relu",
 				padding     = "same",
 			)(x)
 		x = tf.keras.layers.Flatten()(x)
 		d = hp.Float("dropout", 0.00, 0.10, step=0.01, default=0.05)
-		for i in range(hp.Int("dense_layers", 2, 4, default=4)):
+		for i in range(hp.Int("dense_layers", 2, 5, default=5)):
 			x = tf.keras.layers.Dense(
-				units=hp.Int(f"neurons_{i}", min_value=32, max_value=120, step=8),
+				units=hp.Int(f"neurons_{i}", min_value=32, max_value=128, step=16),
 				activation='relu'
 			)(x)
 			x = tf.keras.layers.Dropout(
@@ -225,7 +226,7 @@ class HyperRegressor(kt.HyperModel):
 		outputs = tf.keras.layers.Dense(3, activation='softmax')(x)
 	
 		model = tf.keras.models.Model(inputs, outputs)
-		opt = tf.keras.optimizers.Adam(learning_rate=0.001)
+		opt = tf.keras.optimizers.Adam(learning_rate=0.0005)
 		custom_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
 		model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy'])
 		return model
