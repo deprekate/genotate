@@ -141,7 +141,6 @@ if __name__ == '__main__':
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
-	'''
 	if args.kfold == -1:
 		os.environ["CUDA_VISIBLE_DEVICES"]="0"
 		os.environ["KERASTUNER_TUNER_ID"]="chief"
@@ -153,6 +152,7 @@ if __name__ == '__main__':
 	os.environ["KERASTUNER_ORACLE_PORT"]="18000"
 	'''
 	os.environ["CUDA_VISIBLE_DEVICES"]="0"
+	'''
 	gpus = tf.config.list_physical_devices('GPU')
 	for gpu in gpus:
 		tf.config.experimental.set_memory_growth(gpu, True)
@@ -166,7 +166,7 @@ if __name__ == '__main__':
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
-	filenames = filenames[:30] ; valnames = valnames[:30]
+	#filenames = filenames[:30] ; valnames = valnames[:30]
 	#print(filenames) ; print(valnames)
 	print(len(filenames)) ; print(len(valnames))
 	spec = (tf.TensorSpec(shape = (None,87), dtype = tf.experimental.numpy.int8),
@@ -224,6 +224,7 @@ if __name__ == '__main__':
 	#valiset = strategy.experimental_distribute_dataset(valiset)
 	valiset = valiset.with_options(options) 
 
+	'''
 	name = '_'.join(os.path.dirname(args.directory).split('/')[-2:])
 	checkpoint = tf.keras.callbacks.ModelCheckpoint(name + str(args.kfold) + '-{epoch:03d}', save_weights_only=True, save_freq='epoch')
 	es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=4)
@@ -243,7 +244,7 @@ if __name__ == '__main__':
 	with tf.device('/device:GPU:0'):
 		model = api(args)
 		tuner = kt.Hyperband(HyperRegressor(),
-					 hyperband_iterations=3,
+					 hyperband_iterations=1,
                      objective='val_accuracy',
 					 #objective='val_loss',
                      max_epochs=15,
@@ -257,4 +258,3 @@ if __name__ == '__main__':
 			print(tuner.get_best_hyperparameters(1)[0].values)
 			print(tuner.get_best_hyperparameters(2)[1].values)
 			print(tuner.get_best_hyperparameters(3)[2].values)
-	'''

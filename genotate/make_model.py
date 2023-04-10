@@ -208,7 +208,7 @@ class HyperRegressor(kt.HyperModel):
 		inputs = tf.keras.layers.Input(shape=(87,), dtype=tf.uint8)
 		x = tf.keras.layers.Lambda(lambda x: tf.one_hot(x,depth=6), name='one_hot')(inputs)
 		# Tune the number of units in the first Dense layer
-		for i in range(hp.Int("conv_layers", 2, 4, default=4)):
+		for i in range(hp.Int("conv_layers", 2, 2, default=2)):
 			x = tf.keras.layers.Conv1D(
 				filters     = hp.Int(f"filters_{i}", 64, 128, step=8, default=88),
 				kernel_size = hp.Int(f"kernels_{i}",  6,  20, step=1, default= 7),
@@ -217,7 +217,7 @@ class HyperRegressor(kt.HyperModel):
 			)(x)
 		x = tf.keras.layers.Flatten()(x)
 		d = hp.Float("dropout", 0.00, 0.10, step=0.01, default=0.05)
-		for i in range(hp.Int("dense_layers", 2, 5, default=5)):
+		for i in range(hp.Int("dense_layers", 4, 5, default=5)):
 			x = tf.keras.layers.Dense(
 				units=hp.Int(f"neurons_{i}", min_value=32, max_value=128, step=16),
 				activation='relu'
@@ -228,7 +228,7 @@ class HyperRegressor(kt.HyperModel):
 		outputs = tf.keras.layers.Dense(3, activation='softmax')(x)
 	
 		model = tf.keras.models.Model(inputs, outputs)
-		opt = tf.keras.optimizers.Adam(learning_rate=0.0005)
+		opt = tf.keras.optimizers.Adam(learning_rate=0.001)
 		custom_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
 		model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy'])
 		return model
