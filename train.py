@@ -12,7 +12,7 @@ os.environ["OMP_NUM_THREADS"]="4"
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 import keras_tuner as kt
-from genotate.make_model import create_model_blend, blend, api, HyperRegressor
+from genotate.make_model import create_model_blend, blend, api #, HyperRegressor
 import numpy as np
 from genbank.file import File
 from genotate.functions import to_dna, getsize
@@ -141,6 +141,7 @@ if __name__ == '__main__':
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
+	'''
 	if args.kfold == -1:
 		os.environ["CUDA_VISIBLE_DEVICES"]="0"
 		os.environ["KERASTUNER_TUNER_ID"]="chief"
@@ -150,7 +151,6 @@ if __name__ == '__main__':
 		os.environ["KERASTUNER_TUNER_ID"]="tuner" + str(abs(hash(socket.gethostname()))) + str(args.kfold)
 	os.environ["KERASTUNER_ORACLE_IP"]="127.0.0.1"
 	os.environ["KERASTUNER_ORACLE_PORT"]="18000"
-	'''
 	os.environ["CUDA_VISIBLE_DEVICES"]="0"
 	'''
 	gpus = tf.config.list_physical_devices('GPU')
@@ -161,8 +161,8 @@ if __name__ == '__main__':
 	filenames = list()
 	valnames = list()
 	for f in os.listdir(args.directory):
-		#if (int(f[11])%5) != args.kfold: 
-		if f[11] not in '357': 
+		if (int(f[11])%5) != args.kfold: 
+		#if f[11] not in '357': 
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
@@ -224,7 +224,6 @@ if __name__ == '__main__':
 	#valiset = strategy.experimental_distribute_dataset(valiset)
 	valiset = valiset.with_options(options) 
 
-	'''
 	name = '_'.join(os.path.dirname(args.directory).split('/')[-2:])
 	checkpoint = tf.keras.callbacks.ModelCheckpoint(name + str(args.kfold) + '-{epoch:03d}', save_weights_only=True, save_freq='epoch')
 	es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=4)
@@ -236,7 +235,7 @@ if __name__ == '__main__':
 	model.fit(
 		dataset,
 		validation_data = valiset,
-		epochs          = 10,
+		epochs          = 20,
 		verbose         = 1,
 		callbacks       = [LossHistoryCallback(), checkpoint, es_callback, save] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
 	)
@@ -258,3 +257,4 @@ if __name__ == '__main__':
 			print(tuner.get_best_hyperparameters(1)[0].values)
 			print(tuner.get_best_hyperparameters(2)[1].values)
 			print(tuner.get_best_hyperparameters(3)[2].values)
+	'''

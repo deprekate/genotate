@@ -179,15 +179,15 @@ def api(args):
 	model_ = tf.keras.layers.Conv1D(filters=80, kernel_size=15, padding='same', activation='relu' )(model_)
 	model_ = tf.keras.layers.Flatten()(model_)
 	model_ = tf.keras.layers.Dense( 96, activation='relu')(model_)
-	model_ = tf.keras.layers.Dropout(rate=0.01)(model_)
+	model_ = tf.keras.layers.Dropout(rate=0.03)(model_)
 	model_ = tf.keras.layers.Dense(128, activation='relu')(model_)
-	model_ = tf.keras.layers.Dropout(rate=0.01)(model_)
+	model_ = tf.keras.layers.Dropout(rate=0.03)(model_)
 	model_ = tf.keras.layers.Dense(112, activation='relu')(model_)
-	model_ = tf.keras.layers.Dropout(rate=0.01)(model_)
+	model_ = tf.keras.layers.Dropout(rate=0.03)(model_)
 	model_ = tf.keras.layers.Dense(128, activation='relu')(model_)
-	model_ = tf.keras.layers.Dropout(rate=0.01)(model_)
+	model_ = tf.keras.layers.Dropout(rate=0.03)(model_)
 	model_ = tf.keras.layers.Dense( 32, activation='relu')(model_)
-	model_ = tf.keras.layers.Dropout(rate=0.01)(model_)
+	model_ = tf.keras.layers.Dropout(rate=0.03)(model_)
 	model_ = tf.keras.layers.Dense(3, activation='softmax')(model_)
 
 	model = tf.keras.models.Model(input_, outputs=model_)
@@ -201,7 +201,7 @@ def api(args):
 	model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy']) #,'Recall', 'Precision','FalseNegatives','FalsePositives'])
 	return model
 
-
+'''
 import keras_tuner as kt
 class HyperRegressor(kt.HyperModel):
 	def build(self, hp):
@@ -236,3 +236,4 @@ class HyperRegressor(kt.HyperModel):
 	#def fit(self, hp, model, dataset, **kwargs):
 	#	mod = model.evaluate(dataset) 
 	#	return mod
+'''
