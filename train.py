@@ -4,14 +4,17 @@ import argparse
 from argparse import RawTextHelpFormatter
 from signal import signal, SIGPIPE, SIG_DFL
 signal(SIGPIPE,SIG_DFL)
+import threading
 import socket
+import gc
 
 os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
-os.environ["OMP_NUM_THREADS"]="4" 
+os.environ["OMP_NUM_THREADS"]="8" 
+#os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] ='true'
 #os.environ['TF_GPU_THREAD_COUNT'] = '4'
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
-import keras_tuner as kt
+#import keras_tuner as kt
 from genotate.make_model import create_model_blend, blend, api #, HyperRegressor
 import numpy as np
 from genbank.file import File
@@ -24,15 +27,31 @@ def is_valid_file(x):
 		raise argparse.ArgumentTypeError("{0} does not exist".format(x))
 	return x
 
+def validate(name, data):
+	with tf.device('/device:GPU:0'):
+		model = api(None)
+	model.load_weights(name).expect_partial()
+	result = model.evaluate(data, verbose=0)
+	#result = dict(zip(model.metrics_names, result))
+	print(name[-3:], 'val_loss', result[0], 'val_accuracy', result[1], sep='\t')
+
 class LossHistoryCallback(tf.keras.callbacks.Callback):
-	def on_epoch_end(self, batch, logs=None):
+	def __init__(self, name, data):
+		self.name = name
+		self.data = data
+	def on_epoch_end(self, epoch, logs=None):
+		#print(self.name, epoch, self.data)
 		#logs['loss'] or logs['val_loss'] (the latter available only if you use validation data when model.fit()
 		# Use logs['loss'] or logs['val_loss'] for pyqt5 purposes
-		row = list()
+		row = [epoch+1]
 		for key, value in logs.items():
 			row.append(key)
 			row.append(value)
 		print('\t'.join(map(str,row)), flush=True)
+		#gc.collect()
+		#tf.keras.backend.clear_session()	
+		x = threading.Thread(target=validate, args=(self.name+'-'+str(epoch+1).rjust(3,'0') ,self.data))
+		x.start()
 
 class GenomeDataset:
 	#@tf.function
@@ -141,21 +160,12 @@ if __name__ == '__main__':
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
-	'''
-	if args.kfold == -1:
-		os.environ["CUDA_VISIBLE_DEVICES"]="0"
-		os.environ["KERASTUNER_TUNER_ID"]="chief"
-	else:
-		#os.environ["CUDA_VISIBLE_DEVICES"]="0"
-		os.environ["CUDA_VISIBLE_DEVICES"]=str(args.kfold)
-		os.environ["KERASTUNER_TUNER_ID"]="tuner" + str(abs(hash(socket.gethostname()))) + str(args.kfold)
-	os.environ["KERASTUNER_ORACLE_IP"]="127.0.0.1"
-	os.environ["KERASTUNER_ORACLE_PORT"]="18000"
-	os.environ["CUDA_VISIBLE_DEVICES"]="0"
-	'''
+	os.environ["CUDA_VISIBLE_DEVICES"]="0,1,2,3,4,5,6,7"
 	gpus = tf.config.list_physical_devices('GPU')
 	for gpu in gpus:
 		tf.config.experimental.set_memory_growth(gpu, True)
+		#tf.config.set_logical_device_configuration(gpu,[tf.config.LogicalDeviceConfiguration(memory_limit=8192)])
+	gpus = gpus[1:]
 
 	#filenames = [os.path.join(args.directory,f) for f in os.listdir(args.directory) if os.path.isfile(os.path.join(args.directory, f))]
 	filenames = list()
@@ -166,7 +176,7 @@ if __name__ == '__main__':
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
-	#filenames = filenames[:30] ; valnames = valnames[:30]
+	filenames = filenames[:100] ; valnames = valnames[:100]
 	#print(filenames) ; print(valnames)
 	print(len(filenames)) ; print(len(valnames))
 	spec = (tf.TensorSpec(shape = (None,87), dtype = tf.experimental.numpy.int8),
@@ -184,7 +194,7 @@ if __name__ == '__main__':
 					).unbatch(),
 	                num_parallel_calls=tf.data.AUTOTUNE,
 					deterministic=False,
-					cycle_length=192,
+					cycle_length=180,
 					block_length=48,
 	                )
 	#dataset = dataset.unbatch()
@@ -193,19 +203,10 @@ if __name__ == '__main__':
 	dataset = dataset.shuffle(buffer_size=8)
 	dataset = dataset.prefetch(tf.data.AUTOTUNE)
 	#dataset = strategy.experimental_distribute_dataset(dataset)
-
+	
 	options = tf.data.Options()
 	options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.FILE
 	dataset = dataset.with_options(options) 
-
-	#print(dataset)
-	#for x,y in dataset.take(1):
-	#	x = x.numpy()
-	#	y = y.numpy()
-	#	for i in range(len(x)):
-	#		print(y[i,:],x[i,:])
-	#		print(to_dna(x[i,10:]))
-	#exit()
 	
 	valiset = tf.data.Dataset.from_tensor_slices(valnames)
 	valiset = valiset.interleave(
@@ -217,44 +218,36 @@ if __name__ == '__main__':
 					).unbatch(),
 	                num_parallel_calls=tf.data.AUTOTUNE,
 					deterministic=False,
-					cycle_length=18,block_length=512,
+					cycle_length=22,block_length=256,
 	                )
-	valiset = valiset.batch(9216*len(gpus), num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
+	#valiset = valiset.batch(9216, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
+	valiset = valiset.batch(5632, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
 	valiset = valiset.prefetch(tf.data.AUTOTUNE)
 	#valiset = strategy.experimental_distribute_dataset(valiset)
 	valiset = valiset.with_options(options) 
 
-	name = '_'.join(os.path.dirname(args.directory).split('/')[-2:])
-	checkpoint = tf.keras.callbacks.ModelCheckpoint(name + str(args.kfold) + '-{epoch:03d}', save_weights_only=True, save_freq='epoch')
-	es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=4)
-	save = tf.keras.callbacks.BackupAndRestore(name+str(args.kfold)+"_backup", save_freq="epoch", delete_checkpoint=True)
+
+	#print(dataset)
+	#for x,y in dataset.take(1):
+	#	x = x.numpy()
+	#	y = y.numpy()
+	#	for i in range(len(x)):
+	#		print(y[i,:],x[i,:])
+	#		print(to_dna(x[i,10:]))
+	#exit()
+	
+	name = '_'.join(os.path.dirname(args.directory).split('/')[-2:]) + str(args.kfold)
+	checkpoint = tf.keras.callbacks.ModelCheckpoint(name + '-{epoch:03d}', save_weights_only=True, save_freq='epoch')
+	#es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)
+	#save = tf.keras.callbacks.BackupAndRestore(name+str(args.kfold)+"_backup", save_freq="epoch", delete_checkpoint=True)
 	#tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"), histogram_freq=1, profile_batch = '1512,2024')
 	with strategy.scope():
 	#with tf.device('/device:GPU:0'):
 		model = api(None)
 	model.fit(
 		dataset,
-		validation_data = valiset,
-		epochs          = 20,
-		verbose         = 1,
-		callbacks       = [LossHistoryCallback(), checkpoint, es_callback, save] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
+		#validation_data = valiset,
+		epochs          = 80,
+		verbose         = 0,
+		callbacks       = [checkpoint, LossHistoryCallback(name, valiset) ] #es_callback] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
 	)
-	'''
-	with tf.device('/device:GPU:0'):
-		model = api(args)
-		tuner = kt.Hyperband(HyperRegressor(),
-					 hyperband_iterations=1,
-                     objective='val_accuracy',
-					 #objective='val_loss',
-                     max_epochs=15,
-                     factor=3,
-                     directory='tuner',
-                     project_name='phages')
-		stop_early = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
-		
-		tuner.search(dataset, validation_data=valiset, verbose=1) #, callbacks=[]) #stop_early])
-		if args.kfold == 0:
-			print(tuner.get_best_hyperparameters(1)[0].values)
-			print(tuner.get_best_hyperparameters(2)[1].values)
-			print(tuner.get_best_hyperparameters(3)[2].values)
-	'''
