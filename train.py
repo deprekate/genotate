@@ -175,7 +175,7 @@ if __name__ == '__main__':
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
-	filenames = filenames[:200] ; valnames = valnames[:50]
+	#filenames = filenames[:200] ; valnames = valnames[:50]
 	#print(filenames) ; print(valnames)
 	print(len(filenames)) ; print(len(valnames))
 	spec = (tf.TensorSpec(shape = (None,87), dtype = tf.experimental.numpy.int8),
@@ -206,7 +206,8 @@ if __name__ == '__main__':
 	options = tf.data.Options()
 	options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.FILE
 	dataset = dataset.with_options(options) 
-	
+
+	'''
 	valiset = tf.data.Dataset.from_tensor_slices(valnames)
 	valiset = valiset.interleave(
 					#lambda x: GenomeDataset(x).unbatch(),
@@ -223,7 +224,7 @@ if __name__ == '__main__':
 	valiset = valiset.prefetch(tf.data.AUTOTUNE)
 	#valiset = strategy.experimental_distribute_dataset(valiset)
 	valiset = valiset.with_options(options) 
-
+	'''
 
 	#print(dataset)
 	#for x,y in dataset.take(1):
@@ -244,8 +245,8 @@ if __name__ == '__main__':
 		model = api(None)
 	model.fit(
 		dataset,
-		validation_data = valiset,
+		#validation_data = valiset,
 		epochs          = 80,
-		verbose         = 0,
-		callbacks       = [checkpoint, LossHistoryCallback(name, valiset) ] #es_callback] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
+		verbose         = 2,
+		callbacks       = [checkpoint, LossHistoryCallback(name, None)] #valiset) ] #es_callback] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
 	)
