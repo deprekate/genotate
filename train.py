@@ -50,8 +50,8 @@ class LossHistoryCallback(tf.keras.callbacks.Callback):
 		print('\t'.join(map(str,row)), flush=True)
 		#gc.collect()
 		#tf.keras.backend.clear_session()	
-		x = threading.Thread(target=validate, args=(self.name+'-'+str(epoch+1).rjust(3,'0') ,self.data))
-		x.start()
+		#x = threading.Thread(target=validate, args=(self.name+'-'+str(epoch+1).rjust(3,'0') ,self.data))
+		#x.start()
 
 class GenomeDataset:
 	#@tf.function
@@ -165,7 +165,6 @@ if __name__ == '__main__':
 	for gpu in gpus:
 		tf.config.experimental.set_memory_growth(gpu, True)
 		#tf.config.set_logical_device_configuration(gpu,[tf.config.LogicalDeviceConfiguration(memory_limit=8192)])
-	gpus = gpus[1:]
 
 	#filenames = [os.path.join(args.directory,f) for f in os.listdir(args.directory) if os.path.isfile(os.path.join(args.directory, f))]
 	filenames = list()
@@ -176,7 +175,7 @@ if __name__ == '__main__':
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
-	filenames = filenames[:100] ; valnames = valnames[:100]
+	filenames = filenames[:200] ; valnames = valnames[:50]
 	#print(filenames) ; print(valnames)
 	print(len(filenames)) ; print(len(valnames))
 	spec = (tf.TensorSpec(shape = (None,87), dtype = tf.experimental.numpy.int8),
@@ -198,8 +197,8 @@ if __name__ == '__main__':
 					block_length=48,
 	                )
 	#dataset = dataset.unbatch()
-	dataset = dataset.shuffle(buffer_size=64)
-	dataset = dataset.batch(9216*len(gpus), num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
+	dataset = dataset.shuffle(buffer_size=1024)
+	dataset = dataset.batch(8640*len(gpus), num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
 	dataset = dataset.shuffle(buffer_size=8)
 	dataset = dataset.prefetch(tf.data.AUTOTUNE)
 	#dataset = strategy.experimental_distribute_dataset(dataset)
@@ -218,10 +217,9 @@ if __name__ == '__main__':
 					).unbatch(),
 	                num_parallel_calls=tf.data.AUTOTUNE,
 					deterministic=False,
-					cycle_length=22,block_length=256,
+					cycle_length=16,block_length=540,
 	                )
-	#valiset = valiset.batch(9216, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
-	valiset = valiset.batch(5632, num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
+	valiset = valiset.batch(8640*len(gpus), num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
 	valiset = valiset.prefetch(tf.data.AUTOTUNE)
 	#valiset = strategy.experimental_distribute_dataset(valiset)
 	valiset = valiset.with_options(options) 
@@ -246,7 +244,7 @@ if __name__ == '__main__':
 		model = api(None)
 	model.fit(
 		dataset,
-		#validation_data = valiset,
+		validation_data = valiset,
 		epochs          = 80,
 		verbose         = 0,
 		callbacks       = [checkpoint, LossHistoryCallback(name, valiset) ] #es_callback] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
