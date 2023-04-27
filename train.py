@@ -170,8 +170,9 @@ if __name__ == '__main__':
 	filenames = list()
 	valnames = list()
 	for f in os.listdir(args.directory):
-		if (int(f[11])%5) != args.kfold: 
+		#if (int(f[11])%5) != args.kfold: 
 		#if f[11] not in '357': 
+		if (int(f[11])%2) != args.kfold: 
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
