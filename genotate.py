@@ -25,11 +25,16 @@ from genotate.functions import *
 import numpy as np
 # TensorFlow and tf.keras
 import tensorflow as tf
-gpus = tf.config.list_physical_devices('GPU')
-for gpu in gpus:
-    tf.config.experimental.set_memory_growth(gpu, True)
+#gpus = tf.config.list_physical_devices('GPU')
+#for gpu in gpus:
+#    tf.config.experimental.set_memory_growth(gpu, True)
 import ruptures as rpt
 
+
+def fstack(data, axis=0):
+	shape = min([item.shape for item in data])
+	return np.stack([np.resize(item, shape) for item in data], axis)
+setattr(np, 'fstack', fstack)
 
 class quiet:
 	def __enter__(self):
@@ -72,23 +77,6 @@ def is_valid_file(x):
 	return x
 
 
-def ppack(features):
-	#return tf.stack(list(features.values()), axis=-1)
-	a,b = tf.split(features, [2,1], axis=-1)
-	return ((b,a),)
-
-def pack(features): #labels,datas,windows): #features):
-	#labels,datas,windows = tf.split(features, [1,3,99], axis=-1)
-	labels,windows = tf.split(features, [1,99], axis=-1)
-	#labels = tf.cast(labels, dtype=tf.int32)
-	labels = tf.one_hot(labels, depth=3, axis=-1) #, dtype=tf.int32)
-	#labels = tf.reshape(labels, [-1])
-	labels = tf.squeeze(labels)
-	#print(labels) ; print(datas) ; print(windows)
-	#return (windows, datas) , labels
-	return windows , labels
-
-
 if __name__ == '__main__':
 	usage = '%s [-opt1, [-opt2, ...]] infile' % __file__
 	parser = argparse.ArgumentParser(description='', formatter_class=RawTextHelpFormatter, usage=usage)
@@ -96,14 +84,10 @@ if __name__ == '__main__':
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
 	parser.add_argument('-f', '--format', help='Output the features in the specified format', type=str, default='genbank', choices=['gbk','gff3','gff'])
 	parser.add_argument('-m', '--model', help='', required=True)
-	parser.add_argument('-c', '--cutoff', help='The minimum cutoff length for runs', type=int, default=29)
-	parser.add_argument('-g', '--genes', action="store_true")
 	#parser.add_argument('-a', '--amino', action="store_true")
-	parser.add_argument('-a', '--activation', action="store", default='relu', type=str, help='activation function')
-	parser.add_argument('-p', '--plot_frames', action="store_true")
-	parser.add_argument('-s', '--plot_strands', action="store_true")
-	parser.add_argument('-t', '--trim', action="store", default=15, type=int, help='how many bases to trim off window ends')
-	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
+	parser.add_argument('-g', '--graph', action="store_true")
+	parser.add_argument('-s', '--size', default=30, type=int)
+	parser.add_argument('-p', '--penalty', default=10, type=int)
 	args = parser.parse_args()
 
 	#ckpt_reader = tf.train.load_checkpoint(args.model)
@@ -112,7 +96,7 @@ if __name__ == '__main__':
 	#model = blend(args)
 	k = 1 #int(os.path.basename(args.infile)[11]) % 5
 	args.model = args.model.replace('#', str(k))
-	with quiet() ,tf.device('/device:GPU:0'), quiet():
+	with quiet() ,tf.device('/device:CPU:0'), quiet():
 		model = api(args)
 		#name = args.infile.split('/')[-1]
 		#me = name[10] if len(name) > 10 else None
@@ -120,6 +104,8 @@ if __name__ == '__main__':
 		model.load_weights(args.model).expect_partial()
 		#print(model.summary())
 		#faulthandler.enable()
+	spec = (tf.TensorSpec(shape = (None,87), dtype = tf.experimental.numpy.int8),
+            tf.TensorSpec(shape = (None, 3), dtype = tf.experimental.numpy.int8))
 
 	genbank = File(args.infile)
 	for locus in genbank:
@@ -127,30 +113,41 @@ if __name__ == '__main__':
 		locus.stops = ['taa','tga','tag']
 		generator = lambda : parse_locus(locus)
 		dataset = tf.data.Dataset.from_generator(
-								generator,
-								output_signature=(tf.TensorSpec(shape=(6,100),dtype=np.uint8))
-								)
-		dataset = dataset.unbatch()
-		dataset = dataset.map(pack)
-		dataset = dataset.batch(128)
+                        generator,
+                        output_signature=spec
+                    ) #.unbatch(),
+		dataset = dataset.apply(tf.data.experimental.unbatch())
+		dataset = dataset.batch(1024)
 		#for feature in dataset.take(1):
 		#	print( feature )
 		#	exit()
+		'''
+		for block,label in parse_locus(locus):
+			for i in range(len(block)):
+				row = block[i,:]
+				dna = to_dna(row)
+				#print(i//2,dna)
+				row = tf.expand_dims(row, axis=0)
+				#print(row)
+				p = model.predict(row, verbose=0)
+				print(i//2, dna, p)
+		exit()
+		'''
 		with quiet():
 			p = model.predict(dataset)
-
-		if args.plot_frames:
+	
+		if args.graph:
 			plot_frames(p)
 			continue
 		#p = tf.nn.softmax(p).numpy()
 		#p = smoo(p)
 		#p = best(p)
-		
-		# create arrays of form: array[ frame : bp : type ]
-		forward = np.array([ p[0::6,:] , p[2::6,:] , p[4::6,:] ])
-		reverse = np.array([ p[1::6,:] , p[3::6,:] , p[5::6,:] ])
-		#both = np.array([ p[0::6,:] + p[1::6,:] , p[2::6,:] + p[3::6,:] , p[4::6,:] + p[5::6,:] ]).clip(0,1)
 
+		# create arrays of form: array[ frame : base_position : type ]
+		#forward = np.array([ p[0::6,:] , p[2::6,:] , p[4::6,:] ])
+		forward = np.fstack([ p[0::6,:] , p[2::6,:] , p[4::6,:] ])
+		reverse = np.fstack([ p[1::6,:] , p[3::6,:] , p[5::6,:] ])
+		#both = np.array([ p[0::6,:] + p[1::6,:] , p[2::6,:] + p[3::6,:] , p[4::6,:] + p[5::6,:] ]).clip(0,1)
 		# predict strands
 		strand_wise = np.array([ 
 								reverse[:,:,1].sum(axis=0).clip(0,1) , 
@@ -166,7 +163,7 @@ if __name__ == '__main__':
 			if strand == 0:continue
 			for frame in [0,1,2]:
 				frame_wise = forward[frame, index : offset//3*3, :] if strand > 0 else reverse[frame, index : offset, :]
-				switches = predict_switches(frame_wise, 33, 10)
+				switches = predict_switches(frame_wise, args.size, args.penalty)
 				for (left,right),label in switches.items(): 
 					if label == 1:
 						pairs = [ list(map(str,[3*(index+left)+frame+1, 3*(index+right)+frame])) ]
@@ -175,7 +172,7 @@ if __name__ == '__main__':
 
 		# look for stop codon readthrough
 		locus.stops = locus.detect_stops()
-		locus.write(open('before.gb','w'), args=args)
+		#locus.write(open('before.gb','w'), args=args)
 
 		# merge regions
 		locus.merge()
