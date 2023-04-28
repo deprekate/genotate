@@ -96,7 +96,7 @@ if __name__ == '__main__':
 	#model = blend(args)
 	k = 1 #int(os.path.basename(args.infile)[11]) % 5
 	args.model = args.model.replace('#', str(k))
-	with quiet() ,tf.device('/device:CPU:0'), quiet():
+	with quiet() ,tf.device('/device:GPU:0'), quiet():
 		model = api(args)
 		#name = args.infile.split('/')[-1]
 		#me = name[10] if len(name) > 10 else None

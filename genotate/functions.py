@@ -3,7 +3,6 @@ import sys
 from decimal import Decimal
 
 import numpy as np
-import tensorflow as tf
 from types import ModuleType, FunctionType
 from gc import get_referents
 
@@ -86,12 +85,12 @@ def plot_strands(p):
 def plot_frames(p):
 	print("# BASE VAL1  VAL2 VAL3  VAL4 VAL5 VAL6 VAL7")
 	print("# colour 255:0:0 0:0:255 0:0:0 255:0:255 0:128:128 128:128:128 255:195:0")
-	for i in range(0,len(p), 6):
+	for i in range(0,len(p) // 6 * 6, 6):
 		val = []
 		ig = []
 		for j in range(6):
-			val.append(p[i+j,1])
-			ig.append(p[i+j, 2])
+			val.append('%f' % p[i+j,1])
+			ig.append('%f' % p[i+j, 2])
 		v = [None] * 7
 		v[0] = val[0]
 		v[1] = val[2]
@@ -137,57 +136,43 @@ def skew(seq, nucs):
 	slopes.append(m)
 	return slopes
 
-
 def parse_locus(locus):
-		#def iter_genbank(infile):
-		#for locus in File(infile.decode()):
+		w = 87
+		n = 20000
+		X = np.zeros([2*n ,w],dtype=np.uint8)
+		length = locus.length()
+		Y = np.zeros([length*2+7,3],dtype=np.uint8)
+		Y[:,2] = 1
 		# label the positions
-		positions = dict()
 		for feature in locus.features(include=['CDS']):
-			for i,*_ in feature.codon_locations():
-				# do the other 5 frames
-				for sign,offset in [(+1,1), (+1,2), (-1,1), (-1,2), (-1,0)]:
-					pos = sign * (i + offset) * feature.strand
-					if pos not in positions:
-						positions[pos] = 0
-				# do the current frame
-				sign,offset = (+1,0)
-				pos = sign * (i + offset) * feature.strand
-				positions[pos] = 1
-		#for k,v in positions.items():
-		#	print(k,v)
-		#exit()
-		dna = locus.seq()
-		#at_skew = np.array(skew(dna, 'at'))
-		#gc_skew = np.array(skew(dna, 'gc'))
-		forward = np.zeros(48+len(dna)+50)
-		reverse = np.zeros(48+len(dna)+50)
-		for i,base in enumerate(dna):
-			#if base in 'acgt':
-			forward[i+48] = ((ord(base) >> 1) & 3) + 1
-			reverse[i+48] = ((forward[i+48] - 3) % 4) + 1
-		a = np.zeros([6, 100], dtype=int)
-		#a[:,100] = locus.gc_content() 
-		for n in range(0, len(dna)-2, 3):
-			#pos = n//100
-			i = n + 0
-			a[0,0] = positions.get( i, 2)
-			a[1,0] = positions.get(-i, 2)
-			a[0,1:100] = forward[i : i+99 ]
-			a[1,1:100] = reverse[i : i+99 ][::-1]
-			i = n + 1
-			a[2,0] = positions.get( i, 2)
-			a[3,0] = positions.get(-i, 2)
-			a[2,1:100] = forward[i : i+99 ]
-			a[3,1:100] = reverse[i : i+99 ][::-1]
-			i = n + 2
-			a[4,0] = positions.get( i, 2)
-			a[5,0] = positions.get(-i, 2)
-			a[4,1:100] = forward[i : i+99 ]
-			a[5,1:100] = reverse[i : i+99 ][::-1]
-			#a[:,1:10] = [int(s) for s in locus.file[-19:-10]]
-			#a[2*f  ,101] =  at_skew[pos]
-			#a[2*f+1,101] = -at_skew[pos]
-			#a[2*f  ,102] =  gc_skew[pos]
-			#a[2*f+1,102] = -gc_skew[pos]
-			yield a
+			s = (feature.strand >> 1) * -1
+			locations = feature.codon_locations()
+			if feature.partial() == 'left': next(locations)
+			for i,*_ in locations:
+				i = 2 * i
+				# coding
+				Y[i+s  ,1] = 1
+				# noncoding
+				Y[i:i+6,0] = 1
+				Y[i:i+6,2] = 0
+		Y[Y[:,1]==1,0] = 0
+		forward = np.zeros((w//2-1)+length+(w//2+1),dtype=np.uint8)
+		reverse = np.zeros((w//2-1)+length+(w//2+1),dtype=np.uint8)
+		for i,base in enumerate(locus.dna):
+			i += w//2-1
+			if base in 'acgt':
+				forward[i] = ((ord(base) >> 1) & 3) + 1
+				reverse[i] = ((forward[i] - 3) % 4) + 1
+		# this splits the BIG numpy array into n sized chunks to limit ram usage
+		for i in range( length // n):
+			i *= n
+			X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[ i : i+n+w-1],w)
+			X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+n+w-1],w)[:,::-1]
+			yield X,Y[ i*2:i*2+n*2 , :]
+		i = length // n * n
+		r = length % n
+		if r:
+			X[0:2*r:2,] = np.lib.stride_tricks.sliding_window_view(forward[ i : i+r+w-1],w)
+			X[1:2*r:2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+r+w-1],w)[:,::-1]
+			yield X[ : 2*r , : ] , Y[ i*2: i*2+2*r , :]
+
