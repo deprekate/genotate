@@ -9,7 +9,7 @@ from statistics import mode
 
 import faulthandler
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+#os.environ["CUDA_VISIBLE_DEVICES"]="0"str(int(args.model[-2:]) % 8)
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -90,6 +90,10 @@ if __name__ == '__main__':
 	parser.add_argument('-p', '--penalty', default=10, type=int)
 	args = parser.parse_args()
 
+	os.environ["CUDA_VISIBLE_DEVICES"]=str(int(args.model[-2:]) % 8)
+	gpus = tf.config.list_physical_devices('GPU')
+	for gpu in gpus:
+		tf.config.experimental.set_memory_growth(gpu, True)
 	#ckpt_reader = tf.train.load_checkpoint(args.model)
 	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
 	#model = mm.create_model_deep(n)
