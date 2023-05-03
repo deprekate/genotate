@@ -12,7 +12,7 @@ os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 os.environ["OMP_NUM_THREADS"]="8" 
 #os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] ='true'
 #os.environ['TF_GPU_THREAD_COUNT'] = '4'
-#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 #import keras_tuner as kt
 from genotate.make_model import create_model_blend, blend, api #, HyperRegressor
@@ -170,9 +170,9 @@ if __name__ == '__main__':
 	filenames = list()
 	valnames = list()
 	for f in os.listdir(args.directory):
-		#if (int(f[11])%5) != args.kfold: 
+		if (int(f[11])%5) != args.kfold: 
 		#if f[11] not in '357': 
-		if (int(f[11])%2) != args.kfold: 
+		#if (int(f[11])%2) != args.kfold: 
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
@@ -208,7 +208,6 @@ if __name__ == '__main__':
 	options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.FILE
 	dataset = dataset.with_options(options) 
 
-	'''
 	valiset = tf.data.Dataset.from_tensor_slices(valnames)
 	valiset = valiset.interleave(
 					#lambda x: GenomeDataset(x).unbatch(),
@@ -225,7 +224,6 @@ if __name__ == '__main__':
 	valiset = valiset.prefetch(tf.data.AUTOTUNE)
 	#valiset = strategy.experimental_distribute_dataset(valiset)
 	valiset = valiset.with_options(options) 
-	'''
 
 	#print(dataset)
 	#for x,y in dataset.take(1):
@@ -237,7 +235,7 @@ if __name__ == '__main__':
 	#exit()
 	
 	name = '_'.join(os.path.dirname(args.directory).split('/')[-2:]) + str(args.kfold)
-	checkpoint = tf.keras.callbacks.ModelCheckpoint(name + '-{epoch:03d}', save_weights_only=True, save_freq='epoch')
+	checkpoint = tf.keras.callbacks.ModelCheckpoint('models/' + name + '-{epoch:03d}', save_weights_only=True, save_freq='epoch')
 	#es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)
 	#save = tf.keras.callbacks.BackupAndRestore(name+str(args.kfold)+"_backup", save_freq="epoch", delete_checkpoint=True)
 	#tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"), histogram_freq=1, profile_batch = '1512,2024')
@@ -246,8 +244,8 @@ if __name__ == '__main__':
 		model = api(None)
 	model.fit(
 		dataset,
-		#validation_data = valiset,
-		epochs          = 80,
+		validation_data = valiset,
+		epochs          = 50,
 		verbose         = 2,
-		callbacks       = [checkpoint, LossHistoryCallback(name, None)] #valiset) ] #es_callback] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
+		callbacks       = [checkpoint] #, LossHistoryCallback(name, None)] #valiset) ] #es_callback] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
 	)
