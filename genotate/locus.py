@@ -72,7 +72,7 @@ class Locus(Locus, feature=Feature):
 			# THIS JUST MKES SURE THE FEATURE LOCATIONS ARE IN THE SAME FRAME
 			#for i in _curr.base_locations():
 			#	_curr.dna += self.dna[ i-1 : i ]
-			if None in [_last,_curr,_next]: # or (_last.type != 'CDS') or (_curr.type != 'CDS'):
+			if _curr is None or _next is None: # or (_last.type != 'CDS') or (_curr.type != 'CDS'):
 				pass
 			#elif _curr.strand != _last.strand:
 			#	pass
@@ -87,8 +87,9 @@ class Locus(Locus, feature=Feature):
 					_curr.pairs = ( (_curr.pairs[0][0] , _next.pairs[-1][-1]), )
 					self[_curr] = True
 					#_curr = _next
-					continue
-			elif _next is None:
+					#continue
+					_curr,_next = _last,_curr
+			elif _last is None:
 				pass
 			elif _last.frame() == _next.frame():
 				# THIS MERGES FRAMES BROKEN BY AN EMBEDDED GENE
@@ -100,8 +101,8 @@ class Locus(Locus, feature=Feature):
 					_last.pairs = ((_last.pairs[0][0] , _next.pairs[-1][-1]), )
 					_curr.tags['embedded'] = ['true']
 					self[_last] = True
-					_last,_curr = _curr,_last
-					continue
+					#_last,_curr = _curr,_last
+					_next = _last
 			_last = _curr
 			_curr = _next
 
@@ -120,7 +121,6 @@ class Locus(Locus, feature=Feature):
 						pairs = [[pair[0]+4,pair[1]+3]]
 					else:
 						pairs = [[pair[0]+1,pair[1]+0]]
-
 					pairs = tuple([tuple(map(str,pair)) for pair in pairs])
 					self.add_feature('CDS', feature.strand, pairs, tags=feature.tags)
 
@@ -135,22 +135,11 @@ class Locus(Locus, feature=Feature):
 					#left  = left  if left  else 0
 					right = right if right else self.length()-3
 					feature.set_right(right)
-					# goto closer stop
-					#if feature.right() - left < right - feature.right():
-					#	feature.set_right(left+3)
-					#else:
-					#	feature.set_right(right+3)
 				else:
 					left  = self.next(feature.left(), self.stops, feature.strand)
 					#right = self.last(feature.left(), self.stops, feature.strand)
 					left = left if left else 0
 					feature.set_left(left)
-					#right = right if right else self.length()-3
-					# goto closer stop
-					#if feature.left() - left < right - feature.left():
-					#	feature.set_left(left+1)
-					#else:
-					#	feature.set_left(left+1)
 				self[feature] = True
 
 	def count_starts(self):

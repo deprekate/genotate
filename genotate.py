@@ -90,7 +90,7 @@ if __name__ == '__main__':
 	parser.add_argument('-p', '--penalty', default=10, type=int)
 	args = parser.parse_args()
 
-	os.environ["CUDA_VISIBLE_DEVICES"]=str(int(args.model[-2:]) % 8)
+	os.environ["CUDA_VISIBLE_DEVICES"]=str(id(args)%7+1)  #str(int(args.model[-2:]) % 8)
 	gpus = tf.config.list_physical_devices('GPU')
 	for gpu in gpus:
 		tf.config.experimental.set_memory_growth(gpu, True)
@@ -176,7 +176,6 @@ if __name__ == '__main__':
 
 		# look for stop codon readthrough
 		locus.stops = locus.detect_stops()
-		#locus.write(open('before.gb','w'), args=args)
 
 		# merge regions
 		locus.merge()
@@ -187,8 +186,10 @@ if __name__ == '__main__':
 		# split regions on stop codons
 		locus.split()
 
+		locus.write(open('before.gb','w'), args=args)
 		# adjust ends
 		locus.adjust()
+		locus.write(open('after.gb','w'), args=args)
 
 		#counts = locus.count_starts()
 		#print( { k: v for k, v in sorted(counts.items(), key=lambda item: item[1], reverse=True)} )

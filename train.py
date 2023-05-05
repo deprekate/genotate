@@ -134,7 +134,6 @@ class GenomeDataset:
 				X[1:2*r:2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+r+w-1],w)[:,::-1]
 				yield X[ : 2*r , : ] , Y[ i*2: i*2+2*r , :]
 
-'''
 dataset = GenomeDataset(sys.argv[1].encode())
 #print(getsize(dataset))
 #dataset = GenomeDataset("/home/katelyn/develop/genotate/test/NC_001416.gbk".encode())
@@ -148,7 +147,6 @@ for x,y in dataset:
 exit()
 #print(getsize(dataset))
 #exit()
-'''
 
 if __name__ == '__main__':
 	usage = '%s [-opt1, [-opt2, ...]] directory' % __file__
@@ -160,7 +158,7 @@ if __name__ == '__main__':
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
 	args = parser.parse_args()
 
-	os.environ["CUDA_VISIBLE_DEVICES"]="0,1,2,3,4,5,6,7"
+	os.environ["CUDA_VISIBLE_DEVICES"]="0,1" #,2,3,4,5,6,7"
 	gpus = tf.config.list_physical_devices('GPU')
 	for gpu in gpus:
 		tf.config.experimental.set_memory_growth(gpu, True)
@@ -170,9 +168,9 @@ if __name__ == '__main__':
 	filenames = list()
 	valnames = list()
 	for f in os.listdir(args.directory):
-		if (int(f[11])%5) != args.kfold: 
+		#if (int(f[11])%5) != args.kfold: 
 		#if f[11] not in '357': 
-		#if (int(f[11])%2) != args.kfold: 
+		if (int(f[11])%2) != args.kfold: 
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
@@ -242,6 +240,8 @@ if __name__ == '__main__':
 	with strategy.scope():
 	#with tf.device('/device:GPU:0'):
 		model = api(None)
+	print(model.trainable_variables)
+	exit()
 	model.fit(
 		dataset,
 		validation_data = valiset,
