@@ -64,6 +64,9 @@ class Locus(Locus, feature=Feature):
 			pg = seq.count('g') / length
 			pt = seq.count('t') / length
 			return pt*pa*pa + pt*pa*pg + pt*pg*pa
+	
+	def join(self):	
+		pass
 
 	def merge(self):	
 		_last = _curr = None
