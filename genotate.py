@@ -32,6 +32,14 @@ import tensorflow as tf
 #    tf.config.experimental.set_memory_growth(gpu, True)
 import ruptures as rpt
 
+# backward compatibility
+def sliding_window_view(ar, i):
+    a = np.concatenate(( ar, ar[:-1] ))
+    L = len(ar)
+    n = a.strides[0]
+    return np.lib.stride_tricks.as_strided(a, (L,L), (n,n), writeable=False)[:-i+1,:i]
+if version.parse(np.__version__) < version.parse('1.20'):
+    setattr(np.lib.stride_tricks, 'sliding_window_view', sliding_window_view)
 
 def fstack(data, axis=0):
 	shape = min([item.shape for item in data])

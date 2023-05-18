@@ -22,6 +22,20 @@ from genotate.functions import to_dna, getsize
 import datetime
 import time
 
+# backward compatibility
+def sliding_window_view(ar, i):
+    a = np.concatenate(( ar, ar[:-1] ))
+    L = len(ar)
+    n = a.strides[0]
+    return np.lib.stride_tricks.as_strided(a, (L,L), (n,n), writeable=False)[:-i+1,:i]
+if version.parse(np.__version__) < version.parse('1.20'):
+    setattr(np.lib.stride_tricks, 'sliding_window_view', sliding_window_view)
+
+
+class callback(tf.keras.callbacks.Callback):
+	def on_epoch_end(self, epoch, logs=None):
+		print('lr',self.model.optimizer._decayed_lr('float32').numpy())
+
 def is_valid_file(x):
 	if not os.path.exists(x):
 		raise argparse.ArgumentTypeError("{0} does not exist".format(x))
@@ -156,9 +170,10 @@ if __name__ == '__main__':
 	parser.add_argument('-k', '--kfold', action="store", default=0, type=int, help='which kfold')
 	parser.add_argument('-t', '--trim', action="store", default=0, type=int, help='how many bases to trim off window ends')
 	parser.add_argument('-r', '--reg', action="store_true", help='use kernel regularizer')
+	parser.add_argument('-n', '--none', action='store', type=str)
 	args = parser.parse_args()
 
-	os.environ["CUDA_VISIBLE_DEVICES"]="0,1" #,2,3,4,5,6,7"
+	os.environ["CUDA_VISIBLE_DEVICES"]="0,1,2,3,4,5,6,7"
 	gpus = tf.config.list_physical_devices('GPU')
 	for gpu in gpus:
 		tf.config.experimental.set_memory_growth(gpu, True)
@@ -168,13 +183,13 @@ if __name__ == '__main__':
 	filenames = list()
 	valnames = list()
 	for f in os.listdir(args.directory):
-		#if (int(f[11])%5) != args.kfold: 
+		if (int(f[11])%5) != args.kfold: 
 		#if f[11] not in '357': 
-		if (int(f[11])%2) != args.kfold: 
+		#if (int(f[11])%2) != args.kfold: 
 			filenames.append(os.path.join(args.directory,f))
 		else:
 			valnames.append(os.path.join(args.directory,f))
-	#filenames = filenames[:200] ; valnames = valnames[:50]
+	#filenames = filenames[:7] ; valnames = valnames[:7]
 	#print(filenames) ; print(valnames)
 	print(len(filenames)) ; print(len(valnames))
 	spec = (tf.TensorSpec(shape = (None,87), dtype = tf.experimental.numpy.int8),
@@ -240,12 +255,12 @@ if __name__ == '__main__':
 	with strategy.scope():
 	#with tf.device('/device:GPU:0'):
 		model = api(None)
-	print(model.trainable_variables)
-	exit()
+	#model.load_weights('models/' + name + '-' + str(99).rjust(3,'0')).expect_partial()
+	#model.load_weights('models/assembly_bacteria1-003').expect_partial()
 	model.fit(
 		dataset,
 		validation_data = valiset,
-		epochs          = 50,
+		epochs          = 300,
 		verbose         = 2,
-		callbacks       = [checkpoint] #, LossHistoryCallback(name, None)] #valiset) ] #es_callback] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
+		callbacks       = [callback()] #checkpoint] #, LossHistoryCallback(name, None)] #valiset) ] #es_callback] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
 	)
