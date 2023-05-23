@@ -8,6 +8,7 @@ import sys
 import argparse
 from argparse import RawTextHelpFormatter
 from statistics import mode
+from packaging import version
 
 import faulthandler
 
@@ -186,6 +187,7 @@ if __name__ == '__main__':
 
 		# look for stop codon readthrough
 		locus.stops = locus.detect_stops()
+		
 		#locus.write(open('before.gb','w'), args=args)
 
 		# merge regions
@@ -201,7 +203,7 @@ if __name__ == '__main__':
 		locus.adjust()
 
 		# join partial orfs at both ends
-		locus.join()
+		#locus.join()
 
 		#counts = locus.count_starts()
 		#print( { k: v for k, v in sorted(counts.items(), key=lambda item: item[1], reverse=True)} )
@@ -209,6 +211,7 @@ if __name__ == '__main__':
 
 		# sort them so they are in numerical order instead of by frame
 		# this may be a bad way to do this
+		locus.add_feature('source', 0, [['0',str(locus.length())]], {'stop_codon':locus.stops})
 		for key in sorted(locus):
 			locus[key] = locus.pop(key)
 		try:

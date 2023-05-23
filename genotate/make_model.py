@@ -191,12 +191,13 @@ def api(args):
 	model_ = tf.keras.layers.Dense(3, activation='softmax')(model_)
 	model = tf.keras.models.Model(input_, outputs=model_)
 	#lr_fn = tf.keras.optimizers.schedules.InverseTimeDecay(0.005,6633,0.3)
-	lr_fn = tf.keras.optimizers.schedules.ExponentialDecay(0.005,6633,0.97)
+	#lr_fn = tf.keras.optimizers.schedules.ExponentialDecay(0.005,6633,0.97)
 
 	#try:
-	#	opt = tf.keras.optimizers.legacy.Adam()
+	#	opt = tf.keras.optimizers.Adam()
 	#except:
-	opt = tf.keras.optimizers.Adam(learning_rate=lr_fn)
+	opt = tf.keras.optimizers.legacy.Adam()
+
 	custom_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
 	#model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
 	model.compile(loss=custom_loss, optimizer=opt, metrics=['accuracy']) #,'Recall', 'Precision','FalseNegatives','FalsePositives'])

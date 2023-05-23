@@ -113,17 +113,17 @@ class Locus(Locus, feature=Feature):
 		#stops = ['taa','tga','tag']
 		for feature in sorted(self):
 			stop_locations = [feature.left()-3]
-			for loc,codon in zip(feature.codon_locations(), feature.codons()):
+			for codon,locs in feature.codons(loc=True):
 				if codon in self.stops:
-					stop_locations.append(loc[0])
+					stop_locations.append(min(locs))
 			stop_locations.append(feature.right())
 			del self[feature]
-			for pair in pairwise(sorted(set(stop_locations))):
-				if pair[1]-pair[0] > 30:
+			for left,right in pairwise(sorted(set(stop_locations))):
+				if right-left > 30:
 					if feature.strand > 0:
-						pairs = [[pair[0]+4,pair[1]+3]]
+						pairs = [[left+4,right+3]]
 					else:
-						pairs = [[pair[0]+1,pair[1]+0]]
+						pairs = [[left+1,right+0]]
 					pairs = tuple([tuple(map(str,pair)) for pair in pairs])
 					self.add_feature('CDS', feature.strand, pairs, tags=feature.tags)
 
@@ -137,11 +137,11 @@ class Locus(Locus, feature=Feature):
 					right = self.next(feature.right(), self.stops, feature.strand)
 					#left  = left  if left  else 0
 					right = right if right else self.length()-3
-					feature.set_right(right)
+					feature.set_right(right+3)
 				else:
 					left  = self.next(feature.left(), self.stops, feature.strand)
 					#right = self.last(feature.left(), self.stops, feature.strand)
-					left = left if left else 0
+					left = left+1 if left else '<1'
 					feature.set_left(left)
 				self[feature] = True
 
