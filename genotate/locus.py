@@ -66,6 +66,16 @@ class Locus(Locus, feature=Feature):
 			return pt*pa*pa + pt*pa*pg + pt*pg*pa
 	
 	def join(self):	
+		lefts = list()
+		rights = list()
+		for feature in sorted(self):
+			if feature.left() <= 3:
+				if feature.strand > 0 and feature.start_codon()[:2] != 'tg':
+					lefts.append(feature)
+				elif feature.strand < 0 and feature.stop_codon() not in self.stops:
+					lefts.append(feature)
+			elif feature.right() > self.length() - 6:
+				rights.append(feature)
 		pass
 
 	def merge(self):	

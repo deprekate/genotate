@@ -193,9 +193,9 @@ if __name__ == '__main__':
 		# merge regions
 		locus.merge()
 
-		locus = dict(sorted(locus.items()))
-		#for key in sorted(locus):
-		#	locus[key] = locus.pop(key)
+		#locus = dict(sorted(locus.items()))
+		for key in sorted(locus):
+			locus[key] = locus.pop(key)
 		
 		# split regions on stop codons
 		locus.split()
@@ -214,9 +214,9 @@ if __name__ == '__main__':
 		
 		# sort them so they are in numerical order instead of by frame
 		# this may be a bad way to do this
-		locus = dict(sorted(locus.items()))
-		#for key in sorted(locus):
-		#	locus[key] = locus.pop(key)
+		#locus = dict(sorted(locus.items()))
+		for key in sorted(locus):
+			locus[key] = locus.pop(key)
 		try:
 			locus.write(args.outfile, args=args)
 		except BrokenPipeError:
