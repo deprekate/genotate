@@ -194,9 +194,9 @@ def api(args):
 	#lr_fn = tf.keras.optimizers.schedules.ExponentialDecay(0.005,6633,0.97)
 
 	#try:
-	#	opt = tf.keras.optimizers.Adam()
+	opt = tf.keras.optimizers.Adam()
 	#except:
-	opt = tf.keras.optimizers.legacy.Adam()
+	#opt = tf.keras.optimizers.legacy.Adam()
 
 	custom_loss = tf.keras.losses.CategoricalCrossentropy(from_logits=False)
 	#model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])

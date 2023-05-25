@@ -5,6 +5,7 @@ from argparse import RawTextHelpFormatter
 from signal import signal, SIGPIPE, SIG_DFL
 signal(SIGPIPE,SIG_DFL)
 import threading
+from packaging import version
 import socket
 import gc
 
@@ -21,20 +22,36 @@ from genbank.file import File
 from genotate.functions import to_dna, getsize
 import datetime
 import time
+from statistics import stdev
 
 # backward compatibility
 def sliding_window_view(ar, i):
-    a = np.concatenate(( ar, ar[:-1] ))
-    L = len(ar)
-    n = a.strides[0]
-    return np.lib.stride_tricks.as_strided(a, (L,L), (n,n), writeable=False)[:-i+1,:i]
+	a = np.concatenate(( ar, ar[:-1] ))
+	L = len(ar)
+	n = a.strides[0]
+	return np.lib.stride_tricks.as_strided(a, (L,L), (n,n), writeable=False)[:-i+1,:i]
 if version.parse(np.__version__) < version.parse('1.20'):
-    setattr(np.lib.stride_tricks, 'sliding_window_view', sliding_window_view)
+	setattr(np.lib.stride_tricks, 'sliding_window_view', sliding_window_view)
 
 
 class callback(tf.keras.callbacks.Callback):
 	def on_epoch_end(self, epoch, logs=None):
 		print('lr',self.model.optimizer._decayed_lr('float32').numpy())
+
+class optChanger(tf.keras.callbacks.Callback):
+	def __init__(self):
+		self.loss = [1,1,1]
+		self.opt = 'Adam'
+	def on_epoch_end(self, epoch, logs=None):
+		self.loss.append(logs['loss'])
+		print('opt',self.model.optimizer)
+		if round(min(self.loss[-4:]),4) == round(self.loss[-4],4):
+			if self.opt == 'SGD':
+				print('early stop')
+				self.stopped_epoch = epoch
+				self.model.stop_training = True
+			self.model.optimizer = tf.keras.optimizers.SGD()
+			self.opt = 'SGD'
 
 def is_valid_file(x):
 	if not os.path.exists(x):
@@ -86,9 +103,8 @@ class GenomeDataset:
 			for feature in locus.features(include=['CDS']):
 				#s = (feature.strand * -1 + 1) >> 1
 				s = (feature.strand >> 1) * -1
-				locations = feature.codon_locations()
-				if feature.partial() == 'left': next(locations)
-				for i,*_ in locations:
+				#if feature.partial() == 'left': next(locations)
+				for i in feature.codon_locations():
 					i = 2 * i
 					# coding
 					Y[i+s  ,1] = 1
@@ -96,15 +112,29 @@ class GenomeDataset:
 					Y[i:i+6,0] = 1
 					Y[i:i+6,2] = 0
 				locus[feature] = None
-			Y[Y[:,1]==1,0] = 0
+			#Y[Y[:,1]==1,0] = 0
+			Y[:, 0][Y[:, 1] == 1] = 0
 			forward = np.zeros((w//2-1)+length+(w//2+1),dtype=np.uint8)
 			reverse = np.zeros((w//2-1)+length+(w//2+1),dtype=np.uint8)
-			for i,base in enumerate(locus.dna):
-				i += w//2-1
+			#for i,base in enumerate(locus.dna):
+			#	i += w//2-1
 				#if base in 'acgt':
-				forward[i] = ((ord(base) >> 1) & 3) + 1
-				reverse[i] = ((forward[i] - 3) % 4) + 1
+			#	forward[i] = ((ord(base) >> 1) & 3) + 1
+			#	reverse[i] = ((forward[i] - 3) % 4) + 1
+			forward[w//2-1 : -w//2] = (np.frombuffer(locus.dna.encode(), dtype=np.uint8) >> 1 & 3) + 1
+			reverse[w//2-1 : -w//2] = ((forward[w//2-1:-w//2] - 3) % 4) + 1
 			locus.dna = None
+			for i in range( length // n):
+				i *= n
+				X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[ i : i+n+w-1],w)
+				X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+n+w-1],w)[:,::-1]
+				yield X,Y[ i*2:i*2+n*2 , :]
+			i = length // n * n
+			r = length % n
+			if r:
+				X[0:2*r:2,] = np.lib.stride_tricks.sliding_window_view(forward[i : i+r+w-1],w)
+				X[1:2*r:2,] = np.lib.stride_tricks.sliding_window_view(reverse[i : i+r+w-1],w)[:,::-1]
+				yield X[ : 2*r , : ] , Y[ i*2: i*2+2*r , :]
 			'''
 			a = np.zeros([6, 99], dtype=np.uint8)
 			for n in range(0, length-2, 3):
@@ -120,12 +150,6 @@ class GenomeDataset:
 				a[5,0:99] = reverse[i : i+99 ][::-1]
 				yield a,Y[2*n:2*n+6,:]
 			'''
-			# leave this here for numpy < 1.20 backwards compat
-			#forfor = np.concatenate(( forward, forward[:-1] ))
-			#L = len(forward)
-			#n = forfor.strides[0]
-			#f = np.lib.stride_tricks.as_strided(forfor[L-1:], (L,L), (-n,n))
-			# this is creates one BIG numpy array
 			'''
 			X = np.zeros([len(locus.dna)*2  ,99],dtype=np.uint8)
 			X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward,99)
@@ -135,18 +159,6 @@ class GenomeDataset:
 			#I = i
 			yield X,Y[:-7]
 			'''
-			# this splits the BIG numpy array into n sized chunks to limit ram usage
-			for i in range( length // n):
-				i *= n
-				X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[ i : i+n+w-1],w)
-				X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+n+w-1],w)[:,::-1]
-				yield X,Y[ i*2:i*2+n*2 , :]
-			i = length // n * n
-			r = length % n
-			if r:
-				X[0:2*r:2,] = np.lib.stride_tricks.sliding_window_view(forward[ i : i+r+w-1],w)
-				X[1:2*r:2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+r+w-1],w)[:,::-1]
-				yield X[ : 2*r , : ] , Y[ i*2: i*2+2*r , :]
 
 dataset = GenomeDataset(sys.argv[1].encode())
 #print(getsize(dataset))
@@ -205,11 +217,11 @@ if __name__ == '__main__':
 						args=(x,),
 						output_signature=spec
 					).unbatch(),
-	                num_parallel_calls=tf.data.AUTOTUNE,
+				    num_parallel_calls=tf.data.AUTOTUNE,
 					deterministic=False,
 					cycle_length=180,
 					block_length=48,
-	                )
+				    )
 	#dataset = dataset.unbatch()
 	dataset = dataset.shuffle(buffer_size=1024)
 	dataset = dataset.batch(8640*len(gpus), num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
@@ -229,10 +241,10 @@ if __name__ == '__main__':
 						args=(x,),
 						output_signature=spec
 					).unbatch(),
-	                num_parallel_calls=tf.data.AUTOTUNE,
+				    num_parallel_calls=tf.data.AUTOTUNE,
 					deterministic=False,
 					cycle_length=16,block_length=540,
-	                )
+				    )
 	valiset = valiset.batch(8640*len(gpus), num_parallel_calls=tf.data.AUTOTUNE, deterministic=False)
 	valiset = valiset.prefetch(tf.data.AUTOTUNE)
 	#valiset = strategy.experimental_distribute_dataset(valiset)
@@ -248,7 +260,7 @@ if __name__ == '__main__':
 	#exit()
 	
 	name = '_'.join(os.path.dirname(args.directory).split('/')[-2:]) + str(args.kfold)
-	checkpoint = tf.keras.callbacks.ModelCheckpoint('models/' + name + '-{epoch:03d}', save_weights_only=True, save_freq='epoch')
+	checkpoint = tf.keras.callbacks.ModelCheckpoint('dual/' + name + '-{epoch:03d}', save_weights_only=True, save_freq='epoch')
 	#es_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)
 	#save = tf.keras.callbacks.BackupAndRestore(name+str(args.kfold)+"_backup", save_freq="epoch", delete_checkpoint=True)
 	#tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir="logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"), histogram_freq=1, profile_batch = '1512,2024')
@@ -262,5 +274,5 @@ if __name__ == '__main__':
 		validation_data = valiset,
 		epochs          = 300,
 		verbose         = 2,
-		callbacks       = [callback()] #checkpoint] #, LossHistoryCallback(name, None)] #valiset) ] #es_callback] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
+		callbacks       = [optChanger(), checkpoint] #, LossHistoryCallback(name, None)] #valiset) ] #es_callback] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
 	)
