@@ -13,7 +13,7 @@ os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
 os.environ["OMP_NUM_THREADS"]="8" 
 #os.environ["TF_FORCE_GPU_ALLOW_GROWTH"] ='true'
 #os.environ['TF_GPU_THREAD_COUNT'] = '4'
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 #import keras_tuner as kt
 from genotate.make_model import create_model_blend, blend, api #, HyperRegressor
@@ -26,6 +26,7 @@ from statistics import stdev
 
 # backward compatibility
 def sliding_window_view(ar, i):
+	sys.stdout.write("using legacy sliding window")
 	a = np.concatenate(( ar, ar[:-1] ))
 	L = len(ar)
 	n = a.strides[0]
@@ -34,10 +35,6 @@ if version.parse(np.__version__) < version.parse('1.20'):
 	setattr(np.lib.stride_tricks, 'sliding_window_view', sliding_window_view)
 
 
-class callback(tf.keras.callbacks.Callback):
-	def on_epoch_end(self, epoch, logs=None):
-		print('lr',self.model.optimizer._decayed_lr('float32').numpy())
-
 class optChanger(tf.keras.callbacks.Callback):
 	def __init__(self):
 		self.loss = [1,1,1]
@@ -45,26 +42,20 @@ class optChanger(tf.keras.callbacks.Callback):
 	def on_epoch_end(self, epoch, logs=None):
 		self.loss.append(logs['loss'])
 		print('opt',self.model.optimizer)
-		if round(min(self.loss[-4:]),4) == round(self.loss[-4],4):
-			if self.opt == 'SGD':
+		if self.loss[-1] >  self.loss[-2]:
+			self.model.optimizer = tf.keras.optimizers.SGD()
+			self.loss.extend([1,1,1])
+			self.opt = 'SGD'
+			return
+		if self.opt == 'SGD' and round(min(self.loss[-3:]),4) == round(self.loss[-3],4):
 				print('early stop')
 				self.stopped_epoch = epoch
 				self.model.stop_training = True
-			self.model.optimizer = tf.keras.optimizers.SGD()
-			self.opt = 'SGD'
 
 def is_valid_file(x):
 	if not os.path.exists(x):
 		raise argparse.ArgumentTypeError("{0} does not exist".format(x))
 	return x
-
-def validate(name, data):
-	with tf.device('/device:GPU:0'):
-		model = api(None)
-	model.load_weights(name).expect_partial()
-	result = model.evaluate(data, verbose=0)
-	#result = dict(zip(model.metrics_names, result))
-	print(name[-3:], 'val_loss', result[0], 'val_accuracy', result[1], sep='\t')
 
 class LossHistoryCallback(tf.keras.callbacks.Callback):
 	def __init__(self, name, data):
@@ -101,11 +92,10 @@ class GenomeDataset:
 			Y[:,2] = 1
 			# label the positions
 			for feature in locus.features(include=['CDS']):
-				#s = (feature.strand * -1 + 1) >> 1
 				s = (feature.strand >> 1) * -1
 				#if feature.partial() == 'left': next(locations)
-				for i in feature.codon_locations():
-					i = 2 * i
+				for loc in feature.codon_locations():
+					i = 2 * loc[2*s]
 					# coding
 					Y[i+s  ,1] = 1
 					# noncoding
@@ -160,6 +150,7 @@ class GenomeDataset:
 			yield X,Y[:-7]
 			'''
 
+'''
 dataset = GenomeDataset(sys.argv[1].encode())
 #print(getsize(dataset))
 #dataset = GenomeDataset("/home/katelyn/develop/genotate/test/NC_001416.gbk".encode())
@@ -173,6 +164,8 @@ for x,y in dataset:
 exit()
 #print(getsize(dataset))
 #exit()
+'''
+
 
 if __name__ == '__main__':
 	usage = '%s [-opt1, [-opt2, ...]] directory' % __file__
@@ -268,11 +261,11 @@ if __name__ == '__main__':
 	#with tf.device('/device:GPU:0'):
 		model = api(None)
 	#model.load_weights('models/' + name + '-' + str(99).rjust(3,'0')).expect_partial()
-	#model.load_weights('models/assembly_bacteria1-003').expect_partial()
+	#model.load_weights('dual/assembly_phages0-050').expect_partial()
 	model.fit(
 		dataset,
 		validation_data = valiset,
 		epochs          = 300,
 		verbose         = 2,
-		callbacks       = [optChanger(), checkpoint] #, LossHistoryCallback(name, None)] #valiset) ] #es_callback] #, checkpoint, LossHistoryCallback() ] #tensorboard_callback]
+		callbacks       = [optChanger(), checkpoint] #, LossHistoryCallback(name, None)] #valiset) ] #es_callback] #tensorboard_callback]
 	)

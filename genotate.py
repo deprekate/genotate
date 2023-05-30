@@ -204,7 +204,7 @@ if __name__ == '__main__':
 		locus.adjust()
 
 		# join partial orfs at both ends
-		#locus.join()
+		locus.join()
 
 		#counts = locus.count_starts()
 		#print( { k: v for k, v in sorted(counts.items(), key=lambda item: item[1], reverse=True)} )
