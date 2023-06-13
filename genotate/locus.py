@@ -123,7 +123,7 @@ class Locus(Locus, feature=Feature):
 		#stops = ['taa','tga','tag']
 		for feature in sorted(self):
 			stop_locations = [feature.left()-3]
-			for codon,locs in feature.codons(loc=True):
+			for codon,locs in zip(feature.codons(), feature.codon_locations()):
 				if codon in self.stops:
 					stop_locations.append(min(locs))
 			stop_locations.append(feature.right())
@@ -142,6 +142,8 @@ class Locus(Locus, feature=Feature):
 		for feature in sorted(self):
 			if feature.stop_codon() not in self.stops:
 				del self[feature]
+				# I NEED TO ADD SOME LOGIC HERE TO LIMIT THE MOVEMENT TO NOT
+				# GREATER THAN THE LENGTH OF THE FEATURES CURRENT LENGTH
 				if feature.strand > 0:
 					#left  = self.last(feature.right(), self.stops, feature.strand)
 					right = self.next(feature.right(), self.stops, feature.strand)
@@ -177,6 +179,7 @@ class Locus(Locus, feature=Feature):
 			end['taa'] += e.count('#')
 			end['tag'] += e.count('+')
 			end['tga'] += e.count('*')
+		print(mid, end)
 		stops = self.stops
 		for stop in mid:
 			if mid[stop] - end[stop] >= n :

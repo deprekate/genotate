@@ -150,7 +150,8 @@ if __name__ == '__main__':
 		'''
 		with quiet():
 			p = model.predict(dataset)
-	
+
+		
 		if args.graph:
 			plot_frames(p)
 			continue
@@ -162,6 +163,7 @@ if __name__ == '__main__':
 		#forward = np.array([ p[0::6,:] , p[2::6,:] , p[4::6,:] ])
 		forward = np.fstack([ p[0::6,:] , p[2::6,:] , p[4::6,:] ])
 		reverse = np.fstack([ p[1::6,:] , p[3::6,:] , p[5::6,:] ])
+		#both = np.fstack([ p[1::6,:] , p[3::6,:] , p[5::6,:] , p[1::6,:] , p[3::6,:] , p[5::6,:] ])
 		#both = np.array([ p[0::6,:] + p[1::6,:] , p[2::6,:] + p[3::6,:] , p[4::6,:] + p[5::6,:] ]).clip(0,1)
 		# predict strands
 		strand_wise = np.array([ 
@@ -188,7 +190,7 @@ if __name__ == '__main__':
 		# look for stop codon readthrough
 		locus.stops = locus.detect_stops()
 		
-		#locus.write(open('before.gb','w'), args=args)
+		locus.write(open('before.gb','w'), args=args)
 
 		# merge regions
 		locus.merge()
@@ -204,13 +206,13 @@ if __name__ == '__main__':
 		locus.adjust()
 
 		# join partial orfs at both ends
-		locus.join()
+		#locus.join()
 
 		#counts = locus.count_starts()
 		#print( { k: v for k, v in sorted(counts.items(), key=lambda item: item[1], reverse=True)} )
 		#exit()
 
-		locus.add_feature('source', 0, [['0',str(locus.length())]], {'stop_codon':locus.stops})
+		locus.add_feature('source', 0, [['1',str(locus.length())]], {'stop_codon':locus.stops})
 		
 		# sort them so they are in numerical order instead of by frame
 		# this may be a bad way to do this

@@ -58,7 +58,7 @@ def write_codons(p):
 	print("//")
 
 
-def plot_strands(p):
+def plot_strands(args, p):
 	#p = smo(p, 30)
 	#p = smoo(p)
 	forward = np.array([ p[0::6,:] , p[2::6,:] , p[4::6,:] ])
