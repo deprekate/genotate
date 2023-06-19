@@ -112,11 +112,16 @@ if __name__ == '__main__':
 	k = 1 #int(os.path.basename(args.infile)[11]) % 5
 	args.model = args.model.replace('#', str(k))
 	with quiet() ,tf.device('/device:GPU:0'), quiet():
-		model = api(args)
+		#model = api(args)
+		model = [api(args) for i in range(5)]
 		#name = args.infile.split('/')[-1]
 		#me = name[10] if len(name) > 10 else None
 		#model.load_weights( "out/win_sub_w117_kern3/win_sub_trim=15,reg=False,fold=" + str(me) + ".ckpt" ).expect_partial()
-		model.load_weights(args.model).expect_partial()
+		model[0].load_weights(args.model.replace('#','0') ).expect_partial()
+		model[1].load_weights(args.model.replace('#','1') ).expect_partial()
+		model[2].load_weights(args.model.replace('#','2') ).expect_partial()
+		model[3].load_weights(args.model.replace('#','3') ).expect_partial()
+		model[4].load_weights(args.model.replace('#','4') ).expect_partial()
 		#print(model.summary())
 		#faulthandler.enable()
 	spec = (tf.TensorSpec(shape = (None,87), dtype = tf.experimental.numpy.int8),
@@ -148,9 +153,19 @@ if __name__ == '__main__':
 				print(i//2, dna, p)
 		exit()
 		'''
-		with quiet():
-			p = model.predict(dataset)
 
+		'''
+		with quiet():
+			p0 = model[0].predict(dataset)
+			p1 = model[1].predict(dataset)
+			p2 = model[2].predict(dataset)
+			p3 = model[3].predict(dataset)
+			p4 = model[4].predict(dataset)
+		p = np.mean([p0 , p1, p2, p3, p4], axis=0)
+		np.save('curves/' + args.infile.split('/')[-1], p)
+		exit()
+		'''
+		p = np.load('curves/' + os.path.basename(args.infile) + '.npy')
 		
 		if args.graph:
 			plot_frames(p)
