@@ -109,8 +109,8 @@ if __name__ == '__main__':
 	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
 	#model = mm.create_model_deep(n)
 	#model = blend(args)
-	k = 1 #int(os.path.basename(args.infile)[11]) % 5
-	args.model = args.model.replace('#', str(k))
+	#k = 1 #int(os.path.basename(args.infile)[11]) % 5
+	#args.model = args.model.replace('#', str(k))
 	with quiet() ,tf.device('/device:GPU:0'), quiet():
 		#model = api(args)
 		model = [api(args) for i in range(5)]
@@ -162,10 +162,11 @@ if __name__ == '__main__':
 			p3 = model[3].predict(dataset)
 			p4 = model[4].predict(dataset)
 		p = np.mean([p0 , p1, p2, p3, p4], axis=0)
-		np.save('curves/' + args.infile.split('/')[-1], p)
+
+		np.save('curves/median/' + args.infile.split('/')[-1], p)
 		exit()
 		'''
-		p = np.load('curves/' + os.path.basename(args.infile) + '.npy')
+		p = np.load('curves/mean/' + os.path.basename(args.infile) + '.npy')
 		
 		if args.graph:
 			plot_frames(p)
