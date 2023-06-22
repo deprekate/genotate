@@ -166,6 +166,7 @@ class Locus(Locus, feature=Feature):
 		return counts
 
 	def detect_stops(self):
+		n = 10
 		counts = {stop : 0 for stop in self.stops}
 		for _last, _curr, _next in previous_and_next(sorted(self)):
 			if _last and _last.frame() == _curr.frame():
@@ -174,29 +175,28 @@ class Locus(Locus, feature=Feature):
 				if sum(['taa' in codons, 'tag' in codons, 'tga' in codons]) == 1:
 					for stop in self.stops:
 						counts[stop] += codons.count(stop)
+
+			acids = _curr.translation()[  :-n]
+			if sum(['#' in acids, '+' in acids, '*' in acids]) == 1:
+				counts['taa'] += acids.count('#')
+				counts['tag'] += acids.count('+')
+				counts['tga'] += acids.count('*')
+		print(counts)
 		stops = self.stops
 		for stop in self.stops:
 			counts[stop] /= len(self)
 			if counts[stop] > 1/3 :
 				stops.remove(stop)
-		return stops
 
 		print(counts)
 		exit()
-		n = 10
-		mid = {item : 0 for item in self.stops}
-		end = {item : 0 for item in self.stops}
+		return stops
+
+
 		for feature in self.features(include='CDS'):
 			acids = feature.translation()
 			m = acids[  :-n]
 			e = acids[-n:  ]
-			if sum(['#' in m, '+' in m, '*' in m]) == 1:
-				mid['taa'] += m.count('#')
-				mid['tag'] += m.count('+')
-				mid['tga'] += m.count('*')
-			end['taa'] += e.count('#')
-			end['tag'] += e.count('+')
-			end['tga'] += e.count('*')
 		print(mid, end)
 		stops = self.stops
 		for stop in mid:
