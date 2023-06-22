@@ -154,7 +154,6 @@ if __name__ == '__main__':
 		exit()
 		'''
 
-		'''
 		with quiet():
 			p0 = model[0].predict(dataset)
 			p1 = model[1].predict(dataset)
@@ -163,10 +162,11 @@ if __name__ == '__main__':
 			p4 = model[4].predict(dataset)
 		p = np.mean([p0 , p1, p2, p3, p4], axis=0)
 
-		np.save('curves/median/' + args.infile.split('/')[-1], p)
-		exit()
 		'''
-		p = np.load('curves/mean/' + os.path.basename(args.infile) + '.npy')
+		np.save('curves/' + args.infile.split('/')[-1], p)
+		exit()
+		p = np.load('curves/' + os.path.basename(args.infile) + '.npy')
+		'''
 		
 		if args.graph:
 			plot_frames(p)
@@ -234,7 +234,9 @@ if __name__ == '__main__':
 		# this may be a bad way to do this
 		#locus = dict(sorted(locus.items()))
 		for key in sorted(locus):
-			locus[key] = locus.pop(key)
+			locus.pop(key)
+			if key.partial() or key.length() >= 87:
+				locus[key] = True
 		try:
 			locus.write(args.outfile, args=args)
 		except BrokenPipeError:

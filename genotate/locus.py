@@ -12,6 +12,7 @@ from argparse import RawTextHelpFormatter
 from itertools import zip_longest, chain, tee, islice, tee
 from itertools import cycle
 from copy import deepcopy
+from textwrap import wrap
 
 from genbank.locus import Locus
 from genotate.feature import Feature
@@ -165,6 +166,23 @@ class Locus(Locus, feature=Feature):
 		return counts
 
 	def detect_stops(self):
+		counts = {stop : 0 for stop in self.stops}
+		for _last, _curr, _next in previous_and_next(sorted(self)):
+			if _last and _last.frame() == _curr.frame():
+				seq = self.seq(_last.right(), _curr.left(), _last.frame())
+				codons = wrap(seq, 3)
+				if sum(['taa' in codons, 'tag' in codons, 'tga' in codons]) == 1:
+					for stop in self.stops:
+						counts[stop] += codons.count(stop)
+		stops = self.stops
+		for stop in self.stops:
+			counts[stop] /= len(self)
+			if counts[stop] > 1/3 :
+				stops.remove(stop)
+		return stops
+
+		print(counts)
+		exit()
 		n = 10
 		mid = {item : 0 for item in self.stops}
 		end = {item : 0 for item in self.stops}
