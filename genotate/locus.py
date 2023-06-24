@@ -181,27 +181,14 @@ class Locus(Locus, feature=Feature):
 				counts['taa'] += acids.count('#')
 				counts['tag'] += acids.count('+')
 				counts['tga'] += acids.count('*')
-		print(counts)
 		stops = self.stops
+		print(counts)
 		for stop in self.stops:
 			counts[stop] /= len(self)
-			if counts[stop] > 1/3 :
-				stops.remove(stop)
-
+			#if counts[stop] > 1/3 :
+			#	stops.remove(stop)
 		print(counts)
-		exit()
-		return stops
 
-
-		for feature in self.features(include='CDS'):
-			acids = feature.translation()
-			m = acids[  :-n]
-			e = acids[-n:  ]
-		print(mid, end)
-		stops = self.stops
-		for stop in mid:
-			if mid[stop] - end[stop] >= n :
-				stops.remove(stop)
 		return stops
 
 	def skew(self, nucs):

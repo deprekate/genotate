@@ -235,7 +235,7 @@ if __name__ == '__main__':
 		#locus = dict(sorted(locus.items()))
 		for key in sorted(locus):
 			locus.pop(key)
-			if key.partial() or key.length() >= 87:
+			if True: #key.partial() or key.length() >= 87:
 				locus[key] = True
 		try:
 			locus.write(args.outfile, args=args)
