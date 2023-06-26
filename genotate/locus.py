@@ -13,6 +13,7 @@ from itertools import zip_longest, chain, tee, islice, tee
 from itertools import cycle
 from copy import deepcopy
 from textwrap import wrap
+from math import log
 
 from genbank.locus import Locus
 from genotate.feature import Feature
@@ -172,23 +173,20 @@ class Locus(Locus, feature=Feature):
 			if _last and _last.frame() == _curr.frame():
 				seq = self.seq(_last.right(), _curr.left(), _last.frame())
 				codons = wrap(seq, 3)
-				if sum(['taa' in codons, 'tag' in codons, 'tga' in codons]) == 1:
+				if len(seq) < 300 and sum(['taa' in codons, 'tag' in codons, 'tga' in codons]) == 1:
 					for stop in self.stops:
-						counts[stop] += codons.count(stop)
+						counts[stop] += stop in codons #codons.count(stop)
 
 			acids = _curr.translation()[  :-n]
 			if sum(['#' in acids, '+' in acids, '*' in acids]) == 1:
-				counts['taa'] += acids.count('#')
-				counts['tag'] += acids.count('+')
-				counts['tga'] += acids.count('*')
+				counts['taa'] += "#" in acids #acids.count('#')
+				counts['tag'] += '+' in acids #acids.count('+')
+				counts['tga'] += '*' in acids # acids.count('*')
 		stops = self.stops
-		print(counts)
 		for stop in self.stops:
 			counts[stop] /= len(self)
-			#if counts[stop] > 1/3 :
-			#	stops.remove(stop)
-		print(counts)
-
+			if len(self) > 10 and counts[stop] > 1/3 :
+				stops.remove(stop)
 		return stops
 
 	def skew(self, nucs):
