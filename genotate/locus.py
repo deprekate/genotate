@@ -83,7 +83,7 @@ class Locus(Locus, feature=Feature):
 	def merge(self):	
 		_last = _curr = None
 		#for _, _, _next in previous_and_next(sorted(self)):
-		for _next in chain(sorted(self), [None]):
+		for _next in chain(sorted(self.features(include='CDS')), [None]):
 			# THIS JUST MKES SURE THE FEATURE LOCATIONS ARE IN THE SAME FRAME
 			#for i in _curr.base_locations():
 			#	_curr.dna += self.dna[ i-1 : i ]
@@ -123,7 +123,7 @@ class Locus(Locus, feature=Feature):
 
 	def split(self):
 		#stops = ['taa','tga','tag']
-		for feature in sorted(self):
+		for feature in sorted(self.features(include='CDS')):
 			stop_locations = [feature.left()-3]
 			for codon,locs in zip(feature.codons(), feature.codon_locations()):
 				if codon in self.stops:
@@ -131,7 +131,7 @@ class Locus(Locus, feature=Feature):
 			stop_locations.append(feature.right())
 			del self[feature]
 			for left,right in pairwise(sorted(set(stop_locations))):
-				if right-left > 30:
+				if right-left >= 60:
 					if feature.strand > 0:
 						pairs = [[left+4,right+3]]
 					else:
@@ -141,7 +141,7 @@ class Locus(Locus, feature=Feature):
 
 	def adjust(self):
 		#stops = ['taa','tga','tag']
-		for feature in sorted(self):
+		for feature in sorted(self.features(include='CDS')):
 			if feature.stop_codon() not in self.stops:
 				del self[feature]
 				# I NEED TO ADD SOME LOGIC HERE TO LIMIT THE MOVEMENT TO NOT
@@ -169,7 +169,7 @@ class Locus(Locus, feature=Feature):
 	def detect_stops(self):
 		n = 10
 		counts = {stop : 0 for stop in self.stops}
-		for _last, _curr, _next in previous_and_next(sorted(self)):
+		for _last, _curr, _next in previous_and_next(sorted(self.features(include='CDS'))):
 			if _last and _last.frame() == _curr.frame():
 				seq = self.seq(_last.right(), _curr.left(), _last.frame())
 				codons = wrap(seq, 3)
@@ -184,7 +184,7 @@ class Locus(Locus, feature=Feature):
 				counts['tga'] += '*' in acids # acids.count('*')
 		stops = self.stops
 		for stop in self.stops:
-			counts[stop] /= len(self)
+			counts[stop] /= len(self) if len(self) else 1
 			if len(self) > 10 and counts[stop] > 1/3 :
 				stops.remove(stop)
 		return stops

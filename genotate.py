@@ -65,9 +65,9 @@ def predict_switches(data, min_size, pen):
 	try:
 		switches = rpt.KernelCPD(kernel="linear", min_size=min_size).fit(data).predict(pen=pen)
 	except:
+		print("error")
 		switches = [data.shape[0]]
 	#return switches
-
 	# merge adjacent regions of the same type
 	merged = dict()
 	for left,right in zip([0] + switches, switches): 
@@ -160,7 +160,7 @@ if __name__ == '__main__':
 			p2 = model[2].predict(dataset)
 			p3 = model[3].predict(dataset)
 			p4 = model[4].predict(dataset)
-		p = np.mean([p0 , p1, p2, p3, p4], axis=0)
+		p = np.mean([p0, p1, p2, p3, p4], axis=0)
 
 		'''
 		np.save('curves/' + args.infile.split('/')[-1], p)
@@ -187,16 +187,17 @@ if __name__ == '__main__':
 								np.divide( reverse[:,:,2] + forward[:,:,2], 6).sum(axis=0).clip(0,1) , 
 								forward[:,:,1].sum(axis=0).clip(0,1) 
 								]).T
-		strand_switches = predict_switches(strand_wise, 33, 33)
-		
+		strand_switches = predict_switches(strand_wise, 72, 1)
+		#for switch,strand in strand_switches.items():
+		#	print(strand,switch[0]*3+1,switch[1]*3+1,sep='\t')
 		# predict frames of strand
 		for (index,offset),strand in strand_switches.items():
 			index , offset , strand = max(index - 30, 0) , min(offset + 30, len(strand_wise)-1) , strand-1
-			#locus.add_feature('mRNA', strand, [map(str,[3*index+1, 3*offset+1])])
 			if strand == 0:continue
+			locus.add_feature('mRNA', strand, [map(str,[3*index+1, 3*offset+1])])
 			for frame in [0,1,2]:
 				frame_wise = forward[frame, index : offset//3*3, :] if strand > 0 else reverse[frame, index : offset, :]
-				switches = predict_switches(frame_wise, args.size, args.penalty)
+				switches = predict_switches(frame_wise, 1, 1)
 				for (left,right),label in switches.items(): 
 					if label == 1:
 						pairs = [ list(map(str,[3*(index+left)+frame+1, 3*(index+right)+frame])) ]
@@ -206,14 +207,16 @@ if __name__ == '__main__':
 		# look for stop codon readthrough
 		locus.stops = locus.detect_stops()
 		
-		locus.write(open('before.gb','w'), args=args)
+		#locus.write(open('before.gb','w'), args=args)
 
 		# merge regions
 		locus.merge()
 
 		#locus = dict(sorted(locus.items()))
 		for key in sorted(locus):
-			locus[key] = locus.pop(key)
+			locus.pop(key)
+			if key.partial() or key.length() >= 60:
+				locus[key] = True
 		
 		# split regions on stop codons
 		locus.split()
@@ -234,9 +237,7 @@ if __name__ == '__main__':
 		# this may be a bad way to do this
 		#locus = dict(sorted(locus.items()))
 		for key in sorted(locus):
-			locus.pop(key)
-			if True: #key.partial() or key.length() >= 87:
-				locus[key] = True
+			locus[key] = locus.pop(key)
 		try:
 			locus.write(args.outfile, args=args)
 		except BrokenPipeError:
