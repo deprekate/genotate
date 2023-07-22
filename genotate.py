@@ -187,7 +187,7 @@ if __name__ == '__main__':
 								np.divide( reverse[:,:,2] + forward[:,:,2], 6).sum(axis=0).clip(0,1) , 
 								forward[:,:,1].sum(axis=0).clip(0,1) 
 								]).T
-		strand_switches = predict_switches(strand_wise, 72, 1)
+		strand_switches = predict_switches(strand_wise, 45, 30)
 		#for switch,strand in strand_switches.items():
 		#	print(strand,switch[0]*3+1,switch[1]*3+1,sep='\t')
 		# predict frames of strand
@@ -197,7 +197,7 @@ if __name__ == '__main__':
 			locus.add_feature('mRNA', strand, [map(str,[3*index+1, 3*offset+1])])
 			for frame in [0,1,2]:
 				frame_wise = forward[frame, index : offset//3*3, :] if strand > 0 else reverse[frame, index : offset, :]
-				switches = predict_switches(frame_wise, 1, 1)
+				switches = predict_switches(frame_wise, 1, 10)
 				for (left,right),label in switches.items(): 
 					if label == 1:
 						pairs = [ list(map(str,[3*(index+left)+frame+1, 3*(index+right)+frame])) ]
