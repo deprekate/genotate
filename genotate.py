@@ -187,7 +187,7 @@ if __name__ == '__main__':
 								np.divide( reverse[:,:,2] + forward[:,:,2], 6).sum(axis=0).clip(0,1) , 
 								forward[:,:,1].sum(axis=0).clip(0,1) 
 								]).T
-		strand_switches = predict_switches(strand_wise, 80, 1)
+		strand_switches = predict_switches(strand_wise, 60, 1)
 		#for switch,strand in strand_switches.items():
 		#	print(strand,switch[0]*3+1,switch[1]*3+1,sep='\t')
 		# predict frames of strand
