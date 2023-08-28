@@ -13,19 +13,17 @@ To install `Genotate`,
  pip install genotate/
 ```
 
-And to run `Genotate` you only need to specify the FASTA formatted genome file, and which
-model to use (provided is the most basic model trained on the first 800 phage genomes from
-RefSeq). To run on the provided phiX174 genome, use the command:
+And to run `Genotate` you only need to specify the FASTA formatted genome file
+To run on the provided phiX174 genome, use the command:
 ```
- classify.py --model genotate/models/fold0.ckpt genotate/phiX174.fna > predictions.gb
+ genotate.py test/phiX174.fasta -o genotate.gb
 ```
 
-The output of the script are 'coding region' predictions, in GenBank format.  They *should*
+The output of `Genotate` are 'coding region' predictions in GenBank format.  They *should*
 match with the true coding gene regions, but are not genes per say, since they are not based
-on start and stop codons.
+on start and stop codons. Though they have all been trimmed to a stop codon after Genotate
+determines which transation table the genome uses (i.e. if it does stop codon readthrough).
 
-In future versions, the code will better parse anomalous coding regions, and prompt their
-presence in a genome to the user.
 
 Currently the best way to visualize the predictions is in a Genome Viewer application, such
 as Artemis by Sanger. The example phiX174.gb GenBank file loaded into Artemis shows the 
