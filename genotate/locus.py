@@ -98,7 +98,7 @@ class Locus(Locus, feature=Feature):
 				if not self.has_stop(seq):
 					del self[_curr]
 					del self[_next]
-					_curr.tags['note'] = ['"merged:' + str(_curr.pairs) + str(_next.pairs) + '"' ]
+					#_curr.tags['note'] = ['"merged:' + str(_curr.pairs) + str(_next.pairs) + '"' ]
 					_curr.pairs = ( (_curr.pairs[0][0] , _next.pairs[-1][-1]), )
 					self[_curr] = True
 					#_curr = _next
@@ -112,9 +112,9 @@ class Locus(Locus, feature=Feature):
 				if not self.has_stop(seq):
 					del self[_last]
 					del self[_next]
-					_last.tags['note'] = ['"merged:' + str(_last.pairs) + str(_next.pairs) + '"' ]
+					#_last.tags['note'] = ['"merged:' + str(_last.pairs) + str(_next.pairs) + '"' ]
 					_last.pairs = ((_last.pairs[0][0] , _next.pairs[-1][-1]), )
-					_curr.tags['embedded'] = ['true']
+					#_curr.tags['embedded'] = ['true']
 					self[_last] = True
 					#_last,_curr = _curr,_last
 					_next = _last
@@ -187,6 +187,7 @@ class Locus(Locus, feature=Feature):
 			counts[stop] /= len(self) if len(self) else 1
 			if len(self) > 10 and counts[stop] > 1/3 :
 				stops.remove(stop)
+		stops = keys(counts) if len(stops) == 1 else stops
 		return stops
 
 	def skew(self, nucs):

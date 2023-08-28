@@ -40,7 +40,7 @@ def main():
 		version = get_version(),
 		author = "Katelyn McNair",
 		author_email = "deprekate@gmail.com",
-		description = 'A a tool to annotate microbial genomes',
+		description = 'A tool to annotate microbial genomes',
 		long_description = readme(),
 		long_description_content_type="text/markdown",
 		url =  "https://github.com/deprekate/genotate",
@@ -53,7 +53,8 @@ def main():
 		python_requires='>3.5.2',
 		install_requires=['genbank', 'numpy', 'ruptures'], #'tensorflow>=2.6.2'],
 		ext_modules = [extension()],
-		packages=find_packages()
+		packages=find_packages(),
+		package_data = {'': ['*.index','*.data-00000-of-00001'],},
 	)
 
 

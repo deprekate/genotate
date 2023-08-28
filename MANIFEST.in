@@ -1,3 +1,5 @@
 include *.md LICENSE VERSION
-include tests/*.fasta
+include test/*.fasta
+include genotate/*.index
+include genotate/*.data-00000-of-00001
 recursive-include src *.c

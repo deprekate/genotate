@@ -82,9 +82,9 @@ def plot_strands(args, p):
 		print(3*i+2, strand_wise[i,0], strand_wise[i,1], strand_wise[i,2], c, sep='\t')
 		print(3*i+3, strand_wise[i,0], strand_wise[i,1], strand_wise[i,2], c, sep='\t')
 
-def plot_frames(p):
-	print("# BASE VAL1  VAL2 VAL3  VAL4 VAL5 VAL6 VAL7")
-	print("# colour 255:0:0 0:0:255 0:0:0 255:0:255 0:128:128 128:128:128 255:195:0")
+def plot_frames(args, p):
+	args.outfile.print("# BASE VAL1  VAL2 VAL3  VAL4 VAL5 VAL6 VAL7\n")
+	args.outfile.print("# colour 255:0:0 0:0:255 0:0:0 255:0:255 0:128:128 128:128:128 255:195:0\n")
 	for i in range(0,len(p) // 6 * 6, 6):
 		val = []
 		ig = []
@@ -99,12 +99,18 @@ def plot_frames(p):
 		v[4] = val[3]
 		v[5] = val[5]
 		v[6] = max(ig)
-		print(i // 2 + 1, end='\t')
-		print('\t'.join(map(str,v)))
-		print(i // 2 + 2, end='\t')
-		print('\t'.join(map(str,v)))
-		print(i // 2 + 3, end='\t')
-		print('\t'.join(map(str,v)))
+		args.outfile.print(i // 2 + 1)
+		args.outfile.print('\t')
+		args.outfile.print('\t'.join(map(str,v)))
+		args.outfile.print('\n')
+		args.outfile.print(i // 2 + 2 )
+		args.outfile.print('\t')
+		args.outfile.print('\t'.join(map(str,v)))
+		args.outfile.print('\n')
+		args.outfile.print(i // 2 + 3)
+		args.outfile.print('\t')
+		args.outfile.print('\t'.join(map(str,v)))
+		args.outfile.print('\n')
 
 def to_dna(s):
 	to_base = {0:'n',1:'a',2:'c',3:'t',4:'g'}

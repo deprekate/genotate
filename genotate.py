@@ -6,8 +6,7 @@ import logging
 import os
 import sys
 import argparse
-from argparse import RawTextHelpFormatter
-from statistics import mode
+import pkg_resources
 from packaging import version
 
 import faulthandler
@@ -87,43 +86,37 @@ def is_valid_file(x):
 		raise argparse.ArgumentTypeError("{0} does not exist".format(x))
 	return x
 
+def _print(self, item):
+	if isinstance(item, str):
+		self.write(item)
+	else:
+		self.write(str(item))
 
 if __name__ == '__main__':
 	usage = '%s [-opt1, [-opt2, ...]] infile' % __file__
-	parser = argparse.ArgumentParser(description='', formatter_class=RawTextHelpFormatter, usage=usage)
+	parser = argparse.ArgumentParser(description='', formatter_class=argparse.RawTextHelpFormatter, usage=usage)
 	parser.add_argument('infile', type=is_valid_file, help='input file')
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
 	parser.add_argument('-f', '--format', help='Output the features in the specified format', type=str, default='genbank', choices=['gbk','gff3','gff'])
-	parser.add_argument('-m', '--model', help='', required=True)
+	#parser.add_argument('-m', '--model', help='', required=True)
 	#parser.add_argument('-a', '--amino', action="store_true")
-	parser.add_argument('-g', '--graph', action="store_true")
-	parser.add_argument('-s', '--size', default=30, type=int)
-	parser.add_argument('-p', '--penalty', default=10, type=int)
+	parser.add_argument('-p', '--plot', action="store_true")
+	#parser.add_argument('-s', '--size', default=30, type=int)
+	#parser.add_argument('-p', '--penalty', default=10, type=int)
 	args = parser.parse_args()
+	args.outfile.print = _print.__get__(args.outfile)
 
 	os.environ["CUDA_VISIBLE_DEVICES"]="0" #str(int(args.model[-2:]) % 8)
 	gpus = tf.config.list_physical_devices('GPU')
 	for gpu in gpus:
 		tf.config.experimental.set_memory_growth(gpu, True)
-	#ckpt_reader = tf.train.load_checkpoint(args.model)
-	#n = len(ckpt_reader.get_tensor('layer_with_weights-0/bias/.ATTRIBUTES/VARIABLE_VALUE'))
-	#model = mm.create_model_deep(n)
-	#model = blend(args)
-	#k = 1 #int(os.path.basename(args.infile)[11]) % 5
-	#args.model = args.model.replace('#', str(k))
+	
 	with quiet() ,tf.device('/device:GPU:0'), quiet():
-		#model = api(args)
-		model = [api(args) for i in range(5)]
-		#name = args.infile.split('/')[-1]
-		#me = name[10] if len(name) > 10 else None
-		#model.load_weights( "out/win_sub_w117_kern3/win_sub_trim=15,reg=False,fold=" + str(me) + ".ckpt" ).expect_partial()
-		model[0].load_weights(args.model.replace('#','0') ).expect_partial()
-		model[1].load_weights(args.model.replace('#','1') ).expect_partial()
-		model[2].load_weights(args.model.replace('#','2') ).expect_partial()
-		model[3].load_weights(args.model.replace('#','3') ).expect_partial()
-		model[4].load_weights(args.model.replace('#','4') ).expect_partial()
-		#print(model.summary())
-		#faulthandler.enable()
+		model = [api(args)] * 5
+		for i in range(5):
+			path = pkg_resources.resource_filename('genotate', 'phage' + str(i))
+			model[i].load_weights( path ).expect_partial()
+	
 	spec = (tf.TensorSpec(shape = (None,87), dtype = tf.experimental.numpy.int8),
             tf.TensorSpec(shape = (None, 3), dtype = tf.experimental.numpy.int8))
 
@@ -138,21 +131,6 @@ if __name__ == '__main__':
                     ) #.unbatch(),
 		dataset = dataset.apply(tf.data.experimental.unbatch())
 		dataset = dataset.batch(1024)
-		#for feature in dataset.take(1):
-		#	print( feature )
-		#	exit()
-		'''
-		for block,label in parse_locus(locus):
-			for i in range(len(block)):
-				row = block[i,:]
-				dna = to_dna(row)
-				#print(i//2,dna)
-				row = tf.expand_dims(row, axis=0)
-				#print(row)
-				p = model.predict(row, verbose=0)
-				print(i//2, dna, p)
-		exit()
-		'''
 
 		with quiet():
 			p0 = model[0].predict(dataset)
@@ -162,18 +140,11 @@ if __name__ == '__main__':
 			p4 = model[4].predict(dataset)
 		p = np.mean([p0, p1, p2, p3, p4], axis=0)
 
-		'''
-		np.save('curves/' + args.infile.split('/')[-1], p)
-		exit()
-		p = np.load('curves/' + os.path.basename(args.infile) + '.npy')
-		'''
-		
-		if args.graph:
-			plot_frames(p)
+		if args.plot:
+			plot_frames(args, p)
 			continue
 		#p = tf.nn.softmax(p).numpy()
 		#p = smoo(p)
-		#p = best(p)
 
 		# create arrays of form: array[ frame : base_position : type ]
 		#forward = np.array([ p[0::6,:] , p[2::6,:] , p[4::6,:] ])
@@ -188,13 +159,12 @@ if __name__ == '__main__':
 								forward[:,:,1].sum(axis=0).clip(0,1) 
 								]).T
 		strand_switches = predict_switches(strand_wise, 60, 1)
-		#for switch,strand in strand_switches.items():
-		#	print(strand,switch[0]*3+1,switch[1]*3+1,sep='\t')
+		
 		# predict frames of strand
 		for (index,offset),strand in strand_switches.items():
 			index , offset , strand = max(index - 30, 0) , min(offset + 30, len(strand_wise)-1) , strand-1
 			if strand == 0:continue
-			locus.add_feature('mRNA', strand, [map(str,[3*index+1, 3*offset+1])])
+			#locus.add_feature('mRNA', strand, [map(str,[3*index+1, 3*offset+1])])
 			for frame in [0,1,2]:
 				frame_wise = forward[frame, index : offset//3*3, :] if strand > 0 else reverse[frame, index : offset, :]
 				switches = predict_switches(frame_wise, 1, 1)
@@ -202,10 +172,11 @@ if __name__ == '__main__':
 					if label == 1:
 						pairs = [ list(map(str,[3*(index+left)+frame+1, 3*(index+right)+frame])) ]
 						feature = locus.add_feature('CDS', strand, pairs) 
-						feature.tags['colour'] = ["100 100 100"]
+						#feature.tags['colour'] = ["100 100 100"]
 
 		# look for stop codon readthrough
 		locus.stops = locus.detect_stops()
+		transl_table = 4 if 'tga' not in locus.stops else 16 if 'tag' not in locus.stops else 1
 		
 		locus.write(open('before.gb','w'), args=args)
 
@@ -214,6 +185,7 @@ if __name__ == '__main__':
 
 		#locus = dict(sorted(locus.items()))
 		for key in sorted(locus):
+			key.tags['transl_table'] = [transl_table]
 			locus.pop(key)
 			if key.partial() or key.length() >= 60:
 				locus[key] = True
@@ -224,7 +196,7 @@ if __name__ == '__main__':
 		# adjust ends
 		locus.adjust()
 
-		# join partial orfs at both ends
+		# join partial orfs at both ends for circular genomes
 		#locus.join()
 
 		#counts = locus.count_starts()
