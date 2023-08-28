@@ -16,7 +16,7 @@ To install `Genotate`,
 And to run `Genotate` you only need to specify the FASTA formatted genome file
 To run on the provided phiX174 genome, use the command:
 ```
- genotate.py test/phiX174.fasta -o genotate.gb
+ genotate.py test/phiX174.fasta -o predictions.gb
 ```
 
 The output of `Genotate` are 'coding region' predictions in GenBank format.  They *should*
