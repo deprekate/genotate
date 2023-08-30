@@ -6,6 +6,12 @@ class Feature(Feature):
 
 	def more(self):
 		return "mooore"
+
+	def end(self):
+		if self.strand > 0:
+			return self.right()
+		else:
+			return self.left()
 	
 	def start_codon(self):
 		return self.seq()[:3]
