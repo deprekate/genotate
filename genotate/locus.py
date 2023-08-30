@@ -148,7 +148,6 @@ class Locus(Locus, feature=Feature):
 				# I NEED TO ADD SOME LOGIC HERE TO LIMIT THE MOVEMENT TO NOT
 				# GREATER THAN THE LENGTH OF THE FEATURES CURRENT LENGTH
 
-				# ALSO NEED TO REMOVE DUPLICATE GENES WITH SAME STOP CODON
 				if feature.strand > 0:
 					#left  = self.last(feature.right(), self.stops, feature.strand)
 					right = self.next(feature.right(), self.stops, feature.strand)
@@ -161,7 +160,7 @@ class Locus(Locus, feature=Feature):
 					left = left+1 if left else '<1'
 					feature.set_left(left)
 				self[feature] = True
-			'''
+			# THIS REMOVES DUPLICATE GENES WITH SAME STOP CODON
 			if feature.end() in seen:
 				other = seen[feature.end()]
 				if feature.length() > other.length():
@@ -170,7 +169,6 @@ class Locus(Locus, feature=Feature):
 					del self[feature]
 					feature = other
 			seen[feature.end()] = feature
-			'''
 
 	def count_starts(self):
 		counts = dict()
