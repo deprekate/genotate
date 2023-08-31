@@ -8,6 +8,8 @@ import sys
 import argparse
 import pkg_resources
 from packaging import version
+import warnings
+warnings.filterwarnings('ignore')
 
 import faulthandler
 
@@ -107,7 +109,7 @@ if __name__ == '__main__':
 	args.outfile.print = _print.__get__(args.outfile)
 
 	os.environ["CUDA_VISIBLE_DEVICES"]="0" #str(int(args.model[-2:]) % 8)
-	gpus = tf.config.list_physical_devices('GPU')
+	gpus = tf.config.list_physical_devices('GPU') if hasattr(tf.config, 'list_physical_devices') else []
 	for gpu in gpus:
 		tf.config.experimental.set_memory_growth(gpu, True)
 	
@@ -116,18 +118,25 @@ if __name__ == '__main__':
 		for i in range(5):
 			path = pkg_resources.resource_filename('genotate', 'phage' + str(i))
 			model[i].load_weights( path ).expect_partial()
-	
-	spec = (tf.TensorSpec(shape = (None,87), dtype = tf.experimental.numpy.int8),
-            tf.TensorSpec(shape = (None, 3), dtype = tf.experimental.numpy.int8))
+	int8 = tf.experimental.numpy.int8 if hasattr(tf.experimental,'numpy') else np.int8	
+	spec = (tf.TensorSpec(shape = (None,87), dtype = int8),
+            tf.TensorSpec(shape = (None, 3), dtype = int8))
 
 	genbank = File(args.infile)
 	for locus in genbank:
 		locus.clear()
 		locus.stops = ['taa','tga','tag']
 		generator = lambda : parse_locus(locus)
-		dataset = tf.data.Dataset.from_generator(
+		try:
+			dataset = tf.data.Dataset.from_generator(
                         generator,
                         output_signature=spec
+                    ) #.unbatch(),
+		except:
+			dataset = tf.data.Dataset.from_generator(
+                        generator,
+						output_types = ('int8','int8'),
+						output_shapes = ( (None,87), (None,3) )
                     ) #.unbatch(),
 		dataset = dataset.apply(tf.data.experimental.unbatch())
 		dataset = dataset.batch(1024)
@@ -178,7 +187,7 @@ if __name__ == '__main__':
 		locus.stops = locus.detect_stops()
 		transl_table = 4 if 'tga' not in locus.stops else 16 if 'tag' not in locus.stops else 1
 		
-		locus.write(open('before.gb','w'), args=args)
+		#locus.write(open('before.gb','w'), args=args)
 
 		# merge regions
 		locus.merge()
