@@ -51,7 +51,7 @@ def main():
 			"Operating System :: OS Independent",
 		],
 		python_requires='>3.5.2',
-		install_requires=['genbank', 'numpy', 'ruptures'], #'tensorflow>=2.6.2'],
+		install_requires=['genbank', 'numpy', 'ruptures','tensorflow>=2.6.2'],
 		ext_modules = [extension()],
 		packages=find_packages(),
 		package_data = {'': ['*.index','*.data-00000-of-00001'],},

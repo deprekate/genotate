@@ -141,11 +141,13 @@ class Locus(Locus, feature=Feature):
 
 	def adjust(self):
 		#stops = ['taa','tga','tag']
+		seen = dict()
 		for feature in sorted(self.features(include='CDS')):
 			if feature.stop_codon() not in self.stops:
 				del self[feature]
 				# I NEED TO ADD SOME LOGIC HERE TO LIMIT THE MOVEMENT TO NOT
 				# GREATER THAN THE LENGTH OF THE FEATURES CURRENT LENGTH
+
 				if feature.strand > 0:
 					#left  = self.last(feature.right(), self.stops, feature.strand)
 					right = self.next(feature.right(), self.stops, feature.strand)
@@ -158,6 +160,15 @@ class Locus(Locus, feature=Feature):
 					left = left+1 if left else '<1'
 					feature.set_left(left)
 				self[feature] = True
+			# THIS REMOVES DUPLICATE GENES WITH SAME STOP CODON
+			if feature.end() in seen:
+				other = seen[feature.end()]
+				if feature.length() > other.length():
+					del self[other]
+				else:
+					del self[feature]
+					feature = other
+			seen[feature.end()] = feature
 
 	def count_starts(self):
 		counts = dict()
