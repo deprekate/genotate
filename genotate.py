@@ -99,7 +99,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='', formatter_class=argparse.RawTextHelpFormatter, usage=usage)
 	parser.add_argument('infile', type=is_valid_file, help='input file')
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
-	parser.add_argument('-f', '--format', help='Output the features in the specified format', type=str, default='genbank', choices=['gbk','gff3','gff'])
+	parser.add_argument('-f', '--format', help='Output the features in the specified format', type=str, default='genbank', choices=File.formats)
 	#parser.add_argument('-m', '--model', help='', required=True)
 	#parser.add_argument('-a', '--amino', action="store_true")
 	parser.add_argument('-p', '--plot', action="store_true")
@@ -220,7 +220,7 @@ if __name__ == '__main__':
 		for key in sorted(locus):
 			locus[key] = locus.pop(key)
 		try:
-			locus.write(args.outfile, args=args)
+			locus.write(args)
 		except BrokenPipeError:
 			pass
 	
