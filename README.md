@@ -22,7 +22,7 @@ To run on the provided phiX174 genome, use the command:
 The output of `Genotate` are 'coding region' predictions in GenBank format.  They *should*
 match with the true coding gene regions, but are not genes per say, since they are not based
 on start and stop codons. Though they have all been trimmed to a stop codon after Genotate
-determines which transation table the genome uses (i.e. if it does stop codon readthrough).
+determines which transation table the genome uses (i.e. if it performs stop codon readthrough).
 
 
 Currently the best way to visualize the predictions is in a Genome Viewer application, such
