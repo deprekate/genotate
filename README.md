@@ -24,6 +24,25 @@ match with the true coding gene regions, but are not genes per say, since they a
 on start and stop codons. Though they have all been trimmed to a stop codon after Genotate
 determines which transation table the genome uses (i.e. if it performs stop codon readthrough).
 
+There are three main phases to the Genotate workflow
+1. window classification 
+2. change-point detection
+3. refinement
+   * analyze stop codons
+   * merge adjacent regions
+   * split regions on stop
+   * adjust ends to a stop
+
+Genotate determines the translation table by analyzing the initial coding gene region 
+predictions.  There are two outcomes for a stop codon that is readthrough: either the stop 
+codon appears in the middle of a coding gene region or the region is broken into two pieces at 
+the stop codon. If one of the three known stop codons is significantly over represented in the 
+middle AND between predicted gene regions, that stop codon can be assumed to be read through. 
+With the stop codon usage now known, same frame adjacent coding regions are merged if there is 
+not a stop codon between them. Then the regions are split on any internal stop codons and the 
+ends adjusted to the nearest stop codon.
+
+
 
 Currently the best way to visualize the predictions is in a Genome Viewer application, such
 as Artemis by Sanger. The example phiX174.gb GenBank file loaded into Artemis shows the 
