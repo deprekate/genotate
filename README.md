@@ -42,13 +42,17 @@ With the stop codon usage now known, same frame adjacent coding regions are merg
 not a stop codon between them. Then the regions are split on any internal stop codons and the 
 ends adjusted to the nearest stop codon.
 
+** The opposite end is not adjusted to valid start codon since Genotate does not have a translation
+initiation site detection method yet, so the beginning of a gene call may be off by a few codons
 
-
+---
 Currently the best way to visualize the predictions is in a Genome Viewer application, such
 as Artemis by Sanger. The example phiX174.gb GenBank file loaded into Artemis shows the 
 gene layout:
+
 ![](https://github.com/deprekate/genotate/blob/main/src/genes.png)
 
 The predictions.gb file can then be loaded using the 'File>Read An Entry' menu, and the
 predictions will be overlaid as grey 'coding regions' in the gene layout window:
+
 ![](https://github.com/deprekate/genotate/blob/main/src/predictions.png)
