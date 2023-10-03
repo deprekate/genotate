@@ -187,8 +187,7 @@ if __name__ == '__main__':
 		locus.stops = locus.detect_stops()
 		transl_table = 4 if 'tga' not in locus.stops else 16 if 'tag' not in locus.stops else 1
 		
-		locus.write(args=args)
-		exit()
+		#locus.write(args=args) ; exit()
 
 		# merge regions
 		locus.merge()
