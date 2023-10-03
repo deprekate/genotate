@@ -124,10 +124,10 @@ def get_windows(dna):
 	#if type(dna) is not str:
 	#	dna = dna.decode()
 
-	gc = gc_content(dna) 
+	#gc = gc_content(dna) 
 
-	at_skew = skew(dna, 'at')
-	gc_skew = skew(dna, 'gc')
+	#at_skew = skew(dna, 'at')
+	#gc_skew = skew(dna, 'gc')
 	# get the aminoacid frequency window
 	#args = lambda: None
 	forward = 'n'*48 +          dna  + 'n'*50
@@ -142,8 +142,10 @@ def get_windows(dna):
 	'''
 	for n in range(0, len(dna)-2, 3):
 		for f in [0,1,2]:
-			yield [ gc,  at_skew[n//100],  gc_skew[n//100] ] , forward[n+f : n+f+99 ]
-			yield [ gc, -at_skew[n//100], -gc_skew[n//100] ] , reverse[n+f : n+f+99 ][::-1]
+			yield forward[n+f : n+f+99 ]
+			yield rev_comp(forward[n+f : n+f+99 ])
+			#yield [ gc,  at_skew[n//100],  gc_skew[n//100] ] , forward[n+f : n+f+99 ]
+			#yield [ gc, -at_skew[n//100], -gc_skew[n//100] ] , reverse[n+f : n+f+99 ][::-1]
 			#
 			#yield [str(gc), str( at_skew[n//100]), str( gc_skew[n//100]) ] + single_window(dna, n+f, +1)
 			#yield [str(gc), str(-at_skew[n//100]), str(-gc_skew[n//100]) ] + single_window(dna, n+f, -1)

@@ -187,7 +187,8 @@ if __name__ == '__main__':
 		locus.stops = locus.detect_stops()
 		transl_table = 4 if 'tga' not in locus.stops else 16 if 'tag' not in locus.stops else 1
 		
-		#locus.write(open('before.gb','w'), args=args)
+		locus.write(args=args)
+		exit()
 
 		# merge regions
 		locus.merge()
@@ -202,7 +203,7 @@ if __name__ == '__main__':
 		# split regions on stop codons
 		locus.split()
 
-		# adjust ends
+		# adjust ends to stop codon
 		locus.adjust()
 
 		# join partial orfs at both ends for circular genomes

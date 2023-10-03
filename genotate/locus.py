@@ -189,6 +189,7 @@ class Locus(Locus, feature=Feature):
 						counts[stop] += stop in codons #codons.count(stop)
 
 			acids = _curr.translation()[  :-n]
+			# only count if one type of stop codon is present
 			if sum(['#' in acids, '+' in acids, '*' in acids]) == 1:
 				counts['taa'] += "#" in acids #acids.count('#')
 				counts['tag'] += '+' in acids #acids.count('+')
@@ -196,7 +197,7 @@ class Locus(Locus, feature=Feature):
 		stops = self.stops
 		for stop in self.stops:
 			counts[stop] /= len(self) if len(self) else 1
-			if len(self) > 10 and counts[stop] > 1/3 :
+			if len(self) > 20 and counts[stop] > 0.20 :
 				stops.remove(stop)
 		stops = keys(counts) if len(stops) == 1 else stops
 		return stops
