@@ -166,7 +166,8 @@ def parse_locus(locus):
 		reverse = np.zeros((w//2-1)+length+(w//2+1),dtype=np.uint8)
 		for i,base in enumerate(locus.dna):
 			i += w//2-1
-			if base in 'acgt':
+			# I can prob delete this line if need 4 speed
+			if base in 'AaCcGgTt':
 				forward[i] = ((ord(base) >> 1) & 3) + 1
 				reverse[i] = ((forward[i] - 3) % 4) + 1
 		# this splits the BIG numpy array into n sized chunks to limit ram usage

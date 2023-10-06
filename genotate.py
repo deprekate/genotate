@@ -122,9 +122,9 @@ if __name__ == '__main__':
 	spec = (tf.TensorSpec(shape = (None,87), dtype = int8),
             tf.TensorSpec(shape = (None, 3), dtype = int8))
 
-	genbank = File(args.infile)
-	for locus in genbank:
+	for locus in File(args.infile):
 		locus.clear()
+		locus.dna = locus.dna.lower()
 		locus.stops = ['taa','tga','tag']
 		generator = lambda : parse_locus(locus)
 		try:
@@ -148,7 +148,6 @@ if __name__ == '__main__':
 			p3 = model[3].predict(dataset)
 			p4 = model[4].predict(dataset)
 		p = np.mean([p0, p1, p2, p3, p4], axis=0)
-
 		if args.plot:
 			plot_frames(args, p)
 			continue
