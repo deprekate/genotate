@@ -127,7 +127,7 @@ if __name__ == '__main__':
             tf.TensorSpec(shape = (None, 3), dtype = int8))
 
 	for locus in File(args.infile):
-		#locus.clear()
+		locus.clear()
 		locus.dna = locus.dna.lower()
 		locus.stops = ['taa','tga','tag']
 		generator = lambda : parse_locus(locus)
