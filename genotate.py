@@ -4,6 +4,7 @@ signal(SIGPIPE,SIG_DFL)
 
 import logging
 import os
+import gc
 import sys
 import argparse
 import pkg_resources
@@ -104,26 +105,29 @@ if __name__ == '__main__':
 	#parser.add_argument('-a', '--amino', action="store_true")
 	parser.add_argument('-p', '--plot', action="store_true")
 	#parser.add_argument('-s', '--size', default=30, type=int)
+	parser.add_argument('-n', '--number', default=1, type=int)
 	#parser.add_argument('-p', '--penalty', default=10, type=int)
 	args = parser.parse_args()
 	args.outfile.print = _print.__get__(args.outfile)
 
-	os.environ["CUDA_VISIBLE_DEVICES"]="0" #str(int(args.model[-2:]) % 8)
+	os.environ["CUDA_VISIBLE_DEVICES"]=str(int(args.number) % 8)
 	gpus = tf.config.list_physical_devices('GPU') if hasattr(tf.config, 'list_physical_devices') else []
 	for gpu in gpus:
 		tf.config.experimental.set_memory_growth(gpu, True)
 	
 	with quiet() ,tf.device('/device:GPU:0'), quiet():
-		model = [api(args)] * 5
+		model = [None] * 5
 		for i in range(5):
+			model[i] = api(None)
 			path = pkg_resources.resource_filename('genotate', 'phage' + str(i))
+			#path = '/home/mcnair/develop/genotate/dual/assembly_bacteria' + str(i) + '-' + str(args.number).rjust(3,'0')
 			model[i].load_weights( path ).expect_partial()
 	int8 = tf.experimental.numpy.int8 if hasattr(tf.experimental,'numpy') else np.int8	
 	spec = (tf.TensorSpec(shape = (None,87), dtype = int8),
             tf.TensorSpec(shape = (None, 3), dtype = int8))
 
 	for locus in File(args.infile):
-		locus.clear()
+		#locus.clear()
 		locus.dna = locus.dna.lower()
 		locus.stops = ['taa','tga','tag']
 		generator = lambda : parse_locus(locus)
@@ -141,6 +145,10 @@ if __name__ == '__main__':
 		dataset = dataset.apply(tf.data.experimental.unbatch())
 		dataset = dataset.batch(1024)
 
+		#for i in range(5):
+		#	pp = model[i].evaluate(dataset, verbose=0)
+		#	print(os.path.basename(args.infile), i, pp[0], pp[1])
+		#exit()
 		with quiet():
 			p0 = model[0].predict(dataset)
 			p1 = model[1].predict(dataset)
