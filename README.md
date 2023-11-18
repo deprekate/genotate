@@ -10,8 +10,7 @@ at every position along the genome.
 
 To install `Genotate`,
 ```sh
- git clone https://github.com/deprekate/genotate.git
- pip install genotate/
+ pip install genotate
 ```
 
 And to run `Genotate` you only need to specify the FASTA formatted genome file
@@ -19,7 +18,8 @@ The command to run using the phage models on the provided phiX174 genome is:
 ```
  genotate.py test/phiX174.fasta -o predictions.gb
 ```
-The command to run using the partially trained bacterial/archaeal models needs the --bacterial flag:
+The command to run using the partially trained bacterial/archaeal models needs the --bacterial flag. Instead of
+a FASTA formatted file, you can provide a Genbank formatted file and Genotate will use only the genomic sequence.
 ```
  genotate.py test/mycoplasma.gbff.gz -o predictions.gb --bacteria
 ```
