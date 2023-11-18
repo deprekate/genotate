@@ -101,34 +101,29 @@ if __name__ == '__main__':
 	parser.add_argument('infile', type=is_valid_file, help='input file')
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
 	parser.add_argument('-f', '--format', help='Output the features in the specified format', type=str, default='genbank', choices=File.formats)
-	parser.add_argument('-m', '--model', help='', required=True)
+	#parser.add_argument('-m', '--model', help='', required=True)
 	#parser.add_argument('-a', '--amino', action="store_true")
 	parser.add_argument('-p', '--plot', action="store_true")
 	#parser.add_argument('-s', '--size', default=30, type=int)
 	parser.add_argument('-n', '--number', default=1, type=int)
 	#parser.add_argument('-p', '--penalty', default=10, type=int)
+	parser.add_argument('-b', '--bacterial', action="store_true", help='if your input genome is bacterial or archaea')
 	args = parser.parse_args()
 	args.outfile.print = _print.__get__(args.outfile)
 
-	os.environ["CUDA_VISIBLE_DEVICES"]='1' #str(int(args.number) % 8)
+	os.environ["CUDA_VISIBLE_DEVICES"]=str(int(args.number) % 8)
 	gpus = tf.config.list_physical_devices('GPU') if hasattr(tf.config, 'list_physical_devices') else []
 	for gpu in gpus:
 		tf.config.experimental.set_memory_growth(gpu, True)
 	
+	taxon = 'phage' if not args.bacterial else 'bacteria'
 	with quiet() ,tf.device('/device:GPU:0'), quiet():
-		model = [None] * 5
-		for i in [1]: #range(1):
+		model = [None] * 5 if not args.bacterial else [None]
+		for i in range(len(model)):
 			model[i] = api(None)
-			#path = pkg_resources.resource_filename('genotate', 'phage' + str(i))
+			path = pkg_resources.resource_filename('genotate', taxon + str(i))
 			#path = '/home/mcnair/develop/genotate/dual/assembly_bacteria' + str(i) + '-' + str(args.number).rjust(3,'0')
-			#path = '/home/mcnair/develop/genotate/checkpoints/assembly_bacteria' + str(i) + '-' + str(args.number).rjust(3,'0')
-			path = args.model
 			model[i].load_weights( path ).expect_partial()
-			#try:
-			#	model[i].load_weights( path ).expect_partial()
-			#except:
-			#	model[i] = None
-			#	pass
 	int8 = tf.experimental.numpy.int8 if hasattr(tf.experimental,'numpy') else np.int8	
 	spec = (tf.TensorSpec(shape = (None,87), dtype = int8),
             tf.TensorSpec(shape = (None, 3), dtype = int8))
@@ -153,28 +148,18 @@ if __name__ == '__main__':
 		dataset = dataset.batch(1024)
 
 		'''
-		for i in range(1):
-			if not model[i]: continue
+		for i in range(5):
 			pp = model[i].evaluate(dataset, verbose=0)
-			args.outfile.print(os.path.basename(args.infile))
-			args.outfile.print('\t')
-			args.outfile.print(args.number)
-			args.outfile.print('\t')
-			args.outfile.print(i)
-			args.outfile.print('\t')
-			args.outfile.print(pp[0])
-			args.outfile.print('\t')
-			args.outfile.print(pp[1])
-			args.outfile.print('\n')
+			print(os.path.basename(args.infile), i, pp[0], pp[1])
 		exit()
 		'''
 		with quiet():
-			p0 = model[1].predict(dataset)
-			#p1 = model[1].predict(dataset)
-			#p2 = model[2].predict(dataset)
-			#p3 = model[3].predict(dataset)
-			#p4 = model[4].predict(dataset)
-		p = p0 #np.mean([p0, p1, p2, p3, p4], axis=0)
+			preds = [None] * 5 if not args.bacterial else [None]
+			for i in range(len(model)):
+				preds[i] = model[i].predict(dataset)
+		#p = np.mean([p0, p1, p2, p3, p4], axis=0)
+		p = np.mean(preds, axis=0)
+
 		if args.plot:
 			plot_frames(args, p)
 			continue
