@@ -10,15 +10,23 @@ at every position along the genome.
 
 To install `Genotate`,
 ```sh
- git clone https://github.com/deprekate/genotate.git
- pip install genotate/
+ pip install genotate
 ```
 
 And to run `Genotate` you only need to specify the FASTA formatted genome file
-To run on the provided phiX174 genome, use the command:
+The command to run using the phage models on the provided phiX174 genome is:
 ```
- genotate.py test/phiX174.fasta > predictions.gb
+ genotate.py test/phiX174.fasta -o predictions.gb
 ```
+The command to run using the partially trained bacterial/archaeal models needs the --bacterial flag. Instead of
+a FASTA formatted file, you can provide a Genbank formatted file and Genotate will use only the genomic sequence.
+```
+ genotate.py test/mycoplasma.gbff.gz -o predictions.gb --bacteria
+```
+**It is recommended to use a GPU to run Genotate since it will take a long time to for prokaryotic 
+genomes.**  Genotate will automatically try to run on GPU, if one isn't found it will run on a CPU.
+
+---
 
 The output of `Genotate` are 'coding region' predictions in GenBank format.  They *should*
 match with the true coding gene regions, but are not genes per say, since they are not based
@@ -46,7 +54,7 @@ ends adjusted to the nearest stop codon.
 ** The opposite end is not adjusted to valid start codon since Genotate does not have a translation
 initiation site detection method yet, so the beginning of a gene call may be off by a few codons
 
----
+
 Currently the best way to visualize the predictions is in a Genome Viewer application, such
 as Artemis by Sanger. The example phiX174.gb GenBank file loaded into Artemis shows the 
 gene layout:
