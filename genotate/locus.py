@@ -17,7 +17,6 @@ from math import log
 
 from genbank.locus import Locus
 from genotate.feature import Feature
-from genotate.functions import rev_comp
 
 import numpy as np
 

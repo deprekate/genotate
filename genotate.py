@@ -23,8 +23,7 @@ sys.path.pop(0)
 from genotate.file import File
 import genotate.make_train as mt
 from genotate.make_model import create_model_blend, blend, api
-from genotate.make_train import get_windows
-from genotate.functions import *
+from genotate.functions import GenomeDataset, parse_locus
 	
 # Helper libraries
 import numpy as np
@@ -123,19 +122,14 @@ if __name__ == '__main__':
 	spec = (tf.TensorSpec(shape = (None,87), dtype = int8),
             tf.TensorSpec(shape = (None, 3), dtype = int8))
 
-	if args.train:
-		trainfile = File(args.train)
-		locus = next(iter(trainfile))
-		generator = lambda : parse_locus(locus)
-		trainset = tf.data.Dataset.from_generator(generator,output_signature=spec).apply(tf.data.experimental.unbatch()).batch(1024)
 
 	#with quiet() ,tf.device('/device:GPU:0'), quiet():
 	with tf.device('/device:GPU:0'):
 		model = [None] * 5
-		for i in range(5):
+		for i in [0,1,3]: #range(5):
 			model[i] = api(None)
-			path = pkg_resources.resource_filename('genotate', 'phage' + str(i))
-			#path = pkg_resources.resource_filename('genotate', 'bacteria' + str(i))
+			#path = pkg_resources.resource_filename('genotate', 'phage' + str(i))
+			path = pkg_resources.resource_filename('genotate', 'bacteria' + str(i))
 			#path = '/home/mcnair/develop/genotate/dual/assembly_bacteria' + str(i) + '-' + str(args.number).rjust(3,'0')
 			#path = '/home/mcnair/develop/genotate/checkpoints/assembly_bacteria' + str(i) + '-' + str(args.number).rjust(3,'0')
 			#path = args.model
@@ -146,12 +140,20 @@ if __name__ == '__main__':
 			#	model[i] = None
 			#	pass
 			#
-			model[i].fit(trainset,epochs = 2, verbose=2)
+			'''
+			if args.train:
+				generator = GenomeDataset(args.train.encode())
+				trainset = tf.data.Dataset.from_generator(
+                        lambda : generator,
+                        output_signature=spec
+                    ).unbatch().batch(512)
+				model[i].fit(trainset,epochs = 2, verbose=2)
+			'''
 
 	for locus in File(args.infile):
+		locus.stops = ['taa','tga','tag']
 		locus.clear()
 		locus.dna = locus.dna.lower()
-		locus.stops = ['taa','tga','tag']
 		generator = lambda : parse_locus(locus)
 		try:
 			dataset = tf.data.Dataset.from_generator(
@@ -176,11 +178,11 @@ if __name__ == '__main__':
 		with quiet():
 			p0 = model[0].predict(dataset)
 			p1 = model[1].predict(dataset)
-			p2 = model[2].predict(dataset)
+			#p2 = model[2].predict(dataset)
 			p3 = model[3].predict(dataset)
-			p4 = model[4].predict(dataset)
-		p = np.mean([p0, p1, p2, p3, p4], axis=0)
-		#p = np.mean([p0, p1, p3], axis=0)
+			#p4 = model[4].predict(dataset)
+		#p = np.mean([p0, p1, p2, p3, p4], axis=0)
+		p = np.mean([p0, p1, p3], axis=0)
 		
 		if args.plot:
 			plot_frames(args, p)

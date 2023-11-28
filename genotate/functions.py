@@ -1,10 +1,14 @@
 import os
 import sys
 from decimal import Decimal
+from packaging import version
 
 import numpy as np
 from types import ModuleType, FunctionType
 from gc import get_referents
+import tensorflow as tf
+
+from genotate.file import File
 
 # Custom objects know their class.
 # Function objects seem to know way too much, including modules.
@@ -32,13 +36,6 @@ def getsize(obj):
 
 def ave(a):
 	return round(sum(a)/len(a), 2)
-
-def rev_comp(seq):
-	seq_dict = {'a':'t','t':'a','g':'c','c':'g',
-		    'n':'n',
-		    'r':'y','y':'r','s':'s','w':'w','k':'m','m':'k',
-		    'b':'v','v':'b','d':'h','h':'d'}
-	return "".join([seq_dict[base] for base in reversed(seq)])
 
 def write_codons(p):
 	Y = np.argmax(p,axis=-1)
@@ -119,29 +116,6 @@ def to_dna(s):
 		dna += to_base[num]	
 	return dna
 
-def skew(seq, nucs):
-	windowsize = stepsize = 32 #int(len(self.sequence) / 1000)
-	(nuc_1,nuc_2) = nucs
-	#return [0] * len(seq)
-	cumulative = 0
-	cm_list = []
-	i = int(windowsize / 2)
-	for each in range(len(seq) // stepsize):
-		if i < len(seq):
-			a = seq[i - windowsize//2:i + windowsize // 2].count(nuc_1)
-			b = seq[i - windowsize//2:i + windowsize // 2].count(nuc_2)
-			s = (a - b) / (a + b) if (a + b) else 0
-			cumulative = cumulative + s
-			cm_list.append(cumulative)
-			i = i + stepsize
-	slopes = []
-	for i in range(len(cm_list)):
-		win = cm_list[max(i-5,0):i+5]
-		m,b = np.polyfit(list(range(len(win))),win, 1)
-		slopes.append(m)
-	slopes.append(m)
-	return slopes
-
 def parse_locus(locus):
 		w = 87
 		n = 20000
@@ -183,3 +157,78 @@ def parse_locus(locus):
 			X[1:2*r:2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+r+w-1],w)[:,::-1]
 			yield X[ : 2*r , : ] , Y[ i*2: i*2+2*r , :]
 
+# backward compatibility
+def sliding_window_view(ar, i):
+	sys.stdout.write("using legacy sliding window")
+	a = np.concatenate(( ar, ar[:-1] ))
+	L = len(ar)
+	n = a.strides[0]
+	return np.lib.stride_tricks.as_strided(a, (L,L), (n,n), writeable=False)[:-i+1,:i]
+if version.parse(np.__version__) < version.parse('1.20'):
+	setattr(np.lib.stride_tricks, 'sliding_window_view', sliding_window_view)
+
+class GenomeDataset:
+	#@tf.function
+	def __init__(self, filename):
+		#spec = (tf.TensorSpec(shape = (None,99), dtype = tf.experimental.numpy.int8),
+		#		tf.TensorSpec(shape = (None, 3), dtype = tf.experimental.numpy.int8))
+		self.name = filename
+		self.file = File(filename.decode())
+	def __iter__(self):
+		w = 87
+		n = 10000
+		X = np.zeros([2*n ,w],dtype=np.uint8)
+		stops = set('*#+')
+		for locus in self.file:
+			length = len(locus.dna)
+			Y = np.zeros([length*2+7,3],dtype=np.uint8)
+			M = np.ones([length*2+7],dtype=bool)
+			Y[:,2] = 1
+
+			# label the positions
+			for feature in locus.features(include=['CDS']):
+				data = True
+				aa = set(feature.translation()[:-1])
+				stop = feature.translation()[-1]
+				s = (feature.strand >> 1) * -1
+				#if feature.partial() == 'left': next(locations)
+				locations = list(feature.codon_locations())
+				if not locations or len(stops.intersection(aa)) > 1 or stop in aa:
+					M[ feature.left() : feature.right() + 3 ] = False	
+					continue
+				for location in locations:
+					i = 2 * location[2*s]
+					# coding
+					Y[i+s  ,1] = 1
+					# noncoding
+					Y[i:i+6,0] = 1
+					Y[i:i+6,2] = 0
+				#locus[feature] = None
+			#Y[Y[:,1]==1,0] = 0
+			Y[:, 0][Y[:, 1] == 1] = 0
+			forward = np.zeros((w//2-1)+length+(w//2+1),dtype=np.uint8)
+			reverse = np.zeros((w//2-1)+length+(w//2+1),dtype=np.uint8)
+			#for i,base in enumerate(locus.dna):
+			#	i += w//2-1
+				#if base in 'acgt':
+			#	forward[i] = ((ord(base) >> 1) & 3) + 1
+			#	reverse[i] = ((forward[i] - 3) % 4) + 1
+			forward[w//2-1 : -w//2] = (np.frombuffer(locus.dna.encode(), dtype=np.uint8) >> 1 & 3) + 1
+			reverse[w//2-1 : -w//2] = ((forward[w//2-1:-w//2] - 3) % 4) + 1
+			#locus.dna = None
+			locus = None
+			for i in range( length // n):
+				i *= n
+				mask = M[ i*2:i*2+n*2 ]
+				X[0::2,] = np.lib.stride_tricks.sliding_window_view(forward[ i : i+n+w-1],w)
+				X[1::2,] = np.lib.stride_tricks.sliding_window_view(reverse[ i : i+n+w-1],w)[:,::-1]
+				#yield X,Y[ i*2:i*2+n*2 , :]
+				yield tf.convert_to_tensor(X[mask]), tf.convert_to_tensor(Y[ i*2:i*2+n*2 , :][mask])
+			i = length // n * n
+			r = length % n
+			if r:
+				mask = M[ i*2: i*2+2*r]
+				X[0:2*r:2,] = np.lib.stride_tricks.sliding_window_view(forward[i : i+r+w-1],w)
+				X[1:2*r:2,] = np.lib.stride_tricks.sliding_window_view(reverse[i : i+r+w-1],w)[:,::-1]
+				#yield X[ : 2*r , : ] , Y[ i*2: i*2+2*r , :]
+				yield tf.convert_to_tensor(X[ : 2*r , : ][mask]), tf.convert_to_tensor( Y[ i*2: i*2+2*r , :][mask])
