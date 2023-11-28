@@ -102,10 +102,7 @@ if __name__ == '__main__':
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
 	parser.add_argument('-f', '--format', help='Output the features in the specified format', type=str, default='genbank', choices=File.formats)
 	#parser.add_argument('-m', '--model', help='', required=True)
-<<<<<<< HEAD
 	parser.add_argument('-t', '--train', help='') #, required=True)
-=======
->>>>>>> b16d4723d75bc60d8421d3d1c6e83d05819e5204
 	#parser.add_argument('-a', '--amino', action="store_true")
 	parser.add_argument('-p', '--plot', action="store_true")
 	#parser.add_argument('-s', '--size', default=30, type=int)
@@ -135,10 +132,10 @@ if __name__ == '__main__':
 	#with quiet() ,tf.device('/device:GPU:0'), quiet():
 	with tf.device('/device:GPU:0'):
 		model = [None] * 5
-		for i in [0,1,3]: #range(5):
+		for i in range(5):
 			model[i] = api(None)
-			#path = pkg_resources.resource_filename('genotate', 'phage' + str(i))
-			path = pkg_resources.resource_filename('genotate', 'bacteria' + str(i))
+			path = pkg_resources.resource_filename('genotate', 'phage' + str(i))
+			#path = pkg_resources.resource_filename('genotate', 'bacteria' + str(i))
 			#path = '/home/mcnair/develop/genotate/dual/assembly_bacteria' + str(i) + '-' + str(args.number).rjust(3,'0')
 			#path = '/home/mcnair/develop/genotate/checkpoints/assembly_bacteria' + str(i) + '-' + str(args.number).rjust(3,'0')
 			#path = args.model
@@ -177,22 +174,14 @@ if __name__ == '__main__':
 		exit()
 		'''
 		with quiet():
-<<<<<<< HEAD
 			p0 = model[0].predict(dataset)
 			p1 = model[1].predict(dataset)
-			#p2 = model[2].predict(dataset)
+			p2 = model[2].predict(dataset)
 			p3 = model[3].predict(dataset)
-			#p4 = model[4].predict(dataset)
-		#p = np.mean([p0, p1, p2, p3, p4], axis=0)
-		p = np.mean([p0, p1, p3], axis=0)
-=======
-			preds = [None] * 5 if not args.bacterial else [None]
-			for i in range(len(model)):
-				preds[i] = model[i].predict(dataset)
-		#p = np.mean([p0, p1, p2, p3, p4], axis=0)
-		p = np.mean(preds, axis=0)
-
->>>>>>> b16d4723d75bc60d8421d3d1c6e83d05819e5204
+			p4 = model[4].predict(dataset)
+		p = np.mean([p0, p1, p2, p3, p4], axis=0)
+		#p = np.mean([p0, p1, p3], axis=0)
+		
 		if args.plot:
 			plot_frames(args, p)
 			continue
