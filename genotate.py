@@ -101,7 +101,8 @@ if __name__ == '__main__':
 	parser.add_argument('infile', type=is_valid_file, help='input file')
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
 	parser.add_argument('-f', '--format', help='Output the features in the specified format', type=str, default='genbank', choices=File.formats)
-	parser.add_argument('-m', '--model', help='', required=True)
+	#parser.add_argument('-m', '--model', help='', required=True)
+	parser.add_argument('-t', '--train', help='') #, required=True)
 	#parser.add_argument('-a', '--amino', action="store_true")
 	parser.add_argument('-p', '--plot', action="store_true")
 	#parser.add_argument('-s', '--size', default=30, type=int)
@@ -115,23 +116,34 @@ if __name__ == '__main__':
 	for gpu in gpus:
 		tf.config.experimental.set_memory_growth(gpu, True)
 	
-	with quiet() ,tf.device('/device:GPU:0'), quiet():
+	int8 = tf.experimental.numpy.int8 if hasattr(tf.experimental,'numpy') else np.int8	
+	spec = (tf.TensorSpec(shape = (None,87), dtype = int8),
+            tf.TensorSpec(shape = (None, 3), dtype = int8))
+
+	if args.train:
+		trainfile = File(args.train)
+		locus = next(iter(trainfile))
+		generator = lambda : parse_locus(locus)
+		trainset = tf.data.Dataset.from_generator(generator,output_signature=spec).apply(tf.data.experimental.unbatch()).batch(1024)
+
+	#with quiet() ,tf.device('/device:GPU:0'), quiet():
+	with tf.device('/device:GPU:0'):
 		model = [None] * 5
-		for i in [1]: #range(1):
+		for i in [0,1,3]: #range(5):
 			model[i] = api(None)
 			#path = pkg_resources.resource_filename('genotate', 'phage' + str(i))
+			path = pkg_resources.resource_filename('genotate', 'bacteria' + str(i))
 			#path = '/home/mcnair/develop/genotate/dual/assembly_bacteria' + str(i) + '-' + str(args.number).rjust(3,'0')
 			#path = '/home/mcnair/develop/genotate/checkpoints/assembly_bacteria' + str(i) + '-' + str(args.number).rjust(3,'0')
-			path = args.model
+			#path = args.model
 			model[i].load_weights( path ).expect_partial()
 			#try:
 			#	model[i].load_weights( path ).expect_partial()
 			#except:
 			#	model[i] = None
 			#	pass
-	int8 = tf.experimental.numpy.int8 if hasattr(tf.experimental,'numpy') else np.int8	
-	spec = (tf.TensorSpec(shape = (None,87), dtype = int8),
-            tf.TensorSpec(shape = (None, 3), dtype = int8))
+			#
+			model[i].fit(trainset,epochs = 2, verbose=2)
 
 	for locus in File(args.infile):
 		locus.clear()
@@ -169,12 +181,13 @@ if __name__ == '__main__':
 		exit()
 		'''
 		with quiet():
-			p0 = model[1].predict(dataset)
-			#p1 = model[1].predict(dataset)
+			p0 = model[0].predict(dataset)
+			p1 = model[1].predict(dataset)
 			#p2 = model[2].predict(dataset)
-			#p3 = model[3].predict(dataset)
+			p3 = model[3].predict(dataset)
 			#p4 = model[4].predict(dataset)
-		p = p0 #np.mean([p0, p1, p2, p3, p4], axis=0)
+		#p = np.mean([p0, p1, p2, p3, p4], axis=0)
+		p = np.mean([p0, p1, p3], axis=0)
 		if args.plot:
 			plot_frames(args, p)
 			continue
