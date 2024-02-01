@@ -2,11 +2,11 @@
 Introduction
 ------------
 
-Genotate is a tool to annotate prokaryotic<sup>*</sup> and phage genomes.  It uses scrolling amino-acid
+Genotate is a tool to annotate prokaryotic and phage genomes.  It uses scrolling amino-acid
 windows in all six frames to distinguish between windows that belong to protein coding gene
 regions and those that belong to noncoding regions, in order to determine the coding frame
 at every position along the genome.
-*(the bacteria/archaea model is still being trained)
+
 
 To install `Genotate`,
 ```sh
