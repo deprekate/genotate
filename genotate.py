@@ -127,10 +127,9 @@ if __name__ == '__main__':
 	#with quiet() ,tf.device('/device:GPU:0'), quiet():
 	with tf.device('/device:GPU:0'):
 		model = [None] * 5
-		for i in [0]: #range(5):
+		for i in range(5):
 			model[i] = api(None)
-			#path = pkg_resources.resource_filename('genotate', 'phage' + str(i))
-			path = pkg_resources.resource_filename('genotate', 'bacteria' + str(i))
+			path = pkg_resources.resource_filename('genotate', taxon + str(i))
 			#path = '/home/mcnair/develop/genotate/dual/assembly_bacteria' + str(i) + '-' + str(args.number).rjust(3,'0')
 			#path = '/home/mcnair/develop/genotate/checkpoints/assembly_bacteria' + str(i) + '-' + str(args.number).rjust(3,'0')
 			path = args.model
@@ -172,12 +171,12 @@ if __name__ == '__main__':
 		'''
 		with quiet():
 			p0 = model[0].predict(dataset)
-			#p1 = model[1].predict(dataset)
-			#p2 = model[2].predict(dataset)
-			#p3 = model[3].predict(dataset)
-			#p4 = model[4].predict(dataset)
-		#p = np.mean([p0, p1, p2, p3, p4], axis=0)
-		p =	np.mean([p0], axis=0)
+			p1 = model[1].predict(dataset)
+			p2 = model[2].predict(dataset)
+			p3 = model[3].predict(dataset)
+			p4 = model[4].predict(dataset)
+		p = np.mean([p0, p1, p2, p3, p4], axis=0)
+		#p =	np.mean([p0], axis=0)
 		
 		if args.plot:
 			plot_frames(args, p)
