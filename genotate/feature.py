@@ -7,6 +7,11 @@ class Feature(Feature):
 	def more(self):
 		return "mooore"
 
+	def nested_in(self, other):
+		if self and other and self.left() > other.left() and self.right() < other.right():
+			return True
+		return False
+
 	def end(self):
 		if self.strand > 0:
 			return self.right()

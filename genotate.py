@@ -23,7 +23,8 @@ sys.path.pop(0)
 from genotate.file import File
 import genotate.make_train as mt
 from genotate.make_model import create_model_blend, blend, api
-from genotate.functions import GenomeDataset, parse_locus
+from genotate.functions import GenomeDataset, parse_locus, plot_frames
+from genotate.locus import previous_and_next
 	
 # Helper libraries
 import numpy as np
@@ -100,7 +101,7 @@ if __name__ == '__main__':
 	parser.add_argument('infile', type=is_valid_file, help='input file')
 	parser.add_argument('-o', '--outfile', action="store", default=sys.stdout, type=argparse.FileType('w'), help='where to write output [stdout]')
 	parser.add_argument('-f', '--format', help='Output the features in the specified format', type=str, default='genbank', choices=File.formats)
-	#parser.add_argument('-m', '--model', help='', required=True)
+	parser.add_argument('-m', '--model', help='')
 	parser.add_argument('-t', '--train', help='') #, required=True)
 	#parser.add_argument('-a', '--amino', action="store_true")
 	parser.add_argument('-p', '--plot', action="store_true")
@@ -111,7 +112,7 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 	args.outfile.print = _print.__get__(args.outfile)
 
-	os.environ["CUDA_VISIBLE_DEVICES"]=str(int(args.number) % 8)
+	os.environ["CUDA_VISIBLE_DEVICES"]='0' #str(int(args.number) % 8)
 	gpus = tf.config.list_physical_devices('GPU') if hasattr(tf.config, 'list_physical_devices') else []
 	for gpu in gpus:
 		tf.config.experimental.set_memory_growth(gpu, True)
@@ -126,20 +127,14 @@ if __name__ == '__main__':
 	#with quiet() ,tf.device('/device:GPU:0'), quiet():
 	with tf.device('/device:GPU:0'):
 		model = [None] * 5
-		for i in [0,1,3]: #range(5):
+		for i in [0]: #range(5):
 			model[i] = api(None)
 			#path = pkg_resources.resource_filename('genotate', 'phage' + str(i))
 			path = pkg_resources.resource_filename('genotate', 'bacteria' + str(i))
 			#path = '/home/mcnair/develop/genotate/dual/assembly_bacteria' + str(i) + '-' + str(args.number).rjust(3,'0')
 			#path = '/home/mcnair/develop/genotate/checkpoints/assembly_bacteria' + str(i) + '-' + str(args.number).rjust(3,'0')
-			#path = args.model
+			path = args.model
 			model[i].load_weights( path ).expect_partial()
-			#try:
-			#	model[i].load_weights( path ).expect_partial()
-			#except:
-			#	model[i] = None
-			#	pass
-			#
 			'''
 			if args.train:
 				generator = GenomeDataset(args.train.encode())
@@ -147,7 +142,7 @@ if __name__ == '__main__':
                         lambda : generator,
                         output_signature=spec
                     ).unbatch().batch(512)
-				model[i].fit(trainset,epochs = 2, verbose=2)
+				model[i].fit(trainset,epochs = 5, verbose=2)
 			'''
 
 	for locus in File(args.infile):
@@ -177,12 +172,12 @@ if __name__ == '__main__':
 		'''
 		with quiet():
 			p0 = model[0].predict(dataset)
-			p1 = model[1].predict(dataset)
+			#p1 = model[1].predict(dataset)
 			#p2 = model[2].predict(dataset)
-			p3 = model[3].predict(dataset)
+			#p3 = model[3].predict(dataset)
 			#p4 = model[4].predict(dataset)
 		#p = np.mean([p0, p1, p2, p3, p4], axis=0)
-		p = np.mean([p0, p1, p3], axis=0)
+		p =	np.mean([p0], axis=0)
 		
 		if args.plot:
 			plot_frames(args, p)
@@ -202,13 +197,13 @@ if __name__ == '__main__':
 								np.divide( reverse[:,:,2] + forward[:,:,2], 6).sum(axis=0).clip(0,1) , 
 								forward[:,:,1].sum(axis=0).clip(0,1) 
 								]).T
-		strand_switches = predict_switches(strand_wise, 60, 1)
+		strand_switches = predict_switches(strand_wise, 29, 1)
 		
 		# predict frames of strand
 		for (index,offset),strand in strand_switches.items():
 			index , offset , strand = max(index - 30, 0) , min(offset + 30, len(strand_wise)-1) , strand-1
 			if strand == 0:continue
-			#locus.add_feature('mRNA', strand, [map(str,[3*index+1, 3*offset+1])])
+			locus.add_feature('mRNA', strand, [map(str,[3*index+1, 3*offset+1])])
 			for frame in [0,1,2]:
 				frame_wise = forward[frame, index : offset//3*3, :] if strand > 0 else reverse[frame, index : offset, :]
 				switches = predict_switches(frame_wise, 1, 1)
@@ -239,6 +234,9 @@ if __name__ == '__main__':
 
 		# adjust ends to stop codon
 		locus.adjust()
+
+		# drop opposite strand nested genes
+		locus.drop()
 
 		# join partial orfs at both ends for circular genomes
 		#locus.join()

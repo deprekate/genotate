@@ -34,8 +34,11 @@ def pairwise(iterable):
 
 def count(dq, item):
 	return sum(elem == item for elem in dq)
+
 def nint(x):
-	return int(x.replace('<','').replace('>',''))
+	if isinstance(x, str):
+		return int(x.replace('<','').replace('>',''))
+	return x
 
 class Locus(Locus, feature=Feature):
 	def init(self, args):
@@ -152,12 +155,18 @@ class Locus(Locus, feature=Feature):
 					right = self.next(feature.right(), self.stops, feature.strand)
 					#left  = left  if left  else 0
 					right = right if right else self.length()-3
-					feature.set_right(right+3)
+					if feature.length() >= nint(right) - feature.right(): 
+						feature.set_right(right+3)
+					else:
+						continue
 				else:
 					left  = self.next(feature.left(), self.stops, feature.strand)
 					#right = self.last(feature.left(), self.stops, feature.strand)
 					left = left+1 if left else '<1'
-					feature.set_left(left)
+					if feature.length() >= feature.left() - nint(left): 
+						feature.set_left(left)
+					else:
+						continue
 				self[feature] = True
 			# THIS REMOVES DUPLICATE GENES WITH SAME STOP CODON
 			if feature.end() in seen:
@@ -169,6 +178,15 @@ class Locus(Locus, feature=Feature):
 					feature = other
 			seen[feature.end()] = feature
 
+	def drop(self):	
+		_last = _curr = None
+		for _next in chain(sorted(self.features(include='CDS')), [None]):
+			if _curr and _last and _curr.nested_in(_last) and _last.strand != _curr.strand:
+				del self[_curr]
+				_curr = _last
+			_last = _curr
+			_curr = _next
+
 	def count_starts(self):
 		counts = dict()
 		for feature in self:
@@ -179,7 +197,9 @@ class Locus(Locus, feature=Feature):
 	def detect_stops(self):
 		n = 10
 		counts = {stop : 0 for stop in self.stops}
+		coding = 0
 		for _last, _curr, _next in previous_and_next(sorted(self.features(include='CDS'))):
+			coding += _curr.length() // 3
 			if _last and _last.frame() == _curr.frame():
 				seq = self.seq(_last.right(), _curr.left(), _last.frame())
 				codons = wrap(seq, 3)
@@ -194,9 +214,11 @@ class Locus(Locus, feature=Feature):
 				counts['tag'] += '+' in acids #acids.count('+')
 				counts['tga'] += '*' in acids # acids.count('*')
 		stops = self.stops
+		#print(counts, len(self), coding)  ; exit()
 		for stop in self.stops:
-			counts[stop] /= len(self) if len(self) else 1
-			if len(self) > 20 and counts[stop] > 0.20 :
+			#counts[stop] /= len(self) if len(self) else 1
+			#if len(self) > 20 and counts[stop] > 0.20 :
+			if ((counts[stop]-1) / coding) > 0.003 :
 				stops.remove(stop)
 		stops = keys(counts) if len(stops) == 1 else stops
 		return stops
