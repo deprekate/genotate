@@ -132,7 +132,7 @@ if __name__ == '__main__':
 			path = pkg_resources.resource_filename('genotate', taxon + str(i))
 			#path = '/home/mcnair/develop/genotate/dual/assembly_bacteria' + str(i) + '-' + str(args.number).rjust(3,'0')
 			#path = '/home/mcnair/develop/genotate/checkpoints/assembly_bacteria' + str(i) + '-' + str(args.number).rjust(3,'0')
-			path = args.model
+			#path = args.model
 			model[i].load_weights( path ).expect_partial()
 			'''
 			if args.train:
