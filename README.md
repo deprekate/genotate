@@ -26,7 +26,7 @@ a FASTA formatted file, you can provide a Genbank formatted file and Genotate wi
 ```
  genotate.py test/mycoplasma.gbff.gz -o predictions.gb --bacteria
 ```
-**It is recommended to use a GPU to run Genotate since it will take a long time to for prokaryotic 
+**It is recommended to use a GPU to run Genotate since it will take a long time to run prokaryotic 
 genomes.**  Genotate will automatically try to run on GPU, if one isn't found it will run on a CPU.
 
 ---
