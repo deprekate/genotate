@@ -194,7 +194,7 @@ class GenomeDataset:
 				#if feature.partial() == 'left': next(locations)
 				locations = list(feature.codon_locations())
 				if not locations or len(stops.intersection(aa)) > 1 or stop in aa:
-					M[ feature.left() : feature.right() + 3 ] = False	
+					M[ feature.left() : feature.right() + 1 ] = False	
 					continue
 				for location in locations:
 					i = 2 * location[2*s]

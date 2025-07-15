@@ -78,7 +78,7 @@ class Locus(Locus, feature=Feature):
 					lefts.append(feature)
 				elif feature.strand < 0 and feature.stop_codon() not in self.stops:
 					lefts.append(feature)
-			elif feature.right() > self.length() - 6:
+			elif (feature.right()-2) > self.length() - 6:
 				rights.append(feature)
 		pass
 
@@ -96,7 +96,7 @@ class Locus(Locus, feature=Feature):
 			#elif _last.frame('right') == _curr.frame('left'):
 			elif _curr.frame() == _next.frame():
 				# THIS MERGES ADJACENT FRAMES
-				seq = self.seq(_curr.right()-30 , _next.left()+30, _next.strand)
+				seq = self.seq(_curr.right()-32 , _next.left()+30, _next.strand)
 				if not self.has_stop(seq):
 					del self[_curr]
 					del self[_next]
@@ -110,7 +110,7 @@ class Locus(Locus, feature=Feature):
 				pass
 			elif _last.frame() == _next.frame():
 				# THIS MERGES FRAMES BROKEN BY AN EMBEDDED GENE
-				seq = self.seq(_last.right()-30 , _next.left()+30, _next.strand)
+				seq = self.seq(_last.right()-32 , _next.left()+30, _next.strand)
 				if not self.has_stop(seq):
 					del self[_last]
 					del self[_next]
@@ -130,7 +130,7 @@ class Locus(Locus, feature=Feature):
 			for codon,locs in zip(feature.codons(), feature.codon_locations()):
 				if codon in self.stops:
 					stop_locations.append(min(locs))
-			stop_locations.append(feature.right())
+			stop_locations.append(feature.right()-2)
 			del self[feature]
 			for left,right in pairwise(sorted(set(stop_locations))):
 				if right-left >= 60:
@@ -152,10 +152,10 @@ class Locus(Locus, feature=Feature):
 
 				if feature.strand > 0:
 					#left  = self.last(feature.right(), self.stops, feature.strand)
-					right = self.next(feature.right(), self.stops, feature.strand)
+					right = self.next(feature.right()-2, self.stops, feature.strand)
 					#left  = left  if left  else 0
 					right = right if right else self.length()-3
-					if feature.length() >= nint(right) - feature.right(): 
+					if feature.length() >= nint(right) - (feature.right()-2): 
 						feature.set_right(right+3)
 					else:
 						continue
@@ -201,7 +201,7 @@ class Locus(Locus, feature=Feature):
 		for _last, _curr, _next in previous_and_next(sorted(self.features(include='CDS'))):
 			coding += _curr.length() // 3
 			if _last and _last.frame() == _curr.frame():
-				seq = self.seq(_last.right(), _curr.left(), _last.frame())
+				seq = self.seq((_last.right()-2), _curr.left(), _last.frame())
 				codons = wrap(seq, 3)
 				if len(seq) < 300 and sum(['taa' in codons, 'tag' in codons, 'tga' in codons]) == 1:
 					for stop in self.stops:
